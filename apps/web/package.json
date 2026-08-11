@@ -1,0 +1,45 @@
+{
+  "name": "@plantifiles/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "generate-routes": "tsr generate",
+    "build": "vite build && tsc --noEmit",
+    "preview": "vite preview --port 3000",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:dry": "pnpm build && wrangler deploy --dry-run",
+    "cf-typegen": "wrangler types",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.6.27",
+    "@plantifiles/core": "workspace:*",
+    "@plantifiles/db": "workspace:*",
+    "@tanstack/react-router": "1.170.25",
+    "@tanstack/react-start": "1.168.42",
+    "better-auth": "1.6.27",
+    "drizzle-orm": "0.45.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.51.2",
+    "@tanstack/router-cli": "1.167.27",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.2",
+    "vite": "8.2.1",
+    "vitest": "^4.1.10",
+    "wrangler": "4.120.1"
+  }
+}

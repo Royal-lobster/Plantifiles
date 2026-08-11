@@ -1,0 +1,5 @@
+BETTER_AUTH_SECRET="replace-with-at-least-32-random-characters"
+GITHUB_CLIENT_ID="github-oauth-client-id"
+GITHUB_CLIENT_SECRET="github-oauth-client-secret"
+PUBLIC_URL="http://localhost:3000"
+ANTHROPIC_API_KEY=""

@@ -7,16 +7,19 @@
   },
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
-    "lint": "turbo lint",
+    "dev": "turbo build --filter=@plantifiles/core --filter=@plantifiles/db && turbo dev",
+    "format": "biome format .",
+    "format:fix": "biome format . --write",
+    "lint": "biome lint . && turbo lint",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "db:generate": "pnpm --filter @plantifiles/db generate",
-    "db:push": "pnpm --filter @plantifiles/db db:push"
+    "db:migrate:local": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --local",
+    "db:migrate:remote": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --remote"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
+    "@biomejs/biome": "2.2.4",
     "turbo": "^2.5.6",
-    "typescript": "^5.9.2"
+    "typescript": "^6.0.2"
   }
 }

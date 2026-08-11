@@ -2,9 +2,22 @@ packages:
   - apps/*
   - packages/*
 
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - '@better-auth/core@1.6.27'
+  - '@better-auth/drizzle-adapter@1.6.27'
+  - '@better-auth/kysely-adapter@1.6.27'
+  - '@better-auth/memory-adapter@1.6.27'
+  - '@better-auth/mongo-adapter@1.6.27'
+  - '@better-auth/prisma-adapter@1.6.27'
+  - '@better-auth/telemetry@1.6.27'
+  - better-auth@1.6.27
+
 onlyBuiltDependencies:
-  - '@prisma/engines'
-  - '@prisma/client'
   - esbuild
-  - prisma
+  - lightningcss
   - sharp
+  - workerd
