@@ -170,6 +170,18 @@ export function lint(source: string): LintReport {
   }
 
   for (const node of components) {
+    if (node.type === "mdxJsxTextElement") {
+      const name = componentName(node);
+      add(
+        "block-children-lines",
+        "error",
+        `<${name}> must put its children on their own lines.`,
+        node,
+      );
+    }
+  }
+
+  for (const node of components) {
     const name = componentName(node);
     const requiredAttribute =
       name === "Option" ? "name" : name === "Rejected" ? "what" : name === "Phase" ? "n" : name === "CodeSketch" ? "lang" : undefined;

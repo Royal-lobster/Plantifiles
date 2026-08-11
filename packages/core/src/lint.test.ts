@@ -84,6 +84,16 @@ describe("lint", () => {
     expect(findingsFor(source, "component-vocabulary").length).toBeGreaterThan(0);
   });
 
+  it("requires block component children on their own lines", () => {
+    const source = EXAMPLE_PLAN.replace(
+      '<Decision owner="@srujan" id="historical-invoices">\nDo we backfill historical invoices into Stripe, or leave them in the read-only ledger?\n</Decision>',
+      '<Decision owner="@srujan" id="historical-invoices">Do we backfill historical invoices into Stripe?</Decision>',
+    );
+    const findings = findingsFor(source, "block-children-lines");
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("<Decision>");
+  });
+
   it("warns when no rejected alternative is recorded", () => {
     const source = EXAMPLE_PLAN.replace(/<Rejected[\s\S]*?<\/Rejected>\n/, "");
     expect(findingsFor(source, "rejected-alternative")).toHaveLength(1);
