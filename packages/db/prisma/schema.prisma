@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String       @id @default(cuid())
+  githubId    String       @unique
+  name        String
+  email       String       @unique
+  avatarUrl   String?
+  memberships Membership[]
+  apiTokens   ApiToken[]
+  plans       Plan[]       @relation("PlanCreator")
+  versions    PlanVersion[]
+  comments    Comment[]
+  decisionsOwned Decision[] @relation("DecisionOwner")
+  decisionsResolved Decision[] @relation("DecisionResolver")
+  approvals   Approval[]
+}
+
+model Workspace {
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  name              String
+  requiredApprovals Int          @default(1)
+  memberships       Membership[]
+  plans             Plan[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id               String        @id @default(cuid())
+  workspaceId      String
+  slug             String
+  title            String
+  status           PlanStatus    @default(DRAFT)
+  visibility       Visibility    @default(WORKSPACE)
+  publicSlug       String?       @unique
+  createdById      String
+  currentVersionId String?       @unique
+  workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy        User          @relation("PlanCreator", fields: [createdById], references: [id])
+  currentVersion   PlanVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         PlanVersion[] @relation("PlanVersions")
+  comments         Comment[]
+  decisions        Decision[]
+  approvals        Approval[]
+
+  @@unique([workspaceId, slug])
+}
+
+model PlanVersion {
+  id                 String      @id @default(cuid())
+  planId             String
+  number             Int
+  source             String
+  changeSummary      String?
+  changeSummaryProse String?
+  lintScore          Int
+  lintReport         Json
+  lintOverridden     Boolean     @default(false)
+  authorId           String
+  agentName          String?
+  agentPrompt        String?
+  createdAt          DateTime    @default(now())
+  plan               Plan        @relation("PlanVersions", fields: [planId], references: [id], onDelete: Cascade)
+  currentForPlan     Plan?       @relation("CurrentVersion")
+  author             User        @relation(fields: [authorId], references: [id])
+  blocks             PlanBlock[]
+  comments           Comment[]
+  approvals          Approval[]
+
+  @@unique([planId, number])
+}
+
+model PlanBlock {
+  id          String      @id @default(cuid())
+  versionId   String
+  key         String
+  kind        String
+  ordinal     Int
+  contentHash String
+  version     PlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, key])
+}
+
+model Comment {
+  id            String      @id @default(cuid())
+  planId        String
+  versionId     String
+  blockKey      String?
+  parentId      String?
+  body          String
+  authorId      String
+  agentAssisted Boolean     @default(false)
+  resolvedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  plan          Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  version       PlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  parent        Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]   @relation("CommentReplies")
+  author        User        @relation(fields: [authorId], references: [id])
+}
+
+model Decision {
+  id           String         @id @default(cuid())
+  planId       String
+  key          String
+  status       DecisionStatus @default(OPEN)
+  resolution   String?
+  ownerId      String?
+  resolvedById String?
+  resolvedAt   DateTime?
+  plan         Plan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  owner        User?          @relation("DecisionOwner", fields: [ownerId], references: [id])
+  resolvedBy   User?          @relation("DecisionResolver", fields: [resolvedById], references: [id])
+
+  @@unique([planId, key])
+}
+
+model Approval {
+  id        String      @id @default(cuid())
+  planId    String
+  versionId String
+  userId    String
+  createdAt DateTime    @default(now())
+  plan      Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  version   PlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([versionId, userId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum PlanStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  BUILDING
+  SHIPPED
+  ARCHIVED
+}
+
+enum Visibility {
+  PRIVATE
+  WORKSPACE
+  PUBLIC
+}
+
+enum DecisionStatus {
+  OPEN
+  RESOLVED
+}

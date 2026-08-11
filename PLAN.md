@@ -19,18 +19,24 @@ A v1 that cannot demonstrate that full circle end to end is not done, regardless
 
 ## Stack
 
-Settled. Do not substitute.
+Settled, and the pins below are deliberate. Do not substitute, and do not float anything to `latest`.
 
-- **pnpm workspaces + Turborepo**, TypeScript strict everywhere.
-- **apps/web** — Next.js App Router, React Server Components, Tailwind, shadcn/ui, Lucide icons, `next-themes` for dark mode, Mermaid for diagrams, Shiki for code highlighting, CodeMirror 6 for the editor.
-- **packages/core** — framework-free: MDX vocabulary, parse/normalize, lint, block keys, structural diff, skim projection. No React, no Prisma, no network.
-- **packages/db** — Prisma + Postgres.
-- **apps/cli** — `plantifiles` binary.
-- **apps/mcp** — stdio MCP server.
-- **Auth.js v5** with the GitHub provider only. Audience is devs; GitHub OAuth is the whole login story.
-- **Vitest** for `packages/core`. **Playwright** for one end-to-end smoke.
+- **pnpm workspaces + Turborepo**, TypeScript strict everywhere. **Biome** for lint and format — no ESLint, no Prettier, matching `recalio`.
+- **apps/web** — TanStack Start (React 19) on Cloudflare Workers. Start 1.x is GA.
+  - `@tanstack/react-start` `1.168.42`, `@tanstack/react-router` `1.170.25`, `@vitejs/plugin-react` `^6.0.1`, `vite` `8.2.1`.
+  - `@cloudflare/vite-plugin` **`1.51.2`** and `wrangler` **`4.120.1`**. Do not upgrade either one: `1.51.3` and `4.121.0` both pin an unpublished `miniflare@5.20260804.1-alpha`, and install dies with `ETARGET`.
+- **Cloudflare** — Workers with the static-assets binding, not Pages. D1 for data and KV for caches. No R2 in v1.
+- **packages/db** — Drizzle ORM `0.45.2` with drizzle-kit `0.31.10` against D1. Not `drizzle-orm@rc`, whose `1.0.0-rc.4` breaks the better-auth adapter's peer range.
+- **Auth** — better-auth `1.6.27` with `@better-auth/drizzle-adapter` `1.6.27` and the GitHub social provider. It is the only option with first-party TanStack Start support (`better-auth/tanstack-start`, `tanstackStartCookies`) *and* a Drizzle adapter, so sessions live in the same schema and the same migration pipeline.
+- **packages/core** — framework-free: MDX vocabulary, parse/normalize, lint, block keys, structural diff, skim projection. No React, no DB, no network.
+- **packages/ui** — the shared shadcn/ui workspace with its own `components.json`, per `recalio`.
+- **apps/cli** — `plantifiles` binary, Node. **apps/mcp** — stdio MCP server, Node.
+- **Tailwind v4**, CSS-first with `@theme`. There is no `tailwind.config.js`.
+- `zod` for validation, **TanStack Query v5** for client server-state, **Vitest 4** for `packages/core`, **Playwright** for one end-to-end smoke.
 
-Base URL comes from `PLANTIFILES_BASE_URL`. No domain is hardcoded anywhere.
+`wrangler.jsonc` must carry `"compatibility_flags": ["nodejs_compat"]`. Without it the Worker refuses to boot (`No such module "node:stream/web"`), and better-auth needs AsyncLocalStorage regardless. The public origin comes from a `PUBLIC_URL` var; no domain is hardcoded anywhere.
+
+**`RESEARCH.md` carries the verified API shapes, exact config file contents, and the gotchas behind every choice above.** It was produced by running real code on workerd. Read the relevant section before writing code in each phase — it documents at least four failure modes that are silent rather than loud.
 
 ## Non-goals for v1
 
@@ -43,6 +49,8 @@ Staleness/drift detection against repos, implementation status from PRs, plan gr
 # Phase 1 — packages/core
 
 The whole product's consistency guarantee lives here. Pure functions over strings, fully unit-tested, zero I/O.
+
+It runs in three places — the Node CLI, the Node MCP server, and the Cloudflare Worker — so it stays free of `eval`, `new Function`, and dynamic import. `node:crypto`'s `createHash` is fine because the Worker runs with `nodejs_compat`.
 
 ## The component vocabulary
 
@@ -144,11 +152,12 @@ Errors:
 8. Every `<Risk>` has a valid `severity`.
 9. Heading depth never exceeds `###`.
 10. No components outside the vocabulary table, and no raw HTML.
+11. Every block component puts its children on their own lines. `<Decision>text</Decision>` written on one line parses as an inline `mdxJsxTextElement`, which the renderer wraps in a `<p>` and emits as invalid nesting; only the multi-line form produces a real flow element. This rule is what keeps the parser and the renderer agreeing.
 
 Warnings:
 
-11. No `<Rejected>` anywhere. Six months out, "why we didn't do X" is the highest-value text in the document and always the part that is missing.
-12. Read time above 12 minutes, computed at 200 wpm.
+12. No `<Rejected>` anywhere. Six months out, "why we didn't do X" is the highest-value text in the document and always the part that is missing.
+13. Read time above 12 minutes, computed at 200 wpm.
 
 `score = 100 - (10 × errors) - (3 × warnings)`, floored at 0. Publish requires zero errors **and** `score ≥ 70`. `--force` publishes anyway and sets `lintOverridden` on the version, which the UI shows as a badge.
 
@@ -166,88 +175,137 @@ If `ANTHROPIC_API_KEY` is set, additionally generate a prose summary from the st
 
 `skim(blocks)` returns only `TLDR`, `Decision`, `Tradeoff`, `Risk`, `Diagram`, and `Phase` titles. Half-reading a plan is the normal behaviour, so make half-reading correct instead of fighting it.
 
-**Phase 1 done when:** every rule above has a passing and a failing unit test; `normalize` produces identical keys across two versions of the example plan where the heading path is unchanged; `diff` correctly classifies all four change types; `pnpm test` is green in `packages/core`.
+**Phase 1 done when:** every rule above has a passing and a failing unit test; `normalize` produces identical keys across two versions of the example plan where the heading path is unchanged; `diff` correctly classifies all four change types; a grep of `packages/core/src` finds no `eval` and no `new Function`; `pnpm test` is green in `packages/core`.
 
 ---
 
-# Phase 2 — data model and publish API
+# Phase 2 — scaffold, data layer, and the plan URL
 
-## Prisma schema
+Infrastructure risk first: an empty Start app must deploy to Workers with its bindings resolving before any feature work lands on top of it. `RESEARCH.md` carries the verified config for everything in this phase.
 
-```prisma
-model User      { id String @id; githubId String @unique; name String; email String @unique; avatarUrl String? }
-model Workspace { id String @id; slug String @unique; name String; requiredApprovals Int @default(1) }
-model Membership { id String @id; userId String; workspaceId String; role Role }
-model ApiToken  { id String @id; userId String; name String; tokenHash String @unique; lastUsedAt DateTime? }
+## Scaffold
 
-model Plan {
-  id String @id
-  workspaceId String
-  slug String
-  title String
-  status PlanStatus @default(DRAFT)
-  visibility Visibility @default(WORKSPACE)
-  publicSlug String? @unique
-  createdById String
-  currentVersionId String?
-  @@unique([workspaceId, slug])
-}
-
-model PlanVersion {
-  id String @id
-  planId String
-  number Int
-  source String              // raw MDX
-  changeSummary String?      // structural, always set from v2 onward
-  changeSummaryProse String?
-  lintScore Int
-  lintReport Json
-  lintOverridden Boolean @default(false)
-  authorId String
-  agentName String?          // "claude-code", "codex", "cursor"
-  agentPrompt String?        // the prompt that produced this edit
-  createdAt DateTime @default(now())
-  @@unique([planId, number])
-}
-
-model PlanBlock { id String @id; versionId String; key String; kind String; ordinal Int; contentHash String; @@unique([versionId, key]) }
-model Comment   { id String @id; planId String; versionId String; blockKey String?; parentId String?; body String; authorId String; agentAssisted Boolean @default(false); resolvedAt DateTime?; createdAt DateTime @default(now()) }
-model Decision  { id String @id; planId String; key String; status DecisionStatus @default(OPEN); resolution String?; ownerId String?; resolvedById String?; resolvedAt DateTime?; @@unique([planId, key]) }
-model Approval  { id String @id; planId String; versionId String; userId String; createdAt DateTime @default(now()); @@unique([versionId, userId]) }
-
-enum Role { OWNER ADMIN MEMBER VIEWER }
-enum PlanStatus { DRAFT IN_REVIEW APPROVED BUILDING SHIPPED ARCHIVED }
-enum Visibility { PRIVATE WORKSPACE PUBLIC }
-enum DecisionStatus { OPEN RESOLVED }
+```bash
+npx @tanstack/cli@latest create web --framework React --deployment cloudflare --blank -y
 ```
 
-A `Decision` row holds only app state — status, resolution, owner. The question text always comes from the `<Decision>` block in the source. That way the document and the database never disagree about what was asked.
+Run that inside `apps/`, then pin every dependency the scaffold wrote as `latest`, and swap its ESLint/Prettier setup for Biome.
 
-## Endpoints
+Facts that decide whether this works:
 
-Token auth via `Authorization: Bearer <token>`, hashed with sha256 and compared against `ApiToken.tokenHash`. Browser sessions use Auth.js.
+- Routes live in `apps/web/src/routes/`; the root route is `src/routes/__root.tsx`; `src/router.tsx` must export a function named `getRouter()`.
+- `src/routeTree.gen.ts` is generated by `tanstackStart()` on the first `vite dev` or `vite build`, not by the scaffold. Commit it.
+- Plugin order in `vite.config.ts` is load-bearing: `cloudflare({ viteEnvironment: { name: 'ssr' } })`, then `tanstackStart()`, then `viteReact()`.
+- `wrangler.jsonc` sets `"main": "@tanstack/react-start/server-entry"` and `"compatibility_flags": ["nodejs_compat"]`. The vite plugin injects the `assets` block, so do not write one.
+- Bindings for v1 are `DB` (D1) and `CACHE` (KV) — no R2. Create the database with `wrangler d1 create plantifiles`, paste the returned `database_id`, and add `"migrations_dir": "migrations"`.
+- Re-run `wrangler types` after every binding change; it writes `worker-configuration.d.ts`.
 
-- `POST /api/plans` — `{ workspaceSlug, slug?, title, source, agentName?, agentPrompt? }`. Lints, normalizes, creates plan + version 1 + blocks. Rejects with the full lint report on failure.
-- `POST /api/plans/:id/versions` — same, plus computes `changeSummary` against the current version and re-anchors comments.
-- `GET /api/plans/:id` — metadata + current version.
-- `GET /api/plans?workspace=slug&status=` — list.
-- `POST /api/plans/:id/comments` — `{ blockKey?, parentId?, body, agentAssisted? }`.
-- `POST /api/tokens` — session-authed only; returns the plaintext token exactly once.
+**The `env` rule is a build-breaker, not a style preference.** Touch `env` from `cloudflare:workers` only inside `createServerFn().handler()`, `server.handlers`, `.server()` middleware, or a `*.server.ts` module. Referencing it from a route loader or a component body runs fine under `vite dev` and then fails `vite build` with `Rolldown failed to resolve import "cloudflare:workers"`.
+
+## Drizzle schema
+
+better-auth owns the `user`, `session`, `account`, and `verification` tables — generate them with its CLI into the same Drizzle schema file and let application tables reference `user.id`.
+
+D1 is SQLite, which changes how three things are expressed. `text({ enum: [...] })` is a TypeScript union that creates **no** database constraint, so pair every one with a `check()`. JSON is `text(..., { mode: 'json' })` with a `$type<...>()`. Timestamps are `integer(..., { mode: 'timestamp' })`, which stores Unix **seconds** — never mix that with `timestamp_ms` anywhere in the schema, because the failure mode is silently landing in 1970.
+
+```ts
+// packages/db/src/schema.ts
+import { sql } from 'drizzle-orm'
+import { sqliteTable, text, integer, index, check, unique } from 'drizzle-orm/sqlite-core'
+
+export const workspace = sqliteTable('workspace', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  requiredApprovals: integer('required_approvals').notNull().default(1),
+})
+
+export const plan = sqliteTable('plan', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().references(() => workspace.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  status: text('status', { enum: ['draft','in_review','approved','building','shipped','archived'] }).notNull().default('draft'),
+  visibility: text('visibility', { enum: ['private','workspace','public'] }).notNull().default('workspace'),
+  publicSlug: text('public_slug').unique(),
+  createdById: text('created_by_id').notNull().references(() => user.id),
+  currentVersionId: text('current_version_id'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (t) => [
+  unique('plan_workspace_slug').on(t.workspaceId, t.slug),
+  check('plan_status_ck', sql`${t.status} in ('draft','in_review','approved','building','shipped','archived')`),
+])
+```
+
+The remaining tables carry the same columns the product needs, expressed the same way:
+
+- `planVersion` — `id` pk, `planId` fk, `number` int, `source` text (raw MDX), `changeSummary` text nullable, `changeSummaryProse` text nullable, `lintScore` int, `lintReport` json, `lintOverridden` boolean, `authorId` fk, `agentName` text nullable, `agentPrompt` text nullable, `createdAt` timestamp. Unique on `(planId, number)`.
+- `planBlock` — `id` pk, `versionId` fk, `key`, `kind`, `ordinal` int, `contentHash`. Unique on `(versionId, key)`.
+- `comment` — `id` pk, `planId` fk, `versionId` fk, `blockKey` nullable, `parentId` nullable, `body`, `authorId` fk, `agentAssisted` boolean, `resolvedAt` nullable, `createdAt`.
+- `decision` — `id` pk, `planId` fk, `key`, `status` enum `open|resolved`, `resolution` nullable, `ownerId` nullable, `resolvedById` nullable, `resolvedAt` nullable. Unique on `(planId, key)`.
+- `approval` — `id` pk, `planId` fk, `versionId` fk, `userId` fk, `createdAt`. Unique on `(versionId, userId)`.
+- `membership` — `id` pk, `userId` fk, `workspaceId` fk, `role` enum `owner|admin|member|viewer`.
+- `apiToken` — `id` pk, `userId` fk, `name`, `tokenHash` unique, `lastUsedAt` nullable.
+
+A `decision` row holds only app state: status, resolution, owner. The question text always comes from the `<Decision>` block in the source, so the document and the database can never disagree about what was asked.
+
+**Migrations**: `drizzle-kit generate` writes flat `migrations/0000_*.sql`, and `wrangler d1 migrations apply plantifiles --local | --remote` applies them. Do not run `drizzle-kit migrate` or `drizzle-kit push` — that introduces a second migration journal alongside wrangler's `d1_migrations` table.
+
+**Two D1 limits shape the write path.** There are no interactive transactions: Drizzle's `transaction()` emits `begin`/`commit`, which D1 rejects outright, so every multi-statement write goes through `db.batch([...])`. And a query takes at most 100 bound parameters, so inserting a version's blocks must be chunked rather than issued as one wide multi-row insert.
+
+A D1 row caps at 2 MB. v1 rejects a source above 1 MB with a clear error; offloading large bodies to R2 is v2.
+
+## Server routes
+
+Every endpoint is a file in `src/routes/` whose `createFileRoute` carries a `server` property. Handler signature is `({ request, params, context, next }) => Response`.
+
+- `api.plans.ts` — `POST /api/plans` with `{ workspaceSlug, slug?, title, source, agentName?, agentPrompt? }`. Lints, normalizes, then creates plan + version 1 + blocks in one `db.batch`. Rejects with the full lint report on failure. `GET /api/plans?workspace=slug&status=` lists.
+- `api.plans.$id.ts` — `GET` metadata plus current version.
+- `api.plans.$id.versions.ts` — `POST` a new version; computes `changeSummary` against the current version and re-anchors comments.
+- `api.plans.$id.comments.ts` — `POST { blockKey?, parentId?, body, agentAssisted? }`.
+- `api.tokens.ts` — `POST`, session-authed only, returns the plaintext token exactly once.
+
+Token auth is `Authorization: Bearer <token>`, sha256-hashed and compared against `apiToken.tokenHash`. Browser requests use the better-auth session.
+
+Note that a route defining only `POST` answers a `GET` with 200 and SSR HTML rather than 405. Where method rejection matters, add an explicit `ANY` handler returning 405.
 
 ## The content-negotiated plan URL
 
-This is the single most important surface in the product. One URL, two audiences.
+The single most important surface in the product. One URL, two audiences.
 
-`GET /p/:workspaceSlug/:planSlug` and `GET /p/:workspaceSlug/:planSlug/v/:number`:
+`src/routes/p.$workspaceSlug.$planSlug.tsx` defines **both** a `server.handlers.GET` and a `component`, and that combination is what makes negotiation possible:
 
-- `Accept: text/html` → the themed reader app.
-- `Accept: text/markdown`, `text/plain`, `*/*` from a non-browser client, a `.md` suffix, or `?format=md` → **raw MDX source** with a YAML frontmatter preamble containing `title`, `version`, `status`, `url`, `openDecisions`, `updatedAt`.
+```tsx
+export const Route = createFileRoute('/p/$workspaceSlug/$planSlug')({
+  server: {
+    handlers: {
+      GET: async ({ request, params, next }) => {
+        const accept = request.headers.get('accept') ?? ''
+        const wantsHtml = accept.includes('text/html')
+        if (!wantsHtml) {
+          const md = await renderPlanMarkdown(params)
+          return new Response(md, {
+            headers: { 'Content-Type': 'text/markdown; charset=utf-8', Vary: 'Accept' },
+          })
+        }
+        return next()          // defers to SSR HTML
+      },
+    },
+  },
+  loader: ({ params }) => getPlan({ data: params }),
+  component: PlanReader,
+})
+```
 
-Because that path is plain HTTP and plain text, Claude Code, Codex, Cursor, and Aider all consume plans with zero per-tool integration work. Never gate the Markdown response behind JavaScript, and never return HTML to a client that asked for Markdown.
+`next()` exists only because the same route defines `component`; without one it throws. This defer behaviour is shipping but **undocumented**, which is exactly why `@tanstack/react-start` is pinned and why this phase owes an integration test asserting both branches of this route.
 
-Private and workspace-visibility plans require a session or a bearer token. `PUBLIC` plans serve both representations anonymously via `publicSlug`.
+The Markdown branch returns raw MDX source behind a YAML frontmatter preamble carrying `title`, `version`, `status`, `url`, `openDecisions`, and `updatedAt`. A `.md` suffix or `?format=md` forces it too. Because it is plain HTTP and plain text, Claude Code, Codex, Cursor, and Aider all consume plans with zero per-tool integration. Always send `Vary: Accept`, never gate the Markdown response behind JavaScript, and never return HTML to a client that asked for Markdown.
 
-**Phase 2 done when:** `curl -H 'Accept: text/markdown'` on a seeded plan returns frontmatter plus MDX and nothing else; the same URL in a browser renders the reader; posting a second version returns a non-empty `changeSummary`; a lint-failing source is rejected with per-rule findings.
+`p.$workspaceSlug.$planSlug.v.$number.tsx` does the same for a specific version.
+
+Private and workspace-visibility plans require a session or a bearer token; `public` plans serve both representations anonymously via `publicSlug`. Static assets are served ahead of the Worker, so plan URLs stay under the `/p/` prefix where they cannot collide with a filename in `dist/client`.
+
+**Phase 2 done when:** `wrangler deploy --dry-run` succeeds and lists the `DB` and `CACHE` bindings; `wrangler d1 migrations apply plantifiles --local` creates every table; `curl -H 'Accept: text/markdown'` on a seeded plan returns frontmatter plus MDX and nothing else; the same URL in a browser returns SSR HTML; an automated test asserts both negotiation branches; posting a second version returns a non-empty `changeSummary`; and a lint-failing source is rejected with per-rule findings.
 
 ---
 
@@ -274,13 +332,13 @@ Commands:
 
 **A published plan is a page of the app, not a document the app hosts.** No iframe, no sanitized HTML blob, no separate stylesheet, no `dangerouslySetInnerHTML`. A plan body is React components built from the same shadcn primitives and the same tokens as the dashboard chrome, so a plan and the plan list are visibly the same product. That continuity is the magic; losing it turns this into a nicer artifact host.
 
-Read `skill://design` and follow it. Radix/shadcn primitives are mandatory over hand-rolled equivalents, Lucide for icons, semantic CSS variables per its `BRAND_GUIDELINES.md`, Inter and JetBrains Mono, design tokens rather than magic numbers.
+Read `skill://design` and follow it, with one substitution: it assumes a Tailwind v3 `tailwind.config`, and this project is Tailwind v4, so tokens are declared CSS-first with `@theme`. Everything else holds — Radix/shadcn primitives are mandatory over hand-rolled equivalents, Lucide for icons, semantic variables, Inter and JetBrains Mono, design tokens rather than magic numbers. The shadcn components live in `packages/ui` with their own `components.json`, matching `recalio`.
 
 ## The theme
 
 The skill's palette is the shadcn default — take the *mechanism*, not the identity. Pick a distinctive accent and one signature typographic move, then record both in `DECISIONS.md`. A layout indistinguishable from every other dashboard fails this phase.
 
-Extend the token layer in one `globals.css` with plan-block semantics: `--decision`, `--risk-low`, `--risk-med`, `--risk-high`, `--phase`, `--success`, `--warning`, `--diagram-node`, `--diagram-edge`. Dashboard chrome and plan blocks consume that single set. Dark mode ships from day one, and the Mermaid theme config reads those same CSS variables at runtime rather than carrying its own palette — so one token change restyles chrome, blocks, and diagrams together.
+Declare the token layer once, CSS-first, in `apps/web/src/styles.css` under `@theme`, and extend it with plan-block semantics: `--color-decision`, `--color-risk-low`, `--color-risk-med`, `--color-risk-high`, `--color-phase`, `--color-success`, `--color-warning`, `--color-diagram-node`, `--color-diagram-edge`. Dashboard chrome and plan blocks consume that single set. Dark mode ships from day one, and the Mermaid theme config reads those same variables at runtime rather than carrying its own palette — so one token change restyles chrome, blocks, and diagrams together.
 
 ## Layout
 
@@ -310,15 +368,15 @@ Status chips are defined once and reused by the dashboard, the reader header, an
 
 Persistent left sidebar: workspace switcher, Plans, Decisions, Settings. Topbar breadcrumb `workspace / plan`. Command palette on `cmd+k` searching plan titles and open decisions. User menu with theme toggle. The plan reader renders in the same content region as every other page, reached by client navigation.
 
-Routes:
+Routes, with the TanStack Start file that owns each. Shell chrome lives in `src/routes/-components/`, following `recalio`'s dash-prefixed colocation convention:
 
-- `/` — redirect to the user's last workspace, or onboarding when they have none.
-- `/w/:slug` — dashboard.
-- `/w/:slug/decisions` — every `OPEN` decision across all plans, grouped by plan, with owner and the plan's status. The team's "what is blocking planning" view, nearly free given the schema.
-- `/w/:slug/settings` — name, `requiredApprovals`, members and roles.
-- `/settings/tokens` — create a named token, reveal the plaintext exactly once, list tokens with `lastUsedAt`, revoke. This is the page `plantifiles login` sends people to.
-- `/p/:workspaceSlug/:planSlug` — the reader.
-- `/login` — GitHub only.
+- `/` — `index.tsx`. Redirect to the user's last workspace, or onboarding when they have none.
+- `/w/:slug` — `w.$slug.index.tsx`. Dashboard.
+- `/w/:slug/decisions` — `w.$slug.decisions.tsx`. Every open decision across all plans, grouped by plan, with owner and the plan's status. The team's "what is blocking planning" view, nearly free given the schema.
+- `/w/:slug/settings` — `w.$slug.settings.tsx`. Name, `requiredApprovals`, members and roles.
+- `/settings/tokens` — `settings.tokens.tsx`. Create a named token, reveal the plaintext exactly once, list tokens with `lastUsedAt`, revoke. This is the page `plantifiles login` sends people to.
+- `/p/:workspaceSlug/:planSlug` — `p.$workspaceSlug.$planSlug.tsx`. The reader, and the negotiated route from Phase 2.
+- `/login` — `login.tsx`. GitHub only.
 
 ## The dashboard
 
@@ -334,10 +392,63 @@ Every route gets a loading skeleton and an empty state. Keyboard navigation and 
 
 # Phase 5 — the reader
 
-Server-rendered MDX through a fixed component registry, rendered inside the Phase 4 shell. The registry is the only allow-list, so an unknown component fails the render loudly rather than degrading.
+MDX is compiled and rendered at request time from the source string in D1, inside the Phase 4 shell. This is the hardest constraint in the whole build, because the obvious approach does not work on Workers.
+
+## Why the obvious path is closed
+
+`@mdx-js/mdx`'s `evaluate()` and `run()` construct an `AsyncFunction` from a string. Cloudflare forbids runtime code generation, so on workerd both fail with `EvalError: Code generation from strings disallowed for this context`. `next-mdx-remote` uses `Reflect.construct(Function, …)` and fails identically. Neither is usable — do not spend time trying to make them work.
+
+## The renderer
+
+Parse with remark, convert to hast, and render hast to React with a registry-backed evaluater that performs a **lookup** where the library would otherwise eval:
+
+```ts
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import remarkGfm from 'remark-gfm'
+import remarkMdx from 'remark-mdx'
+import remarkRehype from 'remark-rehype'
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
+
+const MDX_NODES = ['mdxFlowExpression','mdxJsxFlowElement','mdxJsxTextElement','mdxTextExpression','mdxjsEsm']
+
+const pipeline = unified().use(remarkParse).use(remarkGfm).use(remarkMdx)
+  .use(remarkRehype, { passThrough: MDX_NODES })
+
+const evaluater = (registry: Record<string, unknown>) => () => ({
+  evaluateExpression(node: any) {
+    if (node.type === 'Identifier') {
+      if (Object.hasOwn(registry, node.name)) return registry[node.name]
+      throw new Error(`Unknown MDX component <${node.name}>.`)
+    }
+    if (node.type === 'Literal') return node.value
+    throw new Error(`JS expressions are not allowed in plan documents (${node.type}).`)
+  },
+  evaluateProgram() { throw new Error('import/export are not allowed in plan documents.') },
+})
+
+export function renderPlan(source: string, registry: Record<string, unknown>) {
+  const hast = pipeline.runSync(pipeline.parse(source))
+  return toJsxRuntime(hast, { Fragment, jsx, jsxs, components: registry, createEvaluater: evaluater(registry) })
+}
+```
+
+Three details are load-bearing, and each one fails **silently** when missed:
+
+1. `remark-rehype` must receive `passThrough` with all five MDX node types. Omit it and every `<Decision>` degrades to a bare `<div>` with no warning whatsoever.
+2. A capitalized component name arrives at `createEvaluater` as an ESTree `Identifier`, which is why the registry lookup lives there. With no evaluater at all, custom components throw `Cannot handle MDX estrees without createEvaluater`.
+3. A **lowercase** unknown name skips the evaluater entirely and renders as a raw unknown tag with no error — `<decision owner="x">hi</decision>` just renders. Close that hole with a strict `components` Proxy trapping `getOwnPropertyDescriptor`; the library gates on `hasOwnProperty`, so trapping `has` accomplishes nothing.
+
+Props arrive verbatim — no `class`→`className` rewriting, no kebab mangling — and a bare attribute like `recommended` arrives as boolean `true`.
+
+A hast tree is plain JSON, and `JSON.parse` of a cached tree benchmarked roughly 14× faster than reparsing a 14 KB document. That is a KV cache keyed by content hash, worth adding once documents get large, and it is not a substitute for the renderer above: the source string stays the contract.
+
+## Reader surfaces
 
 - **Themed render** — one house style built from the shared tokens. Every component's treatment is specified in the anatomy table below; a block that renders as bare prose or an unstyled `div` is a bug, not a style choice.
-- **Diagrams** — Mermaid rendered client-side against the CSS-variable theme; D2 via `@terrastruct/d2` if it installs cleanly, otherwise show the source in a code block and note it in `DECISIONS.md`.
+- **Diagrams** — Mermaid is client-only, so render it in an effect after hydration against the CSS-variable theme, never during SSR. v1 draws `lang="mermaid"` only; `lang="d2"` renders its source in a code block, because no Workers-safe D2 path is proven. Note that in `DECISIONS.md`.
+- **Code highlighting** — Shiki's default WASM engine fails on Workers with `Wasm code generation disallowed by embedder`. Use `createHighlighterCore` with `createJavaScriptRegexEngine()` and fine-grained theme and language imports, and build the highlighter lazily inside a request rather than at module scope, because Worker global scope must finish in one second.
 - **Skim toggle** — switches between skim projection and full document, persisted per user in `localStorage`.
 - **Header** — title, status chip, version selector, read time, lint score, open-decision count, "Copy Markdown URL" button.
 - **Outline rail** — sticky right-hand jump list of headings and decisions, collapsing on mobile. A 12-minute document needs a map.
@@ -361,7 +472,7 @@ All ten components, so none of this is left to invention. Each block also carrie
 | `<CodeSketch>` | `rounded-lg border` with a `bg-muted` filename bar carrying the `file` prop in JetBrains Mono `text-xs`, highlighted body below via Shiki. |
 | `<Callout>` | The lightest treatment of the set: `bg-muted/40 border-l-2` with `Info` or `AlertTriangle` per `kind`. |
 
-**Phase 5 done when:** the example plan from Phase 1 renders with every block matching its row in the anatomy table, the Mermaid diagram draws in house colors, prose holds the 68ch measure, skim mode hides prose while keeping decisions and diagrams, the outline rail jumps to blocks, and the diff view for v1→v2 shows the changed blocks.
+**Phase 5 done when:** the example plan from Phase 1 renders with every block matching its row in the anatomy table; an unknown capitalized component and an unknown lowercase element each throw rather than rendering; the Mermaid diagram draws in house colors after hydration; prose holds the 68ch measure; skim mode hides prose while keeping decisions and diagrams; the outline rail jumps to blocks; and the diff view for v1→v2 shows the changed blocks.
 
 ---
 
@@ -410,9 +521,11 @@ Teams paste links in Slack no matter what is built, so own the preview instead o
 
 Slack app with OAuth install per workspace, subscribed to `link_shared`. Unfurl shows title, status, version number, read time, open-decision count, and pending-approval count. Link a Slack workspace to a Plantifiles workspace at install time and store the mapping.
 
+The webhook route reads the raw body with `await request.text()` before parsing, since HMAC verification needs the bytes as sent. Give the route an explicit `ANY` handler returning 405: a route defining only `POST` answers a stray `GET` with 200 and SSR HTML, which would make a misrouted Slack retry look like a success. Push the unfurl response through `waitUntil` when the work outlives the response.
+
 Scope is the unfurl only. Notifications back into threads are v2.
 
-**Phase 9 done when:** pasting a plan URL into a Slack channel of the installed workspace renders the unfurl with live counts.
+**Phase 9 done when:** pasting a plan URL into a Slack channel of the installed workspace renders the unfurl with live counts, and a `GET` on the webhook route returns 405 rather than HTML.
 
 ---
 
@@ -432,7 +545,7 @@ The skill suggests; the lint enforces. Keep it short enough that an agent reads 
 
 Not a test file. Run the product and show the output.
 
-1. `docker compose up -d` for Postgres, `pnpm db:push`, `pnpm dev`.
+1. `wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, `pnpm drizzle-kit generate`, `wrangler d1 migrations apply plantifiles --local`, then `pnpm dev`.
 2. Sign in with GitHub, create workspace `demo`, mint a token at `/settings/tokens`.
 3. From a real agent session, write a plan for any small feature using the Phase 10 skill and `plantifiles push --agent claude-code`.
 4. Land on the dashboard and confirm the new plan appears in the table with its status, version, and agent name.
@@ -445,13 +558,14 @@ Not a test file. Run the product and show the output.
 
 Paste the real terminal output and the browser observations. Step 10 is the whole thesis of the product — if it does not work, v1 is not done.
 
-Then, and only then: one Playwright spec covering steps 3–9 against a seeded database, and `README.md` with setup plus the demo loop.
+Then, and only then: `wrangler deploy` to a real Workers environment and re-run steps 5, 6, and 10 against the deployed URL — local workerd and deployed workerd differ, and the Markdown branch is the one thing that must work from the public internet. Finish with one Playwright spec covering steps 3–9 against a seeded local D1, and `README.md` with setup plus the demo loop.
 
 ---
 
 # Notes for whoever builds this
 
-- `packages/core` is the deep module. Everything else is I/O around it. Keep model calls, Prisma, and React out of it so the consistency rules stay unit-testable.
+- `packages/core` is the deep module. Everything else is I/O around it. Keep the DB client, model calls, and React out of it so the consistency rules stay unit-testable — and keep it eval-free so it runs unchanged on Workers.
 - Structure is what buys per-block comments, real diffs, and skim mode. The moment freeform HTML is allowed through, all three become impossible — that constraint is the product, not a limitation of it.
 - The plan reader shares the dashboard's shell, primitives, and token set. The moment a plan needs its own stylesheet or an iframe, the product has become an artifact host and the differentiator is gone.
 - Record every judgement call in `DECISIONS.md` with one line of reasoning, so the next agent inherits the why.
+- `RESEARCH.md` is the verified reference for API shapes and gotchas. Four claims in it are marked UNVERIFIED — confirm those against real docs before depending on them, and correct the file in place when you learn the answer.

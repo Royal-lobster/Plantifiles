@@ -1,0 +1,6 @@
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: Canvas; color: CanvasText; }
+a { color: inherit; }
+main { max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: "JetBrains Mono", ui-monospace, monospace; line-height: 1.6; }
