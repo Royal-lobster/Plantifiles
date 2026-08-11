@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { apiToken, user } from "@plantifiles/db/schema";
 import { eq } from "drizzle-orm";
 import { getAuth } from "./auth.server";
-import { getDb } from "./runtime.server";
+import { getDb, getRuntimeEnv } from "./runtime.server";
 
 export type RequestIdentity = {
 	user: typeof user.$inferSelect;
@@ -25,6 +25,22 @@ export async function authenticateRequest(request: Request): Promise<RequestIden
 		if (!match) return null;
 		await db.update(apiToken).set({ lastUsedAt: new Date() }).where(eq(apiToken.id, match.token.id));
 		return { user: match.user, method: "bearer" };
+	}
+
+	if (getRuntimeEnv().LOCAL_DEV === "true") {
+		const devUserId = request.headers
+			.get("cookie")
+			?.split(";")
+			.map((value) => value.trim().split("="))
+			.find(([name]) => name === "pf_dev_user")?.[1];
+		if (devUserId) {
+			const users = await getDb()
+				.select()
+				.from(user)
+				.where(eq(user.id, decodeURIComponent(devUserId)))
+				.limit(1);
+			if (users[0]) return { user: users[0], method: "session" };
+		}
 	}
 
 	const session = await getAuth().api.getSession({ headers: request.headers });

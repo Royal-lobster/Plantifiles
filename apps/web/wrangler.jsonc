@@ -6,8 +6,7 @@
   "main": "@tanstack/react-start/server-entry",
   "observability": { "enabled": true },
   "vars": {
-    "PUBLIC_URL": "http://localhost:3000",
-    "LOCAL_DEV": "true"
+    "PUBLIC_URL": "http://localhost:3000"
   },
   "d1_databases": [
     {

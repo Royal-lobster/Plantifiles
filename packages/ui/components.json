@@ -1,0 +1,21 @@
+{
+	"$schema": "https://ui.shadcn.com/schema.json",
+	"style": "radix-nova",
+	"rsc": false,
+	"tsx": true,
+	"tailwind": {
+		"config": "",
+		"css": "../../apps/web/src/styles.css",
+		"baseColor": "neutral",
+		"cssVariables": true,
+		"prefix": ""
+	},
+	"iconLibrary": "lucide",
+	"aliases": {
+		"components": "@plantifiles/ui/components",
+		"utils": "@plantifiles/ui/lib/utils",
+		"hooks": "@plantifiles/ui/hooks",
+		"lib": "@plantifiles/ui/lib",
+		"ui": "@plantifiles/ui/components"
+	}
+}
