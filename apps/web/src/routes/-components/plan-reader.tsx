@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Check, Clock3, Eye, FileDown, GitCompareArrows, History, ListTree } from "lucide-react";
+import { ArrowRight, Check, Clock3, Eye, FileDown, GitCompareArrows, History, ListTree, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { PlanRouteData } from "#/lib/plan-data";
 import { renderPlan } from "#/lib/render-plan";
@@ -23,6 +23,7 @@ type PlanReaderProps = {
 	data: PlanRouteData;
 	workspaceSlug: string;
 	planSlug: string;
+	compareFrom?: number | undefined;
 };
 
 const CHANGE_CLASS: Record<BlockChange["type"], string> = {
@@ -46,11 +47,11 @@ function outlineLabel(source: string): string {
 		.slice(0, 80);
 }
 
-function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
+function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderProps) {
 	const router = useRouter();
 	const [skim, setSkim] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const [showDiff, setShowDiff] = useState(false);
+	const [showDiff, setShowDiff] = useState(compareFrom !== undefined);
 	const [reviewMessage, setReviewMessage] = useState("");
 	const [reviewBusy, setReviewBusy] = useState(false);
 	const createComment = useServerFn(createCommentForPage);
@@ -60,7 +61,11 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	const advanceStatus = useServerFn(advancePlanStatusForPage);
 	const latest = data.versions[0];
 	const oldest = data.versions.at(-1);
-	const [fromNumber, setFromNumber] = useState(String(oldest?.number ?? data.version.number));
+	const [fromNumber, setFromNumber] = useState(
+		String(
+			data.versions.some((item) => item.number === compareFrom) ? compareFrom : (oldest?.number ?? data.version.number),
+		),
+	);
 	const [toNumber, setToNumber] = useState(String(latest?.number ?? data.version.number));
 	const fromVersion = data.versions.find((item) => item.number === Number(fromNumber));
 	const toVersion = data.versions.find((item) => item.number === Number(toNumber));
@@ -193,6 +198,13 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 								"Copy Markdown URL"
 							)}
 						</Button>
+						{data.viewer && isCurrentVersion && (
+							<Button variant="outline" asChild>
+								<Link to="/p/$workspaceSlug/$planSlug/edit" params={{ workspaceSlug, planSlug }}>
+									<Pencil /> Edit
+								</Link>
+							</Button>
+						)}
 						{data.viewer && isCurrentVersion && data.plan.status !== "archived" && (
 							<Button onClick={() => void runStatusAction()} disabled={reviewBusy}>
 								{data.plan.status === "in_review"

@@ -20,3 +20,5 @@
 - 2026-08-12 — Convert CSS token colors through a one-pixel canvas before passing them to Mermaid because Mermaid rejects the design system's OKLCH values.
 - 2026-08-12 — Move approved, building, or shipped plans back to review when a new version lands while preserving prior version approvals as history.
 - 2026-08-12 — Promote an in-review plan automatically once its last open decision is resolved and its current-version approval count meets the workspace gate.
+- 2026-08-12 — Run debounced editor lint and preview compilation in Worker server functions so the browser shares the exact publish gate and receives only serializable HAST.
+- 2026-08-12 — Instantiate CodeMirror 6 after hydration with its official `EditorView` API because the editor owns browser DOM and does not belong in SSR.

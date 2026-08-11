@@ -48,7 +48,6 @@ type PlanBlockProps = ComponentProps<"div"> & {
 	"data-block-kind"?: string;
 	"data-block-key"?: string;
 };
-
 type PlanRenderContextValue = {
 	skim: boolean;
 	decisions: ReaderDecision[];
@@ -60,9 +59,9 @@ type PlanRenderContextValue = {
 	versionNumberById: Record<string, number>;
 	workspaceSlug: string;
 	planSlug: string;
-	onCreateComment?: (value: CreateCommentValue) => Promise<void>;
-	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
-	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
+	onCreateComment?: ((value: CreateCommentValue) => Promise<void>) | undefined;
+	onResolveComment?: ((commentId: string, resolved: boolean) => Promise<void>) | undefined;
+	onResolveDecision?: ((key: string, resolution: string) => Promise<ReviewResult>) | undefined;
 };
 
 const PlanRenderContext = createContext<PlanRenderContextValue>({
@@ -114,9 +113,9 @@ function PlanRenderProvider({
 	versionNumberById: Record<string, number>;
 	workspaceSlug: string;
 	planSlug: string;
-	onCreateComment: (value: CreateCommentValue) => Promise<void>;
-	onResolveComment: (commentId: string, resolved: boolean) => Promise<void>;
-	onResolveDecision: (key: string, resolution: string) => Promise<ReviewResult>;
+	onCreateComment?: (value: CreateCommentValue) => Promise<void>;
+	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
+	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
 }) {
 	const value = useMemo(
 		() => ({
