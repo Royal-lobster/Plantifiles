@@ -27,3 +27,7 @@
 - 2026-08-12 - Keep the Slack Web API origin configurable only through Worker environment bindings so the complete OAuth and unfurl loop can be exercised against a local Slack simulator.
 - 2026-08-12 - Keep one canonical write-plan skill at `skills/write-plan/SKILL.md` and bundle that exact source into the Worker download route rather than maintaining a public-file copy.
 - 2026-08-12 - Render persisted timestamps in an explicit UTC format so Worker SSR and browser hydration produce identical text in every locale.
+- 2026-08-12 — Translate thrown `Response` objects into `notFound()`/`redirect()` at the loader boundary via `guardLoader`, because a raw `Response` reaching the router's dehydration step fails seroval and returns 500 instead of the intended status.
+- 2026-08-12 — Map 403 to the 404 page rather than a distinct "forbidden" screen so a plan the viewer cannot see does not confirm its own existence.
+- 2026-08-12 — Resolve the theme in a blocking inline script in `<head>` rather than in the provider effect, since the server cannot know the preference and hydration-time switching paints light first.
+- 2026-08-12 — Register both Shiki themes with `defaultColor: false` so code blocks follow the `.dark` class through CSS variables instead of pinning `github-dark` in both modes.
