@@ -1,32 +1,49 @@
 # Brief — build Plantifiles v1
 
-You are implementing this product end to end. `PLAN.md` is the complete spec and is settled; `CONVENTIONS.md` is the house style for `apps/web`, extracted from a real reference repo. Where the two conflict, `PLAN.md` wins.
+You are implementing this product end to end on **TanStack Start (React) + the Cloudflare stack**. Read these three, in this order:
+
+1. `PLAN.md` — the complete spec. Settled.
+2. `RESEARCH.md` — verified API shapes, exact config file contents, and gotchas, produced by running real code on workerd. This is not background reading; it is the reference that keeps you from four silent failure modes.
+3. `CONVENTIONS.md` — house style, extracted from the `recalio` repo. Note its caveat: recalio is a Router SPA plus a separate Hono Worker, so take its conventions and not its architecture.
+
+Where any two conflict, `PLAN.md` wins.
+
+## State of the repo
+
+An earlier attempt targeted Next.js + Postgres + Prisma. That stack is gone, and its scaffold has been deleted — it survives only in git history at commit `e120e1f` if you ever want to look. Do not resurrect it.
+
+**`packages/core` is already built, committed, and passing 25 tests. Keep it.** It is framework-free by design and survives the stack change intact. Two things it still owes you:
+
+- Error rule 11 in Phase 1 is new: block components must put their children on their own lines. Add the rule and its tests.
+- Confirm it stays free of `eval` and `new Function`, since it now has to run on Workers as well as Node.
+
+Everything else starts from the TanStack Start scaffold described in Phase 2.
 
 ## How to work
 
-Read `PLAN.md` in full before writing code, then `CONVENTIONS.md`. Build a todo list from its eleven phases and work them in order. Each phase ends in a **done when** clause — that clause is the gate, so satisfy it before moving on.
+Build a todo list from the eleven phases and work them in order. Each phase ends in a **done when** clause — that clause is the gate, so satisfy it before moving on.
 
-Work autonomously. Decide the small stuff yourself using the reference conventions and record every judgement call as one line in `DECISIONS.md`. Do not stop to ask for approval, direction, or confirmation.
+Work autonomously. Decide the small stuff yourself using `CONVENTIONS.md` and record every judgement call as one line in `DECISIONS.md`. Do not stop to ask for approval or direction.
 
 Commit after each phase with a message naming the phase. Skip project-wide reformatting.
 
 ## Structure
 
-`PLAN.md` fixes the monorepo layout: `apps/web`, `apps/cli`, `apps/mcp`, `packages/core`, `packages/db`. Apply `CONVENTIONS.md` **inside `apps/web`** — its route groups, `_components/` `_actions.ts` `_schema.ts` colocation, flat `lib/`, and shadcn placement are the target, not the repo root.
+The monorepo is `apps/web`, `apps/cli`, `apps/mcp`, `packages/core`, `packages/db`, `packages/ui`. Apply `CONVENTIONS.md` inside `apps/web`: `-components/` colocation, `(group)/` route naming, hoisted zod `validateSearch`, Tailwind v4 `@theme` tokens, Biome for lint and format, shadcn living in `packages/ui` with its own `components.json`.
 
-`packages/core` stays framework-free: no React, no Prisma, no network, no model calls. It is pure functions over strings and it carries the unit tests. Everything else is I/O around it.
+`packages/core` stays pure: no React, no DB, no network, no `eval`.
 
 ## Local environment
 
-Bring up Postgres with a `docker compose.yml` you write. Create `.env.example` covering `DATABASE_URL`, `AUTH_SECRET`, `GITHUB_ID`, `GITHUB_SECRET`, `PLANTIFILES_BASE_URL`, and the optional `ANTHROPIC_API_KEY`.
+`wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, then `drizzle-kit generate` and `wrangler d1 migrations apply plantifiles --local`. Secrets go in `.dev.vars` for local dev — note that `.dev.vars` and `.env` are mutually exclusive, and if `.dev.vars` exists then `.env` is ignored entirely. Write a `.dev.vars.example` covering `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `PUBLIC_URL`, and the optional `ANTHROPIC_API_KEY`.
 
-GitHub OAuth credentials are not provisioned for you. GitHub stays the real provider per the spec, and to keep the Phase 11 smoke test runnable you may add a dev-only sign-in that is unreachable when `NODE_ENV === "production"`. Note it in `DECISIONS.md`.
+GitHub OAuth credentials are not provisioned for you. GitHub stays the real provider per the spec, and to keep the smoke test runnable you may add a dev-only sign-in that is unreachable when the Worker is not in local dev. Note it in `DECISIONS.md`.
 
 ## Verification
 
-Phase 11 is not optional and it is not a test file. Run the product, drive the whole loop, and paste the real terminal output plus what you observed in the browser. The load-bearing step is the last one: a *separate* agent session pulling the plan back down as Markdown and building from it. That step is the entire thesis of the product.
+Phase 11 is not optional and it is not a test file. Run the product, drive the whole loop, and paste the real terminal output plus what you observed in the browser. The load-bearing step is the last one: a *separate* agent session pulling the plan back down as Markdown and building from it. That is the entire thesis of the product.
 
-Do not report v1 complete until that loop runs.
+`wrangler deploy --dry-run` works without credentials and is part of the Phase 2 gate. The real `wrangler deploy` at the end of Phase 11 needs a Cloudflare account. If you have no credentials, complete everything else, then say plainly that the deploy step is blocked on Cloudflare auth and what you verified locally instead. Do not fake it, and do not quietly drop it.
 
 ## Division of labour
 
