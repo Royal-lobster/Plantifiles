@@ -54,6 +54,30 @@ function WorkspaceSettings() {
 					{message && <span className="text-success text-sm">{message}</span>}
 				</div>
 			</form>
+			<div className="max-w-xl space-y-4 rounded-lg border bg-card p-5">
+				<div>
+					<h2 className="font-semibold text-lg">Slack link unfurls</h2>
+					<p className="text-muted-foreground text-sm">
+						Show live plan status, version, read time, open decisions, and pending approvals when a plan URL is shared.
+					</p>
+				</div>
+				{data.slack ? (
+					<p className="text-sm">
+						Connected to <span className="font-medium">{data.slack.teamName ?? data.slack.teamId}</span>
+					</p>
+				) : (
+					<p className="text-muted-foreground text-sm">No Slack workspace connected.</p>
+				)}
+				{data.role === "owner" || data.role === "admin" ? (
+					<Button variant={data.slack ? "outline" : "default"} asChild>
+						<a href={`/api/slack/install?workspace=${encodeURIComponent(slug)}`}>
+							{data.slack ? "Reconnect Slack" : "Connect Slack"}
+						</a>
+					</Button>
+				) : (
+					<p className="text-muted-foreground text-xs">An owner or admin can manage this connection.</p>
+				)}
+			</div>
 			<div className="space-y-3">
 				<div>
 					<h2 className="font-semibold text-lg">Members</h2>
