@@ -22,6 +22,7 @@ import { Route as ApiSlackEventsRouteImport } from './routes/api.slack.events'
 import { Route as ApiSlackInstallRouteImport } from './routes/api.slack.install'
 import { Route as ApiTokensIdRouteImport } from './routes/api.tokens.$id'
 import { Route as PWorkspaceSlugPlanSlugRouteImport } from './routes/p.$workspaceSlug.$planSlug'
+import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills.write-plan.SKILL[.]md'
 import { Route as WSlugIndexRouteImport } from './routes/w.$slug.index'
 import { Route as WSlugDecisionsRouteImport } from './routes/w.$slug.decisions'
 import { Route as WSlugSettingsRouteImport } from './routes/w.$slug.settings'
@@ -95,6 +96,12 @@ const PWorkspaceSlugPlanSlugRoute = PWorkspaceSlugPlanSlugRouteImport.update({
   path: '/p/$workspaceSlug/$planSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SkillsWritePlanSKILLDotmdRoute =
+  SkillsWritePlanSKILLDotmdRouteImport.update({
+    id: '/skills/write-plan/SKILL.md',
+    path: '/skills/write-plan/SKILL.md',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const WSlugIndexRoute = WSlugIndexRouteImport.update({
   id: '/w/$slug/',
   path: '/w/$slug/',
@@ -147,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
+  '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/w/$slug/decisions': typeof WSlugDecisionsRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
@@ -169,6 +177,7 @@ export interface FileRoutesByTo {
   '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
+  '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/w/$slug/decisions': typeof WSlugDecisionsRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug': typeof WSlugIndexRoute
@@ -192,6 +201,7 @@ export interface FileRoutesById {
   '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
+  '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/w/$slug/decisions': typeof WSlugDecisionsRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
+    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
     | '/w/$slug/'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
+    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
     | '/w/$slug'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
+    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
     | '/w/$slug/'
@@ -281,6 +294,7 @@ export interface RootRouteChildren {
   ApiSlackEventsRoute: typeof ApiSlackEventsRoute
   ApiSlackInstallRoute: typeof ApiSlackInstallRoute
   PWorkspaceSlugPlanSlugRoute: typeof PWorkspaceSlugPlanSlugRouteWithChildren
+  SkillsWritePlanSKILLDotmdRoute: typeof SkillsWritePlanSKILLDotmdRoute
   WSlugDecisionsRoute: typeof WSlugDecisionsRoute
   WSlugSettingsRoute: typeof WSlugSettingsRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
@@ -377,6 +391,13 @@ declare module '@tanstack/react-router' {
       path: '/p/$workspaceSlug/$planSlug'
       fullPath: '/p/$workspaceSlug/$planSlug'
       preLoaderRoute: typeof PWorkspaceSlugPlanSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills/write-plan/SKILL.md': {
+      id: '/skills/write-plan/SKILL.md'
+      path: '/skills/write-plan/SKILL.md'
+      fullPath: '/skills/write-plan/SKILL.md'
+      preLoaderRoute: typeof SkillsWritePlanSKILLDotmdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/w/$slug/': {
@@ -497,6 +518,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSlackEventsRoute: ApiSlackEventsRoute,
   ApiSlackInstallRoute: ApiSlackInstallRoute,
   PWorkspaceSlugPlanSlugRoute: PWorkspaceSlugPlanSlugRouteWithChildren,
+  SkillsWritePlanSKILLDotmdRoute: SkillsWritePlanSKILLDotmdRoute,
   WSlugDecisionsRoute: WSlugDecisionsRoute,
   WSlugSettingsRoute: WSlugSettingsRoute,
   WSlugIndexRoute: WSlugIndexRoute,

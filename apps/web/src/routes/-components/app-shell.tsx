@@ -22,6 +22,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
 	CheckCircle2,
 	ChevronsUpDown,
+	Download,
 	FileText,
 	Menu,
 	Moon,
@@ -205,6 +206,11 @@ function UserMenu({ navigation }: { navigation: NavigationData }) {
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onSelect={() => setTheme(theme === "dark" ? "light" : "dark")}>
 					{theme === "dark" ? <Sun /> : <Moon />} {theme === "dark" ? "Light mode" : "Dark mode"}
+				</DropdownMenuItem>
+				<DropdownMenuItem asChild>
+					<a href="/skills/write-plan/SKILL.md" download>
+						<Download /> Write-plan skill
+					</a>
 				</DropdownMenuItem>
 				{navigation.user && (
 					<DropdownMenuItem asChild>

@@ -25,3 +25,4 @@
 - 2026-08-12 — Use the stable MCP TypeScript SDK v2 split server package and require both token and service URL so the stdio adapter stays a thin HTTP client.
 - 2026-08-12 - Map each Plantifiles workspace to one Slack team, restrict installation to owners and admins, and encrypt bot tokens with AES-GCM under `BETTER_AUTH_SECRET`.
 - 2026-08-12 - Keep the Slack Web API origin configurable only through Worker environment bindings so the complete OAuth and unfurl loop can be exercised against a local Slack simulator.
+- 2026-08-12 - Keep one canonical write-plan skill at `skills/write-plan/SKILL.md` and bundle that exact source into the Worker download route rather than maintaining a public-file copy.
