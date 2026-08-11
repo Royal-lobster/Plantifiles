@@ -355,6 +355,46 @@ export async function loadPlanDocument(
 		comments,
 	};
 }
+export type PlanReaderVersion = {
+	id: string;
+	number: number;
+	agentName: string | null;
+	agentPrompt: string | null;
+	changeSummary: string | null;
+	changeSummaryProse: string | null;
+	createdAt: Date;
+	author: { id: string; name: string; image: string | null };
+	blocks: Block[];
+};
+
+export async function loadPlanReaderData(
+	request: Request,
+	workspaceSlug: string,
+	requestedSlug: string,
+	versionNumber?: number,
+): Promise<{ document: PlanDocument; versions: PlanReaderVersion[] }> {
+	const document = await loadPlanDocument(request, workspaceSlug, requestedSlug, versionNumber);
+	const rows = await getDb()
+		.select({ version: planVersion, author: user })
+		.from(planVersion)
+		.innerJoin(user, eq(planVersion.authorId, user.id))
+		.where(eq(planVersion.planId, document.plan.id))
+		.orderBy(desc(planVersion.number));
+	return {
+		document,
+		versions: rows.map(({ version, author }) => ({
+			id: version.id,
+			number: version.number,
+			agentName: version.agentName,
+			agentPrompt: version.agentPrompt,
+			changeSummary: version.changeSummary,
+			changeSummaryProse: version.changeSummaryProse,
+			createdAt: version.createdAt,
+			author: { id: author.id, name: author.name, image: author.image },
+			blocks: normalize(version.source),
+		})),
+	};
+}
 
 function yamlString(value: string): string {
 	return JSON.stringify(value);

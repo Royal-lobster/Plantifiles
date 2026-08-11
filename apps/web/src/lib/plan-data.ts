@@ -2,7 +2,8 @@ import type { LintReport } from "@plantifiles/core";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { loadPlanDocument } from "./plans.server";
+import { compilePlan } from "./plan-render.server";
+import { loadPlanReaderData } from "./plans.server";
 
 const planParamsSchema = z.object({
 	workspaceSlug: z.string(),
@@ -13,7 +14,13 @@ const planParamsSchema = z.object({
 export const getPlanForRoute = createServerFn({ method: "GET" })
 	.validator(planParamsSchema)
 	.handler(async ({ data }) => {
-		const document = await loadPlanDocument(getRequest(), data.workspaceSlug, data.planSlug, data.number);
+		const { document, versions } = await loadPlanReaderData(
+			getRequest(),
+			data.workspaceSlug,
+			data.planSlug,
+			data.number,
+		);
+		const renderTree = await compilePlan(document.version.source);
 		return {
 			...document,
 			plan: { ...document.plan, updatedAt: document.plan.updatedAt.toISOString() },
@@ -37,5 +44,9 @@ export const getPlanForRoute = createServerFn({ method: "GET" })
 				resolvedAt: item.resolvedAt?.toISOString() ?? null,
 			})),
 			approvals: document.approvals.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
+			renderTree,
+			versions: versions.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
 		};
 	});
+
+export type PlanRouteData = Awaited<ReturnType<typeof getPlanForRoute>>;

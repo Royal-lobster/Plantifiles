@@ -15,3 +15,6 @@
 - 2026-08-12 — Resolve plan URLs through authenticated list and detail APIs so `pull` returns the stored source byte-for-byte rather than transport frontmatter.
 - 2026-08-12 — Key `.plantifiles.json` by git-root-relative file path, falling back to the working directory only outside a repository.
 - 2026-08-12 — Use a restrained violet accent and violet/rose diagram pair so status colors remain semantic and the product has one recognizable signature.
+- 2026-08-12 — Compile MDX to serializable HAST in the route loader so SSR and hydration share one strict registry without shipping the Node-only normalizer to browsers.
+- 2026-08-12 — Export the structural diff as a browser-safe core subpath because the core barrel also exports the `node:crypto`-based normalizer.
+- 2026-08-12 — Convert CSS token colors through a one-pixel canvas before passing them to Mermaid because Mermaid rejects the design system's OKLCH values.
