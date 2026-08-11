@@ -1,25 +1,26 @@
 {
-  "name": "plantifiles",
-  "private": true,
-  "packageManager": "pnpm@11.17.0",
-  "engines": {
-    "node": ">=22"
-  },
-  "scripts": {
-    "build": "turbo build",
-    "dev": "turbo build --filter=@plantifiles/core --filter=@plantifiles/db && turbo dev",
-    "format": "biome format .",
-    "format:fix": "biome format . --write",
-    "lint": "biome lint . && turbo lint",
-    "test": "turbo test",
-    "typecheck": "turbo typecheck",
-    "db:generate": "pnpm --filter @plantifiles/db generate",
-    "db:migrate:local": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --local",
-    "db:migrate:remote": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --remote"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.2.4",
-    "turbo": "^2.5.6",
-    "typescript": "^6.0.2"
-  }
+	"name": "plantifiles",
+	"private": true,
+	"packageManager": "pnpm@11.17.0",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "turbo build",
+		"dev": "turbo build --filter=@plantifiles/core --filter=@plantifiles/db && turbo dev",
+		"format": "biome format .",
+		"format:fix": "biome format . --write",
+		"lint": "biome lint . && turbo lint",
+		"test": "turbo test",
+		"test:e2e": "pnpm --filter @plantifiles/cli build && pnpm --filter @plantifiles/web test:e2e",
+		"typecheck": "turbo typecheck",
+		"db:generate": "pnpm --filter @plantifiles/db generate",
+		"db:migrate:local": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --local",
+		"db:migrate:remote": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --remote"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.4",
+		"turbo": "^2.5.6",
+		"typescript": "^6.0.2"
+	}
 }

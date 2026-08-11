@@ -7,6 +7,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Check, Clock3, Eye, FileDown, GitCompareArrows, History, ListTree, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
+import { formatUtcTimestamp } from "#/lib/format-time";
 import type { PlanRouteData } from "#/lib/plan-data";
 import { renderPlan } from "#/lib/render-plan";
 import {
@@ -349,9 +350,7 @@ function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderPr
 								{item.agentName && (
 									<span className="font-mono text-muted-foreground text-xs">via {item.agentName}</span>
 								)}
-								<time className="ml-auto text-muted-foreground text-xs">
-									{new Date(item.createdAt).toLocaleString()}
-								</time>
+								<time className="ml-auto text-muted-foreground text-xs">{formatUtcTimestamp(item.createdAt)}</time>
 							</div>
 							<p className="mt-2 text-muted-foreground text-sm">
 								{item.changeSummaryProse ?? item.changeSummary ?? "Initial version."}

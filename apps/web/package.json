@@ -15,6 +15,7 @@
 		"deploy:dry": "pnpm build && wrangler deploy --dry-run",
 		"cf-typegen": "wrangler types",
 		"test": "vitest run",
+		"test:e2e": "playwright test",
 		"typecheck": "tsc --noEmit",
 		"lint": "tsc --noEmit"
 	},
@@ -54,6 +55,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "1.51.2",
+		"@playwright/test": "1.62.1",
 		"@tailwindcss/vite": "^4.1.14",
 		"@tanstack/router-cli": "1.167.27",
 		"@types/hast": "^3.0.4",

@@ -5,6 +5,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { formatUtcTimestamp } from "#/lib/format-time";
 import { createTokenForPage, getTokensForPage, revokeTokenForPage } from "#/lib/token-data";
 
 export const Route = createFileRoute("/settings/tokens")({
@@ -61,7 +62,7 @@ function TokenSettings() {
 							<span className="min-w-0 flex-1">
 								<span className="block truncate font-medium text-sm">{token.name}</span>
 								<span className="block text-muted-foreground text-xs">
-									{token.lastUsedAt ? `Last used ${new Date(token.lastUsedAt).toLocaleString()}` : "Never used"}
+									{token.lastUsedAt ? `Last used ${formatUtcTimestamp(token.lastUsedAt)}` : "Never used"}
 								</span>
 							</span>
 							<Button

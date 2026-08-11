@@ -26,3 +26,4 @@
 - 2026-08-12 - Map each Plantifiles workspace to one Slack team, restrict installation to owners and admins, and encrypt bot tokens with AES-GCM under `BETTER_AUTH_SECRET`.
 - 2026-08-12 - Keep the Slack Web API origin configurable only through Worker environment bindings so the complete OAuth and unfurl loop can be exercised against a local Slack simulator.
 - 2026-08-12 - Keep one canonical write-plan skill at `skills/write-plan/SKILL.md` and bundle that exact source into the Worker download route rather than maintaining a public-file copy.
+- 2026-08-12 - Render persisted timestamps in an explicit UTC format so Worker SSR and browser hydration produce identical text in every locale.
