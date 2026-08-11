@@ -11,3 +11,6 @@
 - 2026-08-12 — Replace author frontmatter in negotiated Markdown with canonical product metadata while preserving the byte-exact source on the JSON API for CLI pulls.
 - 2026-08-12 — Treat Anthropic prose summaries as best-effort and retain the deterministic structural summary when the API is absent or fails.
 - 2026-08-12 — Commit a deterministic local seed identity and token so integration and smoke runs do not depend on GitHub OAuth credentials.
+- 2026-08-12 — Store the service base URL beside the CLI token instead of hardcoding a production origin; environment variables override both values.
+- 2026-08-12 — Resolve plan URLs through authenticated list and detail APIs so `pull` returns the stored source byte-for-byte rather than transport frontmatter.
+- 2026-08-12 — Key `.plantifiles.json` by git-root-relative file path, falling back to the working directory only outside a repository.

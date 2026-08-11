@@ -280,6 +280,16 @@ export async function listPlans(request: Request, workspaceSlug: string, status?
 			updatedAt: plan.updatedAt,
 			version: planVersion.number,
 			agentName: planVersion.agentName,
+			openDecisions: sql<number>`(
+				select count(*) from decision d
+				where d.plan_id = ${plan.id} and d.status = 'open'
+			)`,
+			approvals: sql<number>`(
+				select count(*) from approval a
+				where a.version_id = ${planVersion.id}
+			)`,
+			requiredApprovals: sql<number>`${targetWorkspace.requiredApprovals}`,
+			readTimeMinutes: sql<number>`coalesce(json_extract(${planVersion.lintReport}, '$.readTimeMinutes'), 0)`,
 		})
 		.from(plan)
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
