@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { negotiatePlanResponse } from "#/lib/content-negotiation";
 import { errorResponse } from "#/lib/http";
+import { guardLoader } from "#/lib/loader-guard";
 import { getPlanForRoute } from "#/lib/plan-data";
 import { loadPlanDocument, renderPlanMarkdown } from "#/lib/plans.server";
 import { PlanReader } from "./-components/plan-reader";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/p/$workspaceSlug/$planSlug/v/$number")({
 			},
 		},
 	},
-	loader: ({ params }) => getPlanForRoute({ data: params }),
+	loader: ({ params }) => guardLoader(() => getPlanForRoute({ data: params })),
 	component: VersionPage,
 	pendingComponent: () => <div className="h-96 animate-pulse rounded-lg bg-muted" />,
 });

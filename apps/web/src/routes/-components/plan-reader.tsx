@@ -164,7 +164,7 @@ function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderPr
 				</div>
 				<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
 					<div>
-						<p className="font-mono text-accent text-xs uppercase tracking-widest">{data.workspace.name} / Plan</p>
+						<p className="font-mono text-accent text-xs uppercase tracking-widest">{data.workspace.name}</p>
 						<h1 className="mt-2 font-semibold text-3xl tracking-tight">{data.plan.title}</h1>
 						<p className="mt-1 text-muted-foreground text-sm">
 							{data.version.number === latest?.number ? "Current" : "Historical"} version by {data.author.name}

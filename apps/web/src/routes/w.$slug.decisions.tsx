@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CircleHelp } from "lucide-react";
 import { getWorkspaceDecisions } from "#/lib/app-data";
+import { guardLoader } from "#/lib/loader-guard";
 import { StatusChip } from "./-components/status-chip";
 
 export const Route = createFileRoute("/w/$slug/decisions")({
-	loader: ({ params }) => getWorkspaceDecisions({ data: params }),
+	loader: ({ params }) => guardLoader(() => getWorkspaceDecisions({ data: params })),
 	component: DecisionsPage,
 	pendingComponent: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />,
 });

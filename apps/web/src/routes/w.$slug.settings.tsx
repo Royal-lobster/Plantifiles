@@ -4,9 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useId, useState } from "react";
 import { getWorkspaceSettings, updateWorkspaceSettings } from "#/lib/app-data";
+import { guardLoader } from "#/lib/loader-guard";
 
 export const Route = createFileRoute("/w/$slug/settings")({
-	loader: ({ params }) => getWorkspaceSettings({ data: params }),
+	loader: ({ params }) => guardLoader(() => getWorkspaceSettings({ data: params })),
 	component: WorkspaceSettings,
 	pendingComponent: () => <div className="h-80 animate-pulse rounded-lg bg-muted" />,
 });

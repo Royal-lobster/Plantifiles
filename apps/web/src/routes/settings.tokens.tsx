@@ -6,10 +6,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatUtcTimestamp } from "#/lib/format-time";
+import { guardLoader } from "#/lib/loader-guard";
 import { createTokenForPage, getTokensForPage, revokeTokenForPage } from "#/lib/token-data";
 
 export const Route = createFileRoute("/settings/tokens")({
-	loader: () => getTokensForPage(),
+	loader: () => guardLoader(() => getTokensForPage()),
 	component: TokenSettings,
 	pendingComponent: () => <div className="h-64 animate-pulse rounded-lg bg-muted" />,
 });

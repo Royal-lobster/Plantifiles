@@ -14,9 +14,10 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const [ready, setReady] = useState(false);
 
 	useEffect(() => {
-		const saved = localStorage.getItem("plantifiles-theme") as Theme | null;
-		const initial = saved ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-		setTheme(initial);
+		// The pre-paint script in __root has already resolved the theme from
+		// localStorage or the system preference, so read it back rather than
+		// deciding a second time and risking the two disagreeing.
+		setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
 		setReady(true);
 	}, []);
 

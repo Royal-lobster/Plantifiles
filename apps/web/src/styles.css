@@ -130,3 +130,17 @@
 		background: color-mix(in oklab, var(--accent) 25%, transparent);
 	}
 }
+
+/* Shiki emits both themes as CSS variables (defaultColor: false), so code blocks
+   follow the same .dark switch as every other token instead of pinning one theme. */
+.shiki,
+.shiki span {
+	color: var(--shiki-light);
+	background-color: var(--shiki-light-bg);
+}
+
+.dark .shiki,
+.dark .shiki span {
+	color: var(--shiki-dark);
+	background-color: var(--shiki-dark-bg);
+}

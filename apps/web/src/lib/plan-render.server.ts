@@ -12,6 +12,7 @@ import tsx from "@shikijs/langs/tsx";
 import typescript from "@shikijs/langs/typescript";
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
 import githubDark from "@shikijs/themes/github-dark";
+import githubLight from "@shikijs/themes/github-light";
 import type { Element, Root, RootContent } from "hast";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
@@ -33,7 +34,7 @@ let highlighterPromise: ReturnType<typeof createHighlighterCore> | undefined;
 
 function getHighlighter() {
 	highlighterPromise ??= createHighlighterCore({
-		themes: [githubDark],
+		themes: [githubLight, githubDark],
 		langs: [typescript, javascript, tsx, jsx, json, bash, css, sql, markdown, mermaid],
 		engine: createJavaScriptRegexEngine(),
 	});
@@ -79,7 +80,11 @@ export async function compilePlan(source: string): Promise<Root> {
 		.use(remarkGfm)
 		.use(remarkMdx)
 		.use(remarkRehype, { passThrough: [...MDX_NODES] })
-		.use(rehypeShikiFromHighlighter, typedHighlighter, { theme: "github-dark", fallbackLanguage: "text" });
+		.use(rehypeShikiFromHighlighter, typedHighlighter, {
+			themes: { light: "github-light", dark: "github-dark" },
+			defaultColor: false,
+			fallbackLanguage: "text",
+		});
 	const tree = (await pipeline.run(pipeline.parse(source))) as Root;
 	return annotateBlocks(tree, source);
 }

@@ -1,7 +1,7 @@
 import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Link, Scripts } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { getNavigationData } from "#/lib/app-data";
@@ -21,6 +21,7 @@ export const Route = createRootRoute({
 		links: [{ rel: "stylesheet", href: appCss }],
 	}),
 	shellComponent: RootDocument,
+	notFoundComponent: NotFound,
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
@@ -29,6 +30,18 @@ function RootDocument({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
+				{/* Resolve the theme before first paint. Without this the server sends
+				    no class, the page paints light, and hydration then flips it to dark. */}
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: must run before paint, so it cannot be a module
+					dangerouslySetInnerHTML={{
+						__html:
+							"try{var t=localStorage.getItem('plantifiles-theme');" +
+							"if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';" +
+							"if(t==='dark')document.documentElement.classList.add('dark');" +
+							"document.documentElement.style.colorScheme=t;}catch(e){}",
+					}}
+				/>
 				<HeadContent />
 			</head>
 			<body>
@@ -40,5 +53,20 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<Scripts />
 			</body>
 		</html>
+	);
+}
+
+function NotFound() {
+	return (
+		<div className="mx-auto max-w-[68ch] py-16">
+			<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">404</p>
+			<h1 className="mt-2 text-2xl font-semibold">Nothing here</h1>
+			<p className="mt-3 leading-7 text-muted-foreground">
+				This plan either does not exist, or it is not visible to you.
+			</p>
+			<Link to="/" className="mt-6 inline-block text-sm underline underline-offset-4">
+				Back to your workspace
+			</Link>
+		</div>
 	);
 }

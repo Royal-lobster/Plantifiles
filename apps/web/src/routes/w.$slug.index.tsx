@@ -6,6 +6,7 @@ import { Check, Copy, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { getDashboardData } from "#/lib/app-data";
+import { guardLoader } from "#/lib/loader-guard";
 import { type PlanStatus, StatusChip } from "./-components/status-chip";
 
 const dashboardSearchSchema = z.object({
@@ -15,7 +16,7 @@ const dashboardSearchSchema = z.object({
 
 export const Route = createFileRoute("/w/$slug/")({
 	validateSearch: dashboardSearchSchema,
-	loader: ({ params }) => getDashboardData({ data: params }),
+	loader: ({ params }) => guardLoader(() => getDashboardData({ data: params })),
 	component: Dashboard,
 	pendingComponent: DashboardSkeleton,
 });
