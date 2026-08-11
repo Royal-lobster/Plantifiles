@@ -22,3 +22,4 @@
 - 2026-08-12 — Promote an in-review plan automatically once its last open decision is resolved and its current-version approval count meets the workspace gate.
 - 2026-08-12 — Run debounced editor lint and preview compilation in Worker server functions so the browser shares the exact publish gate and receives only serializable HAST.
 - 2026-08-12 — Instantiate CodeMirror 6 after hydration with its official `EditorView` API because the editor owns browser DOM and does not belong in SSR.
+- 2026-08-12 — Use the stable MCP TypeScript SDK v2 split server package and require both token and service URL so the stdio adapter stays a thin HTTP client.
