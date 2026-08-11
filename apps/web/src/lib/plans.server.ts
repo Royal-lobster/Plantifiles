@@ -33,6 +33,9 @@ export type PublishVersionInput = {
 	force?: boolean | undefined;
 	baseVersion?: number | undefined;
 };
+export type PlanComment = typeof comment.$inferSelect & {
+	author: { id: string; name: string; image: string | null };
+};
 
 export type PlanDocument = {
 	plan: typeof plan.$inferSelect;
@@ -42,7 +45,7 @@ export type PlanDocument = {
 	blocks: Block[];
 	decisions: Array<typeof decision.$inferSelect>;
 	approvals: Array<typeof approval.$inferSelect>;
-	comments: Array<typeof comment.$inferSelect>;
+	comments: PlanComment[];
 };
 
 function slugify(value: string): string {
@@ -227,10 +230,9 @@ export async function createPlanVersion(request: Request, planId: string, input:
 		),
 		...blockStatements(blocks, versionId),
 		...decisionStatements(blocks, planId),
-		runtime.DB.prepare("update plan set current_version_id = ?, updated_at = unixepoch() where id = ?").bind(
-			versionId,
-			planId,
-		),
+		runtime.DB.prepare(
+			"update plan set current_version_id = ?, status = case when status in ('approved', 'building', 'shipped') then 'in_review' else status end, updated_at = unixepoch() where id = ?",
+		).bind(versionId, planId),
 	];
 	await runtime.DB.batch(statements);
 
@@ -339,10 +341,15 @@ export async function loadPlanDocument(
 	const selected = versions[0];
 	if (!selected) throw new Response("Version not found", { status: 404 });
 
-	const [decisions, approvals, comments] = await Promise.all([
+	const [decisions, approvals, commentRows] = await Promise.all([
 		db.select().from(decision).where(eq(decision.planId, target.plan.id)).orderBy(asc(decision.key)),
 		db.select().from(approval).where(eq(approval.versionId, selected.version.id)),
-		db.select().from(comment).where(eq(comment.planId, target.plan.id)).orderBy(asc(comment.createdAt)),
+		db
+			.select({ comment, author: user })
+			.from(comment)
+			.innerJoin(user, eq(comment.authorId, user.id))
+			.where(eq(comment.planId, target.plan.id))
+			.orderBy(asc(comment.createdAt)),
 	]);
 	return {
 		plan: target.plan,
@@ -352,7 +359,10 @@ export async function loadPlanDocument(
 		blocks: normalize(selected.version.source),
 		decisions,
 		approvals,
-		comments,
+		comments: commentRows.map(({ comment: item, author }) => ({
+			...item,
+			author: { id: author.id, name: author.name, image: author.image },
+		})),
 	};
 }
 export type PlanReaderVersion = {
@@ -372,8 +382,13 @@ export async function loadPlanReaderData(
 	workspaceSlug: string,
 	requestedSlug: string,
 	versionNumber?: number,
-): Promise<{ document: PlanDocument; versions: PlanReaderVersion[] }> {
+): Promise<{
+	document: PlanDocument;
+	versions: PlanReaderVersion[];
+	viewer: { id: string; name: string; image: string | null } | null;
+}> {
 	const document = await loadPlanDocument(request, workspaceSlug, requestedSlug, versionNumber);
+	const identity = await authenticateRequest(request);
 	const rows = await getDb()
 		.select({ version: planVersion, author: user })
 		.from(planVersion)
@@ -393,6 +408,7 @@ export async function loadPlanReaderData(
 			author: { id: author.id, name: author.name, image: author.image },
 			blocks: normalize(version.source),
 		})),
+		viewer: identity ? { id: identity.user.id, name: identity.user.name, image: identity.user.image } : null,
 	};
 }
 

@@ -2,12 +2,21 @@ import type { BlockChange } from "@plantifiles/core";
 import { diff } from "@plantifiles/core/diff";
 import { Button } from "@plantifiles/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
+import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
-import { Check, Clock3, Eye, FileDown, GitCompareArrows, History, ListTree } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowRight, Check, Clock3, Eye, FileDown, GitCompareArrows, History, ListTree } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { PlanRouteData } from "#/lib/plan-data";
 import { renderPlan } from "#/lib/render-plan";
-import { PlanRenderProvider } from "./plan-components";
+import {
+	advancePlanStatusForPage,
+	approveCurrentVersionForPage,
+	createCommentForPage,
+	resolveDecisionForPage,
+	setCommentResolvedForPage,
+} from "#/lib/review-data";
+import { DetachedCommentThreads, PlanRenderProvider } from "./plan-components";
 import { StatusChip } from "./status-chip";
 
 type PlanReaderProps = {
@@ -21,6 +30,12 @@ const CHANGE_CLASS: Record<BlockChange["type"], string> = {
 	removed: "bg-destructive/15 text-destructive",
 	modified: "bg-warning/15 text-warning",
 	moved: "bg-accent/15 text-accent",
+};
+const NEXT_STATUS_LABEL: Record<Exclude<PlanRouteData["plan"]["status"], "archived" | "in_review">, string> = {
+	draft: "Submit for review",
+	approved: "Start building",
+	building: "Mark shipped",
+	shipped: "Archive",
 };
 
 function outlineLabel(source: string): string {
@@ -36,6 +51,13 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	const [skim, setSkim] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [showDiff, setShowDiff] = useState(false);
+	const [reviewMessage, setReviewMessage] = useState("");
+	const [reviewBusy, setReviewBusy] = useState(false);
+	const createComment = useServerFn(createCommentForPage);
+	const setCommentResolved = useServerFn(setCommentResolvedForPage);
+	const resolveDecision = useServerFn(resolveDecisionForPage);
+	const approveVersion = useServerFn(approveCurrentVersionForPage);
+	const advanceStatus = useServerFn(advancePlanStatusForPage);
 	const latest = data.versions[0];
 	const oldest = data.versions.at(-1);
 	const [fromNumber, setFromNumber] = useState(String(oldest?.number ?? data.version.number));
@@ -54,11 +76,42 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 				.map((change) => [change.next?.key ?? change.key, true]),
 		) as Record<string, true>;
 	}, [data.version.number, showDiff, structuralDiff, toVersion]);
+	const isCurrentVersion = data.version.number === latest?.number;
+	const currentBlockKeys = useMemo(
+		() => Object.fromEntries((latest?.blocks ?? []).map((block) => [block.key, true])) as Record<string, true>,
+		[latest],
+	);
+	const versionNumberById = useMemo(
+		() => Object.fromEntries(data.versions.map((version) => [version.id, version.number])),
+		[data.versions],
+	);
 	const rendered = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
 	const outline = data.blocks.filter(
 		(block) => block.kind === "Heading2" || block.kind === "Heading3" || block.kind === "Decision",
 	);
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
+	const currentApprovals = isCurrentVersion ? data.approvals.length : 0;
+
+	async function refreshReview(resultMessage: string) {
+		setReviewMessage(resultMessage);
+		await router.invalidate();
+	}
+
+	async function runStatusAction() {
+		setReviewBusy(true);
+		setReviewMessage("");
+		try {
+			const result =
+				data.plan.status === "in_review"
+					? await approveVersion({ data: { planId: data.plan.id } })
+					: await advanceStatus({ data: { planId: data.plan.id } });
+			await refreshReview(result.reason ?? `Plan is now ${result.status.replace("_", " ")}.`);
+		} catch (caught) {
+			setReviewMessage(caught instanceof Error ? caught.message : "Could not update plan status.");
+		} finally {
+			setReviewBusy(false);
+		}
+	}
 
 	async function selectVersion(value: string) {
 		const number = Number(value);
@@ -99,6 +152,9 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 						<Clock3 className="size-3.5" />
 						{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min
 					</span>
+					<span className="rounded-full bg-muted px-2 py-1 font-mono text-muted-foreground text-xs">
+						{currentApprovals}/{data.workspace.requiredApprovals} approvals
+					</span>
 				</div>
 				<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
 					<div>
@@ -109,7 +165,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 							{data.version.agentName ? ` via ${data.version.agentName}` : " by hand"}
 						</p>
 					</div>
-					<div className="flex flex-wrap gap-2">
+					<div className="flex flex-wrap items-center gap-2">
 						<Button variant={skim ? "default" : "outline"} onClick={() => setSkim((value) => !value)}>
 							<Eye /> {skim ? "Full document" : "Skim"}
 						</Button>
@@ -137,8 +193,23 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 								"Copy Markdown URL"
 							)}
 						</Button>
+						{data.viewer && isCurrentVersion && data.plan.status !== "archived" && (
+							<Button onClick={() => void runStatusAction()} disabled={reviewBusy}>
+								{data.plan.status === "in_review"
+									? reviewBusy
+										? "Approving…"
+										: "Approve current version"
+									: NEXT_STATUS_LABEL[data.plan.status]}
+								<ArrowRight />
+							</Button>
+						)}
 					</div>
 				</div>
+				{reviewMessage && (
+					<p className={cn("text-sm", reviewMessage.includes("block") ? "text-warning" : "text-muted-foreground")}>
+						{reviewMessage}
+					</p>
+				)}
 			</header>
 
 			{showDiff && structuralDiff && fromVersion && toVersion && (
@@ -202,8 +273,33 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 			</details>
 			<div className="xl:grid xl:grid-cols-[minmax(0,68ch)_14rem] xl:items-start xl:gap-12">
 				<article className="min-w-0 space-y-6">
-					<PlanRenderProvider skim={skim} decisions={data.decisions} changedKeys={changedKeys}>
+					<PlanRenderProvider
+						skim={skim}
+						decisions={data.decisions}
+						comments={data.comments}
+						changedKeys={changedKeys}
+						currentBlockKeys={currentBlockKeys}
+						viewerId={data.viewer?.id ?? null}
+						isCurrentVersion={isCurrentVersion}
+						versionNumberById={versionNumberById}
+						workspaceSlug={workspaceSlug}
+						planSlug={planSlug}
+						onCreateComment={async (value) => {
+							await createComment({ data: { planId: data.plan.id, ...value } });
+							await refreshReview("Comment added.");
+						}}
+						onResolveComment={async (commentId, resolved) => {
+							await setCommentResolved({ data: { commentId, resolved } });
+							await refreshReview(resolved ? "Comment resolved." : "Comment reopened.");
+						}}
+						onResolveDecision={async (key, resolution) => {
+							const result = await resolveDecision({ data: { planId: data.plan.id, key, resolution } });
+							await refreshReview(result.reason ?? "Decision resolved.");
+							return { ...result, reason: null };
+						}}
+					>
 						{rendered}
+						<DetachedCommentThreads />
 					</PlanRenderProvider>
 				</article>
 				<aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">

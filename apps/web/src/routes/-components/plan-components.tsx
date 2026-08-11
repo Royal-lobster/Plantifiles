@@ -1,9 +1,23 @@
+import { Button } from "@plantifiles/ui/components/button";
 import { Checkbox } from "@plantifiles/ui/components/checkbox";
+import { Textarea } from "@plantifiles/ui/components/textarea";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { AlertTriangle, ChevronRight, HelpCircle, Info, Scale, X } from "lucide-react";
+import {
+	AlertTriangle,
+	Bot,
+	CheckCircle2,
+	ChevronRight,
+	HelpCircle,
+	Info,
+	MessageSquare,
+	Reply,
+	Scale,
+	X,
+} from "lucide-react";
 import {
 	type ComponentProps,
 	createContext,
+	type FormEvent,
 	isValidElement,
 	type ReactElement,
 	type ReactNode,
@@ -16,6 +30,19 @@ import {
 } from "react";
 
 type ReaderDecision = { key: string; status: "open" | "resolved"; resolution: string | null };
+type ReaderComment = {
+	id: string;
+	versionId: string;
+	blockKey: string | null;
+	parentId: string | null;
+	body: string;
+	agentAssisted: boolean;
+	resolvedAt: string | null;
+	createdAt: string;
+	author: { id: string; name: string; image: string | null };
+};
+type CreateCommentValue = { blockKey?: string; parentId?: string; body: string; agentAssisted?: boolean };
+type ReviewResult = { status: string; reason: string | null };
 type PlanBlockProps = ComponentProps<"div"> & {
 	node?: unknown;
 	"data-block-kind"?: string;
@@ -25,10 +52,31 @@ type PlanBlockProps = ComponentProps<"div"> & {
 type PlanRenderContextValue = {
 	skim: boolean;
 	decisions: ReaderDecision[];
+	comments: ReaderComment[];
 	changedKeys: Record<string, true>;
+	currentBlockKeys: Record<string, true>;
+	viewerId: string | null;
+	isCurrentVersion: boolean;
+	versionNumberById: Record<string, number>;
+	workspaceSlug: string;
+	planSlug: string;
+	onCreateComment?: (value: CreateCommentValue) => Promise<void>;
+	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
+	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
 };
 
-const PlanRenderContext = createContext<PlanRenderContextValue>({ skim: false, decisions: [], changedKeys: {} });
+const PlanRenderContext = createContext<PlanRenderContextValue>({
+	skim: false,
+	decisions: [],
+	comments: [],
+	changedKeys: {},
+	currentBlockKeys: {},
+	viewerId: null,
+	isCurrentVersion: false,
+	versionNumberById: {},
+	workspaceSlug: "",
+	planSlug: "",
+});
 
 const SKIM_KIND: Record<string, true> = {
 	TLDR: true,
@@ -43,19 +91,71 @@ function PlanRenderProvider({
 	children,
 	skim,
 	decisions,
+	comments,
 	changedKeys = {},
+	currentBlockKeys,
+	viewerId,
+	isCurrentVersion,
+	versionNumberById,
+	workspaceSlug,
+	planSlug,
+	onCreateComment,
+	onResolveComment,
+	onResolveDecision,
 }: {
 	children: ReactNode;
 	skim: boolean;
 	decisions: ReaderDecision[];
+	comments: ReaderComment[];
 	changedKeys?: Record<string, true>;
+	currentBlockKeys: Record<string, true>;
+	viewerId: string | null;
+	isCurrentVersion: boolean;
+	versionNumberById: Record<string, number>;
+	workspaceSlug: string;
+	planSlug: string;
+	onCreateComment: (value: CreateCommentValue) => Promise<void>;
+	onResolveComment: (commentId: string, resolved: boolean) => Promise<void>;
+	onResolveDecision: (key: string, resolution: string) => Promise<ReviewResult>;
 }) {
-	const value = useMemo(() => ({ skim, decisions, changedKeys }), [skim, decisions, changedKeys]);
+	const value = useMemo(
+		() => ({
+			skim,
+			decisions,
+			comments,
+			changedKeys,
+			currentBlockKeys,
+			viewerId,
+			isCurrentVersion,
+			versionNumberById,
+			workspaceSlug,
+			planSlug,
+			onCreateComment,
+			onResolveComment,
+			onResolveDecision,
+		}),
+		[
+			skim,
+			decisions,
+			comments,
+			changedKeys,
+			currentBlockKeys,
+			viewerId,
+			isCurrentVersion,
+			versionNumberById,
+			workspaceSlug,
+			planSlug,
+			onCreateComment,
+			onResolveComment,
+			onResolveDecision,
+		],
+	);
 	return <PlanRenderContext.Provider value={value}>{children}</PlanRenderContext.Provider>;
 }
 
 function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProps) {
 	const context = useContext(PlanRenderContext);
+	const [composing, setComposing] = useState(false);
 	const kind = typeof props["data-block-kind"] === "string" ? props["data-block-kind"] : undefined;
 	const key = typeof props["data-block-key"] === "string" ? props["data-block-key"] : undefined;
 	if (!key)
@@ -65,6 +165,10 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 			</div>
 		);
 	if (context.skim && (!kind || !SKIM_KIND[kind])) return null;
+	const threads = context.comments.filter((item) => item.blockKey === key && !item.parentId);
+	const canComment = Boolean(
+		context.viewerId && context.isCurrentVersion && context.currentBlockKeys[key] && context.onCreateComment,
+	);
 	return (
 		<div
 			className={cn(
@@ -74,8 +178,203 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 			)}
 			{...props}
 		>
+			{canComment && (
+				<Button
+					type="button"
+					variant="outline"
+					size="icon"
+					className="-left-2 absolute top-0 z-10 size-7 -translate-x-full opacity-100 shadow-sm sm:opacity-0 sm:group-hover/plan-block:opacity-100 sm:focus:opacity-100"
+					aria-label={`Comment on ${kind ?? "block"}`}
+					onClick={() => setComposing((value) => !value)}
+				>
+					<MessageSquare className="size-3.5" />
+				</Button>
+			)}
 			{children}
+			{(threads.length > 0 || composing) && (
+				<div className="mt-3 space-y-3 border-l-2 border-accent/30 pl-3">
+					{threads.map((thread) => (
+						<CommentThread key={thread.id} comment={thread} />
+					))}
+					{composing && context.onCreateComment && (
+						<CommentComposer
+							label={`Comment on ${kind ?? "block"}`}
+							onCancel={() => setComposing(false)}
+							onSubmit={async (body) => {
+								await context.onCreateComment?.({ blockKey: key, body });
+								setComposing(false);
+							}}
+						/>
+					)}
+				</div>
+			)}
 		</div>
+	);
+}
+function CommentComposer({
+	label,
+	onSubmit,
+	onCancel,
+}: {
+	label: string;
+	onSubmit: (body: string) => Promise<void>;
+	onCancel: () => void;
+}) {
+	const [body, setBody] = useState("");
+	const [busy, setBusy] = useState(false);
+	const inputId = useId();
+	const [error, setError] = useState("");
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!body.trim()) return;
+		setBusy(true);
+		setError("");
+		try {
+			await onSubmit(body.trim());
+			setBody("");
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Could not save comment.");
+		} finally {
+			setBusy(false);
+		}
+	}
+	return (
+		<form className="space-y-2 rounded-md border bg-card p-3" onSubmit={submit}>
+			<label className="font-medium text-xs" htmlFor={inputId}>
+				{label}
+			</label>
+			<Textarea
+				id={inputId}
+				value={body}
+				onChange={(event) => setBody(event.target.value)}
+				placeholder="Leave a review comment"
+				className="min-h-20"
+			/>
+			{error && <p className="text-destructive text-xs">{error}</p>}
+			<div className="flex justify-end gap-2">
+				<Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+					Cancel
+				</Button>
+				<Button type="submit" size="sm" disabled={busy || !body.trim()}>
+					{busy ? "Saving…" : "Comment"}
+				</Button>
+			</div>
+		</form>
+	);
+}
+
+function CommentThread({ comment: root }: { comment: ReaderComment }) {
+	const context = useContext(PlanRenderContext);
+	const [replying, setReplying] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState("");
+	const replies = context.comments.filter((item) => item.parentId === root.id);
+	const canReply = Boolean(context.viewerId && context.isCurrentVersion && !root.resolvedAt && context.onCreateComment);
+	async function toggleResolved() {
+		if (!context.onResolveComment) return;
+		setBusy(true);
+		setError("");
+		try {
+			await context.onResolveComment(root.id, !root.resolvedAt);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Could not update comment.");
+		} finally {
+			setBusy(false);
+		}
+	}
+	return (
+		<div className={cn("space-y-2 rounded-md border bg-background p-3", root.resolvedAt && "opacity-70")}>
+			<div className="flex items-start justify-between gap-3">
+				<div className="flex min-w-0 items-center gap-2 text-xs">
+					<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent/15 font-semibold text-accent">
+						{root.author.name.slice(0, 1).toUpperCase()}
+					</span>
+					<span className="truncate font-medium">{root.author.name}</span>
+					<time className="text-muted-foreground" dateTime={root.createdAt}>
+						{root.createdAt.slice(0, 10)}
+					</time>
+					{root.agentAssisted && (
+						<span className="inline-flex items-center gap-1 text-muted-foreground" title="Agent-assisted comment">
+							<Bot className="size-3" /> Agent-assisted
+						</span>
+					)}
+				</div>
+				{root.resolvedAt && (
+					<span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 font-mono text-[10px] text-success uppercase">
+						<CheckCircle2 className="size-3" /> Resolved
+					</span>
+				)}
+			</div>
+			<p className="whitespace-pre-wrap text-sm leading-6">{root.body}</p>
+			{replies.map((reply) => (
+				<div key={reply.id} className="ml-4 border-l pl-3 text-sm">
+					<div className="mb-1 flex items-center gap-2 text-xs">
+						<span className="font-medium">{reply.author.name}</span>
+						<time className="text-muted-foreground" dateTime={reply.createdAt}>
+							{reply.createdAt.slice(0, 10)}
+						</time>
+						{reply.agentAssisted && <Bot className="size-3 text-muted-foreground" aria-label="Agent-assisted reply" />}
+					</div>
+					<p className="whitespace-pre-wrap leading-6">{reply.body}</p>
+				</div>
+			))}
+			{error && <p className="text-destructive text-xs">{error}</p>}
+			{context.viewerId && context.isCurrentVersion && (
+				<div className="flex gap-2">
+					{canReply && (
+						<Button type="button" variant="ghost" size="sm" onClick={() => setReplying((value) => !value)}>
+							<Reply className="size-3.5" /> Reply
+						</Button>
+					)}
+					<Button type="button" variant="ghost" size="sm" disabled={busy} onClick={toggleResolved}>
+						<CheckCircle2 className="size-3.5" /> {root.resolvedAt ? "Reopen" : "Resolve"}
+					</Button>
+				</div>
+			)}
+			{replying && context.onCreateComment && (
+				<CommentComposer
+					label={`Reply to ${root.author.name}`}
+					onCancel={() => setReplying(false)}
+					onSubmit={async (body) => {
+						await context.onCreateComment?.({ parentId: root.id, body });
+						setReplying(false);
+					}}
+				/>
+			)}
+		</div>
+	);
+}
+
+function DetachedCommentThreads() {
+	const context = useContext(PlanRenderContext);
+	const roots = context.comments.filter(
+		(item) => !item.parentId && item.blockKey && !context.currentBlockKeys[item.blockKey],
+	);
+	if (roots.length === 0) return null;
+	return (
+		<details className="mt-10 rounded-lg border bg-muted/20">
+			<summary className="cursor-pointer px-4 py-3 font-medium text-sm">
+				From an earlier version ({roots.length})
+			</summary>
+			<div className="space-y-4 border-t p-4">
+				{roots.map((thread) => {
+					const version = context.versionNumberById[thread.versionId];
+					return (
+						<div key={thread.id} className="space-y-2">
+							{version && (
+								<a
+									className="font-mono text-accent text-xs underline underline-offset-4"
+									href={`/p/${context.workspaceSlug}/${context.planSlug}/v/${version}`}
+								>
+									Anchored on v{version}
+								</a>
+							)}
+							<CommentThread comment={thread} />
+						</div>
+					);
+				})}
+			</div>
+		</details>
 	);
 }
 
@@ -129,9 +428,32 @@ function TLDR({ children }: { children?: ReactNode }) {
 }
 
 function Decision({ owner, blockKey, children }: { owner: string; blockKey?: string; children?: ReactNode }) {
-	const { decisions } = useContext(PlanRenderContext);
-	const record = decisions.find((item) => item.key === blockKey);
+	const context = useContext(PlanRenderContext);
+	const [resolving, setResolving] = useState(false);
+	const [resolution, setResolution] = useState("");
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState("");
+	const resolutionId = useId();
+	const record = context.decisions.find((item) => item.key === blockKey);
 	const status = record?.status ?? "open";
+	const canResolve = Boolean(
+		context.viewerId && context.isCurrentVersion && status === "open" && blockKey && context.onResolveDecision,
+	);
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!blockKey || !resolution.trim() || !context.onResolveDecision) return;
+		setBusy(true);
+		setError("");
+		try {
+			const result = await context.onResolveDecision(blockKey, resolution.trim());
+			if (result.reason) setError(result.reason);
+			else setResolving(false);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Could not resolve decision.");
+		} finally {
+			setBusy(false);
+		}
+	}
 	return (
 		<section className="rounded-lg border bg-card">
 			<header className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
@@ -153,6 +475,37 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 					<span className="font-medium">Resolution: </span>
 					{record.resolution}
 				</footer>
+			)}
+			{canResolve && (
+				<div className="border-t px-4 py-3">
+					{!resolving ? (
+						<Button type="button" size="sm" variant="outline" onClick={() => setResolving(true)}>
+							Resolve decision
+						</Button>
+					) : (
+						<form className="space-y-2" onSubmit={submit}>
+							<label className="font-medium text-xs" htmlFor={resolutionId}>
+								Resolution
+							</label>
+							<Textarea
+								id={resolutionId}
+								value={resolution}
+								onChange={(event) => setResolution(event.target.value)}
+								placeholder="Record the outcome and rationale"
+								className="min-h-20"
+							/>
+							{error && <p className="text-destructive text-xs">{error}</p>}
+							<div className="flex justify-end gap-2">
+								<Button type="button" size="sm" variant="ghost" onClick={() => setResolving(false)}>
+									Cancel
+								</Button>
+								<Button type="submit" size="sm" disabled={busy || !resolution.trim()}>
+									{busy ? "Saving…" : "Save resolution"}
+								</Button>
+							</div>
+						</form>
+					)}
+				</div>
 			)}
 		</section>
 	);
@@ -395,4 +748,4 @@ const planComponents = {
 	Callout,
 };
 
-export { PlanRenderProvider, planComponents };
+export { DetachedCommentThreads, PlanRenderProvider, planComponents };

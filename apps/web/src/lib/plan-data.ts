@@ -14,7 +14,7 @@ const planParamsSchema = z.object({
 export const getPlanForRoute = createServerFn({ method: "GET" })
 	.validator(planParamsSchema)
 	.handler(async ({ data }) => {
-		const { document, versions } = await loadPlanReaderData(
+		const { document, versions, viewer } = await loadPlanReaderData(
 			getRequest(),
 			data.workspaceSlug,
 			data.planSlug,
@@ -46,6 +46,7 @@ export const getPlanForRoute = createServerFn({ method: "GET" })
 			approvals: document.approvals.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
 			renderTree,
 			versions: versions.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
+			viewer,
 		};
 	});
 
