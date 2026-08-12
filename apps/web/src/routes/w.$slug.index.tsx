@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from "@plantifiles/ui/components/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Copy, Search } from "lucide-react";
+import { Check, Copy, ListFilter, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { type DashboardPlan, getDashboardData, type PlanStatus } from "#/lib/app-data";
@@ -85,6 +85,7 @@ function Dashboard() {
 							}
 						>
 							<SelectTrigger className="h-9 w-44 sm:ml-auto" aria-label="Filter by status">
+								<ListFilter className="size-3.5 text-muted-foreground" />
 								<SelectValue placeholder="All statuses" />
 							</SelectTrigger>
 							<SelectContent>

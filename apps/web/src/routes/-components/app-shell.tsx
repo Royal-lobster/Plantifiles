@@ -11,15 +11,15 @@ import {
 } from "@plantifiles/ui/components/dropdown-menu";
 import { TooltipProvider } from "@plantifiles/ui/components/tooltip";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Check, ChevronsUpDown, Palette, Slash } from "lucide-react";
+import { Check, ChevronsUpDown, FileText, Palette, Settings2, Slash, Waypoints } from "lucide-react";
 import type { NavigationData } from "#/lib/app-data";
 import { LogoBadge } from "./brand";
 import { type Theme, useTheme } from "./theme-provider";
 
 const NAV_LINKS = [
-	{ label: "Plans", to: "/w/$slug", exact: true },
-	{ label: "Decisions", to: "/w/$slug/decisions", exact: false },
-	{ label: "Settings", to: "/w/$slug/settings", exact: false },
+	{ label: "Plans", to: "/w/$slug", exact: true, icon: FileText },
+	{ label: "Decisions", to: "/w/$slug/decisions", exact: false, icon: Waypoints },
+	{ label: "Settings", to: "/w/$slug/settings", exact: false, icon: Settings2 },
 ] as const;
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -177,9 +177,10 @@ function AppShell({ navigation, children }: { navigation: NavigationData; childr
 											to={item.to}
 											params={{ slug: workspaceSlug }}
 											activeOptions={{ exact: item.exact }}
-											className="block border-b-2 border-transparent pt-1 pb-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
+											className="flex items-center gap-1.5 border-b-2 border-transparent pt-1 pb-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground [&_svg]:size-3.5"
 											activeProps={{ className: "border-foreground text-foreground" }}
 										>
+											<item.icon />
 											{item.label}
 										</Link>
 									</li>

@@ -160,9 +160,9 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 
 				{/* One primary action, related reading modes segmented, everything else
 				    behind the overflow. A control that cannot act is not rendered. */}
-				<div className="mt-6 flex flex-wrap items-center gap-2">
+				<div className="mt-5 flex flex-wrap items-center gap-2">
 					{canAdvance && (
-						<Button onClick={() => void runStatusAction()} disabled={reviewBusy}>
+						<Button size="sm" onClick={() => void runStatusAction()} disabled={reviewBusy}>
 							{data.plan.status === "in_review"
 								? reviewBusy
 									? "Approving…"
@@ -173,11 +173,11 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 					)}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="outline" size="icon" aria-label="More plan actions">
+							<Button variant="outline" size="icon-sm" aria-label="More plan actions">
 								<MoreHorizontal />
 							</Button>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-56">
+						<DropdownMenuContent align="end" className="w-52">
 							<DropdownMenuLabel className="label-eyebrow">This plan</DropdownMenuLabel>
 							<DropdownMenuItem onSelect={() => void copyMarkdownUrl()}>
 								{copied ? <Check /> : <FileDown />}
@@ -199,9 +199,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 				)}
 			</header>
 
-			{/* One left-aligned column, flush with the nav and the title. The rail and the gutter track are gone: at a 64rem
-			    shell there is no room for a third track, and a collapsed outline is a
-			    click a bailing reader never spends. Headings carry the navigation. */}
+			{/* One column, flush with the nav and the title. */}
 			<div className="mt-10">
 				<article className="relative min-w-0 space-y-7">
 					<PlanRenderProvider
