@@ -292,9 +292,11 @@ export async function listPlans(request: Request, workspaceSlug: string, status?
 			)`,
 			requiredApprovals: sql<number>`${targetWorkspace.requiredApprovals}`,
 			readTimeMinutes: sql<number>`coalesce(json_extract(${planVersion.lintReport}, '$.readTimeMinutes'), 0)`,
+			authorName: user.name,
 		})
 		.from(plan)
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
+		.innerJoin(user, eq(planVersion.authorId, user.id))
 		.where(
 			statusValue
 				? and(eq(plan.workspaceId, targetWorkspace.id), eq(plan.status, statusValue))

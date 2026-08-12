@@ -1,13 +1,14 @@
+import { Badge } from "@plantifiles/ui/components/badge";
 import { Button } from "@plantifiles/ui/components/button";
 import { Input } from "@plantifiles/ui/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Copy, Search } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { getDashboardData } from "#/lib/app-data";
+import { type DashboardPlan, getDashboardData, type PlanStatus } from "#/lib/app-data";
 import { guardLoader } from "#/lib/loader-guard";
-import { type PlanStatus, StatusChip } from "./-components/status-chip";
+import { StatusChip } from "./-components/status-chip";
 
 const dashboardSearchSchema = z.object({
 	status: z.enum(["draft", "in_review", "approved", "building", "shipped", "archived"]).optional(),
@@ -21,6 +22,8 @@ export const Route = createFileRoute("/w/$slug/")({
 	pendingComponent: DashboardSkeleton,
 });
 
+const STATUS_ORDER: PlanStatus[] = ["draft", "in_review", "approved", "building", "shipped", "archived"];
+
 function relativeTime(value: string): string {
 	const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
 	if (seconds < 60) return "just now";
@@ -31,12 +34,41 @@ function relativeTime(value: string): string {
 	return `${Math.floor(hours / 24)}d ago`;
 }
 
+type PlanGroup = { label: string; urgent?: boolean; plans: DashboardPlan[] };
+
+/**
+ * The dashboard is an index of the team's thinking, so it groups by what a
+ * reader has to do about a plan rather than laying eight equal-weight columns
+ * side by side. An unresolved decision outranks every status.
+ */
+function groupPlans(plans: DashboardPlan[]): PlanGroup[] {
+	const blocked: DashboardPlan[] = [];
+	const byStatus: Record<PlanStatus, DashboardPlan[]> = {
+		draft: [],
+		in_review: [],
+		approved: [],
+		building: [],
+		shipped: [],
+		archived: [],
+	};
+	for (const item of plans) {
+		if (item.openDecisions > 0 && item.status !== "archived") blocked.push(item);
+		else byStatus[item.status].push(item);
+	}
+	return [
+		{ label: "Awaiting judgment", urgent: true, plans: blocked },
+		{ label: "In review", plans: byStatus.in_review },
+		{ label: "Moving", plans: [...byStatus.approved, ...byStatus.building] },
+		{ label: "Drafts", plans: byStatus.draft },
+		{ label: "Closed", plans: [...byStatus.shipped, ...byStatus.archived] },
+	].filter((group) => group.plans.length > 0);
+}
+
 function Dashboard() {
-	const plans = Route.useLoaderData();
+	const { workspace, plans } = Route.useLoaderData();
 	const { slug } = Route.useParams();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
-	const [copied, setCopied] = useState(false);
 	const visiblePlans = useMemo(
 		() =>
 			plans.filter(
@@ -46,128 +78,191 @@ function Dashboard() {
 			),
 		[plans, search.q, search.status],
 	);
+	const groups = useMemo(
+		() =>
+			search.status ? [{ label: search.status.replace("_", " "), plans: visiblePlans }] : groupPlans(visiblePlans),
+		[search.status, visiblePlans],
+	);
+	const openDecisions = plans.reduce((total, item) => total + item.openDecisions, 0);
+
 	return (
-		<section className="space-y-6">
-			<header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-				<div>
-					<p className="font-mono text-accent text-xs uppercase tracking-widest">Workspace / {slug}</p>
-					<h1 className="mt-2 font-semibold text-3xl tracking-tight">Plans</h1>
-					<p className="mt-1 text-muted-foreground text-sm">
-						Review what agents proposed, then send approved context back to the build.
-					</p>
-				</div>
+		<section>
+			<header className="border-b pb-8">
+				<p className="label-eyebrow">Plan index</p>
+				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight md:text-5xl">{workspace.name}</h1>
+				<p className="mt-3 max-w-measure text-muted-foreground leading-7">
+					Review what agents proposed, then send approved context back to the build.
+				</p>
+				<p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
+					<span>
+						{plans.length} {plans.length === 1 ? "plan" : "plans"}
+					</span>
+					<span className="text-border">·</span>
+					<span className={openDecisions > 0 ? "text-warning" : undefined}>{openDecisions} open decisions</span>
+					<span className="text-border">·</span>
+					<span>{plans.filter((item) => item.status === "in_review").length} in review</span>
+				</p>
 			</header>
-			<div className="flex flex-col gap-3 sm:flex-row">
-				<div className="relative max-w-sm flex-1">
-					<Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
-					<Input
-						aria-label="Filter by title"
-						className="pl-9"
-						value={search.q ?? ""}
-						onChange={(event) =>
-							void navigate({ search: (previous) => ({ ...previous, q: event.target.value || undefined }) })
-						}
-						placeholder="Filter titles"
-					/>
-				</div>
-				<Select
-					value={search.status ?? "all"}
-					onValueChange={(value) =>
-						void navigate({
-							search: (previous) => ({ ...previous, status: value === "all" ? undefined : (value as PlanStatus) }),
-						})
-					}
-				>
-					<SelectTrigger className="w-44">
-						<SelectValue placeholder="All statuses" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All statuses</SelectItem>
-						{(["draft", "in_review", "approved", "building", "shipped", "archived"] as const).map((status) => (
-							<SelectItem key={status} value={status}>
-								{status.replace("_", " ")}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
+
 			{plans.length === 0 ? (
-				<div className="rounded-lg border border-dashed p-10 text-center">
-					<p className="font-medium">Publish the first plan from your agent session.</p>
-					<p className="mt-1 text-muted-foreground text-sm">
-						The browser teaches the command; the CLI owns publishing.
-					</p>
-					<div className="mx-auto mt-5 flex max-w-xl items-center gap-2 rounded-md border bg-muted/40 p-2 pl-4 text-left">
-						<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">
-							plantifiles push plan.mdx --workspace {slug}
-						</code>
-						<Button
-							size="icon"
-							variant="ghost"
-							aria-label="Copy push command"
-							onClick={async () => {
-								await navigator.clipboard.writeText(`plantifiles push plan.mdx --workspace ${slug}`);
-								setCopied(true);
-								setTimeout(() => setCopied(false), 1500);
-							}}
-						>
-							{copied ? <Check /> : <Copy />}
-						</Button>
-					</div>
-				</div>
+				<EmptyState slug={slug} />
 			) : (
-				<div className="overflow-x-auto rounded-lg border bg-card">
-					<div className="grid min-w-[900px] grid-cols-[minmax(18rem,40%)_7rem_4rem_10rem_6rem_6rem_5rem_7rem] border-b bg-muted/30 px-4 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-						<span>Title</span>
-						<span>Status</span>
-						<span>Version</span>
-						<span>Author</span>
-						<span>Decisions</span>
-						<span>Approvals</span>
-						<span>Read time</span>
-						<span>Updated</span>
-					</div>
-					{visiblePlans.map((plan) => (
-						<Link
-							key={plan.id}
-							to="/p/$workspaceSlug/$planSlug"
-							params={{ workspaceSlug: slug, planSlug: plan.slug }}
-							className="grid h-14 min-w-[900px] grid-cols-[minmax(18rem,40%)_7rem_4rem_10rem_6rem_6rem_5rem_7rem] items-center border-b px-4 text-sm last:border-b-0 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+				<>
+					<div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center">
+						<div className="relative flex-1 sm:max-w-xs">
+							<Search className="absolute top-2.5 left-0 size-4 text-muted-foreground" />
+							<Input
+								aria-label="Filter by title"
+								className="h-9 rounded-none border-0 border-b bg-transparent pl-6 shadow-none focus-visible:border-brand-ink focus-visible:ring-0"
+								value={search.q ?? ""}
+								onChange={(event) =>
+									void navigate({ search: (previous) => ({ ...previous, q: event.target.value || undefined }) })
+								}
+								placeholder="Filter titles"
+							/>
+						</div>
+						<Select
+							value={search.status ?? "all"}
+							onValueChange={(value) =>
+								void navigate({
+									search: (previous) => ({
+										...previous,
+										status: value === "all" ? undefined : (value as PlanStatus),
+									}),
+								})
+							}
 						>
-							<span className="truncate font-medium">{plan.title}</span>
-							<span>
-								<StatusChip status={plan.status} />
-							</span>
-							<span className="font-mono text-xs">v{plan.version}</span>
-							<span className="min-w-0">
-								<span className="block truncate">Demo User</span>
-								<span className="block truncate text-muted-foreground text-xs">{plan.agentName ?? "hand edit"}</span>
-							</span>
-							<span className={plan.openDecisions > 0 ? "text-warning" : "text-muted-foreground"}>
-								{plan.openDecisions > 0 ? `${plan.openDecisions} open` : "—"}
-							</span>
-							<span>
-								{plan.approvals}/{plan.requiredApprovals}
-							</span>
-							<span>{Math.max(1, Math.ceil(plan.readTimeMinutes))} min</span>
-							<span className="text-muted-foreground">{relativeTime(plan.updatedAt)}</span>
-						</Link>
-					))}
-					{visiblePlans.length === 0 && (
-						<p className="p-8 text-center text-muted-foreground text-sm">No plans match these filters.</p>
+							<SelectTrigger className="h-9 w-44 sm:ml-auto" aria-label="Filter by status">
+								<SelectValue placeholder="All statuses" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All statuses</SelectItem>
+								{STATUS_ORDER.map((status) => (
+									<SelectItem key={status} value={status}>
+										{status.replace("_", " ")}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					{groups.length === 0 ? (
+						<p className="py-16 text-center text-muted-foreground text-sm">No plans match these filters.</p>
+					) : (
+						groups.map((group) => (
+							<section key={group.label} className="mt-10 first:mt-2">
+								<div className="flex items-center gap-3">
+									<span className={group.urgent ? "label-eyebrow text-warning" : "label-eyebrow"}>{group.label}</span>
+									<span className="font-mono text-[11px] text-muted-foreground/60">{group.plans.length}</span>
+									<span className="h-px flex-1 bg-border" />
+								</div>
+								<ul>
+									{group.plans.map((plan) => (
+										<li key={plan.id}>
+											<PlanEntry plan={plan} workspaceSlug={slug} />
+										</li>
+									))}
+								</ul>
+							</section>
+						))
 					)}
-				</div>
+				</>
 			)}
 		</section>
 	);
 }
 
+function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug: string }) {
+	const readTime = Math.max(1, Math.ceil(plan.readTimeMinutes));
+	const approved = plan.approvals >= plan.requiredApprovals;
+	return (
+		<Link
+			to="/p/$workspaceSlug/$planSlug"
+			params={{ workspaceSlug, planSlug: plan.slug }}
+			className="group -mx-3 flex flex-col gap-3 border-b px-3 py-5 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-6"
+		>
+			<div className="min-w-0 flex-1">
+				<h3 className="font-display font-medium text-lg leading-snug tracking-tight transition-colors group-hover:text-brand-ink sm:text-xl">
+					{plan.title}
+				</h3>
+				<p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-muted-foreground">
+					<StatusChip status={plan.status} size="sm" />
+					<span>v{plan.version}</span>
+					<span className="text-border">·</span>
+					<span>{readTime} min read</span>
+					<span className="text-border">·</span>
+					<span className="truncate">
+						{plan.authorName}
+						{plan.agentName ? ` via ${plan.agentName}` : " by hand"}
+					</span>
+					<span className="text-border">·</span>
+					<time dateTime={plan.updatedAt}>{relativeTime(plan.updatedAt)}</time>
+				</p>
+			</div>
+			<div className="flex shrink-0 items-center gap-4">
+				{plan.openDecisions > 0 ? (
+					<Badge variant="warning" size="sm">
+						{plan.openDecisions} open
+					</Badge>
+				) : (
+					<span className="w-16 font-mono text-[11px] text-muted-foreground/50 sm:text-right">resolved</span>
+				)}
+				<span
+					className={`w-10 text-right font-mono text-xs tabular-nums ${approved ? "text-success" : "text-muted-foreground"}`}
+					title={`${plan.approvals} of ${plan.requiredApprovals} approvals`}
+				>
+					{plan.approvals}/{plan.requiredApprovals}
+				</span>
+				<ArrowUpRight className="size-4 text-muted-foreground/40 transition-all group-hover:-translate-y-0.5 group-hover:text-brand-ink" />
+			</div>
+		</Link>
+	);
+}
+
+function EmptyState({ slug }: { slug: string }) {
+	const [copied, setCopied] = useState(false);
+	const command = `plantifiles push plan.mdx --workspace ${slug}`;
+	return (
+		<div className="mt-10 max-w-measure">
+			<h2 className="font-display font-medium text-2xl">Nothing has been proposed yet.</h2>
+			<p className="mt-3 text-muted-foreground leading-7">
+				Publishing is the CLI's job. Run this from the agent session that wrote the plan.
+			</p>
+			<div className="mt-6 flex items-center gap-2 rounded-lg border bg-muted/40 p-2 pl-4">
+				<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">{command}</code>
+				<Button
+					size="icon-sm"
+					variant="quiet"
+					aria-label="Copy push command"
+					onClick={async () => {
+						await navigator.clipboard.writeText(command);
+						setCopied(true);
+						setTimeout(() => setCopied(false), 1500);
+					}}
+				>
+					{copied ? <Check /> : <Copy />}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 function DashboardSkeleton() {
 	return (
-		<output className="block space-y-6" aria-label="Loading plans">
-			<div className="h-9 w-48 animate-pulse rounded bg-muted" />
-			<div className="h-10 w-full animate-pulse rounded bg-muted" />
-			<div className="h-72 w-full animate-pulse rounded-lg bg-muted" />
+		<output className="block" aria-label="Loading plans">
+			<div className="border-b pb-8">
+				<div className="h-3 w-20 animate-pulse rounded bg-muted" />
+				<div className="mt-4 h-11 w-64 animate-pulse rounded bg-muted" />
+				<div className="mt-4 h-4 w-96 animate-pulse rounded bg-muted" />
+			</div>
+			<div className="mt-8 space-y-6">
+				{[0, 1, 2, 3, 4].map((row) => (
+					<div key={row} className="space-y-2 border-b pb-5">
+						<div className="h-6 w-2/3 animate-pulse rounded bg-muted" />
+						<div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+					</div>
+				))}
+			</div>
 		</output>
 	);
 }

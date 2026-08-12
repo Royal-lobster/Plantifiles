@@ -56,11 +56,44 @@ export const getNavigationData = createServerFn({ method: "GET" }).handler(async
 	return { user: navigationUser, workspaces, plans, decisions };
 });
 
+export type PlanStatus = "draft" | "in_review" | "approved" | "building" | "shipped" | "archived";
+
+export type DashboardPlan = {
+	id: string;
+	slug: string;
+	title: string;
+	status: PlanStatus;
+	updatedAt: string;
+	version: number;
+	agentName: string | null;
+	openDecisions: number;
+	approvals: number;
+	requiredApprovals: number;
+	readTimeMinutes: number;
+	authorName: string;
+};
+
+export type DashboardData = {
+	workspace: { name: string; slug: string };
+	plans: DashboardPlan[];
+};
+
 export const getDashboardData = createServerFn({ method: "GET" })
 	.validator(workspaceParamsSchema)
-	.handler(async ({ data }) => {
-		const plans = await listPlans(getRequest(), data.slug);
-		return plans.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() }));
+	.handler(async ({ data }): Promise<DashboardData> => {
+		const request = getRequest();
+		const [plans, workspaceRows] = await Promise.all([
+			listPlans(request, data.slug),
+			getDb()
+				.select({ name: workspace.name, slug: workspace.slug })
+				.from(workspace)
+				.where(eq(workspace.slug, data.slug))
+				.limit(1),
+		]);
+		return {
+			workspace: workspaceRows[0] ?? { name: data.slug, slug: data.slug },
+			plans: plans.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })),
+		};
 	});
 
 export const getWorkspaceSettings = createServerFn({ method: "GET" })
