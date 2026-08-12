@@ -9,6 +9,7 @@
 	/* One voice. Geist for everything, Geist Mono for metadata and code. */
 	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 	--font-display: var(--font-sans);
+	--font-heading: var(--font-sans);
 	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
 	/* The whole UI is capped at 4xl, and the shell is also the reading measure:

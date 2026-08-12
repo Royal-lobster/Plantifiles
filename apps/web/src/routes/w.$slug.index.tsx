@@ -1,5 +1,6 @@
 import { Button } from "@plantifiles/ui/components/button";
-import { Input } from "@plantifiles/ui/components/input";
+import { Card, CardContent, CardFooter } from "@plantifiles/ui/components/card";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, Copy, Search } from "lucide-react";
@@ -59,18 +60,19 @@ function Dashboard() {
 			) : (
 				<>
 					<div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center">
-						<div className="relative flex-1 sm:max-w-xs">
-							<Search className="absolute top-2.5 left-0 size-4 text-muted-foreground" />
-							<Input
+						<InputGroup className="h-9 flex-1 sm:max-w-xs">
+							<InputGroupAddon>
+								<Search />
+							</InputGroupAddon>
+							<InputGroupInput
 								aria-label="Filter by title or emoji"
-								className="h-9 rounded-none border-0 border-b bg-transparent pl-6 shadow-none focus-visible:border-brand-ink focus-visible:ring-0"
 								value={search.q ?? ""}
 								onChange={(event) =>
 									void navigate({ search: (previous) => ({ ...previous, q: event.target.value || undefined }) })
 								}
 								placeholder="Filter title or emoji"
 							/>
-						</div>
+						</InputGroup>
 						<Select
 							value={search.status ?? "all"}
 							onValueChange={(value) =>
@@ -118,25 +120,32 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 		<Link
 			to="/p/$workspaceSlug/$planSlug"
 			params={{ workspaceSlug, planSlug: plan.slug }}
-			className="group flex min-h-52 flex-col rounded-xl border bg-card p-4 outline-none transition hover:-translate-y-0.5 hover:border-brand-ink/30 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
+			className="group block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
 		>
-			<div className="flex items-start justify-between gap-2">
-				<span
-					aria-hidden="true"
-					className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary/15 text-3xl ring-1 ring-primary/20 transition-transform group-hover:scale-105"
-				>
-					{plan.emoji ?? "📝"}
-				</span>
-				<StatusChip status={plan.status} size="sm" />
-			</div>
-			<h3 className="mt-5 line-clamp-2 font-display font-medium text-lg leading-snug tracking-tight transition-colors group-hover:text-brand-ink">
-				{plan.title}
-			</h3>
-			<p className="mt-auto flex items-center gap-2 truncate pt-4 font-mono text-[11px] text-muted-foreground">
-				<span className={plan.openDecisions > 0 ? "text-warning" : undefined}>{plan.openDecisions} open</span>
-				<span className="text-border">·</span>
-				<span>v{plan.version}</span>
-			</p>
+			<Card
+				size="sm"
+				className="h-full min-h-48 justify-between transition group-hover:-translate-y-0.5 group-hover:ring-brand-ink/30"
+			>
+				<CardContent className="flex items-start justify-between gap-2">
+					<span
+						aria-hidden="true"
+						className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/15 text-2xl ring-1 ring-primary/20 transition-transform group-hover:scale-105"
+					>
+						{plan.emoji ?? "📝"}
+					</span>
+					<StatusChip status={plan.status} size="sm" />
+				</CardContent>
+				<CardContent>
+					<h3 className="line-clamp-2 font-medium text-base leading-snug tracking-tight transition-colors group-hover:text-brand-ink">
+						{plan.title}
+					</h3>
+				</CardContent>
+				<CardFooter className="gap-2 font-mono text-[11px] text-muted-foreground">
+					<span className={plan.openDecisions > 0 ? "text-warning" : undefined}>{plan.openDecisions} open</span>
+					<span className="text-border">·</span>
+					<span>v{plan.version}</span>
+				</CardFooter>
+			</Card>
 		</Link>
 	);
 }
