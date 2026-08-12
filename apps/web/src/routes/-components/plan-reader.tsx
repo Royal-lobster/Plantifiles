@@ -332,7 +332,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 									</time>
 								</div>
 								<p className="mt-1.5 text-muted-foreground text-sm leading-6">
-									{item.changeSummaryProse ?? item.changeSummary ?? "Initial version."}
+									{item.changeSummary ?? "Initial version."}
 								</p>
 								{item.agentPrompt && (
 									<details className="mt-2">

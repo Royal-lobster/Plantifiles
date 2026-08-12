@@ -5,7 +5,6 @@ type SecretEnv = Cloudflare.Env & {
 	BETTER_AUTH_SECRET?: string;
 	GITHUB_CLIENT_ID?: string;
 	GITHUB_CLIENT_SECRET?: string;
-	ANTHROPIC_API_KEY?: string;
 };
 
 export function getRuntimeEnv(): SecretEnv {

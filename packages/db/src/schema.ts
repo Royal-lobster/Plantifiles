@@ -116,7 +116,6 @@ export const planVersion = sqliteTable(
 		number: integer("number").notNull(),
 		source: text("source").notNull(),
 		changeSummary: text("change_summary"),
-		changeSummaryProse: text("change_summary_prose"),
 		lintScore: integer("lint_score").notNull(),
 		lintReport: text("lint_report", { mode: "json" }).$type<unknown>().notNull(),
 		lintOverridden: integer("lint_overridden", { mode: "boolean" }).notNull().default(false),

@@ -5,7 +5,6 @@ export type PublishedPlan = {
 	version: number;
 	url: string;
 	changeSummary: string | null;
-	changeSummaryProse?: string | null;
 };
 
 export type PlanDetail = {

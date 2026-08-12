@@ -154,32 +154,6 @@ export async function createPlan(request: Request, input: PublishPlanInput) {
 	};
 }
 
-async function generateProseSummary(summary: string): Promise<string | null> {
-	const apiKey = getRuntimeEnv().ANTHROPIC_API_KEY;
-	if (!apiKey) return null;
-	const response = await fetch("https://api.anthropic.com/v1/messages", {
-		method: "POST",
-		headers: {
-			"content-type": "application/json",
-			"x-api-key": apiKey,
-			"anthropic-version": "2023-06-01",
-		},
-		body: JSON.stringify({
-			model: "claude-sonnet-4-5",
-			max_tokens: 180,
-			messages: [
-				{
-					role: "user",
-					content: `Summarize this structural plan change in one concise paragraph. Do not invent details.\n\n${summary}`,
-				},
-			],
-		}),
-	});
-	if (!response.ok) return null;
-	const payload = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
-	return payload.content?.find((item) => item.type === "text")?.text?.trim() || null;
-}
-
 export async function createPlanVersion(request: Request, planId: string, input: PublishVersionInput) {
 	const identity = await requireIdentity(request);
 	const db = getDb();
@@ -196,20 +170,18 @@ export async function createPlanVersion(request: Request, planId: string, input:
 
 	const { blocks, report } = assertPublishableSource(input.source, input.force);
 	const structural = diff(normalize(current.version.source), blocks);
-	const changeSummaryProse = await generateProseSummary(structural.summary);
 	const versionId = crypto.randomUUID();
 	const versionNumber = current.version.number + 1;
 	const runtime = getRuntimeEnv();
 	const statements: D1PreparedStatement[] = [
 		runtime.DB.prepare(
-			"insert into plan_version (id, plan_id, number, source, change_summary, change_summary_prose, lint_score, lint_report, lint_overridden, author_id, agent_name, agent_prompt, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())",
+			"insert into plan_version (id, plan_id, number, source, change_summary, lint_score, lint_report, lint_overridden, author_id, agent_name, agent_prompt, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())",
 		).bind(
 			versionId,
 			planId,
 			versionNumber,
 			input.source,
 			structural.summary,
-			changeSummaryProse,
 			report.score,
 			JSON.stringify(report),
 			input.force ? 1 : 0,
@@ -230,7 +202,6 @@ export async function createPlanVersion(request: Request, planId: string, input:
 		version: versionNumber,
 		url: publicPlanUrl(current.workspace.slug, current.plan.slug),
 		changeSummary: structural.summary,
-		changeSummaryProse,
 		lint: report,
 	};
 }
@@ -362,7 +333,6 @@ export type PlanReaderVersion = {
 	agentName: string | null;
 	agentPrompt: string | null;
 	changeSummary: string | null;
-	changeSummaryProse: string | null;
 	createdAt: Date;
 	author: { id: string; name: string; image: string | null };
 	blocks: Block[];
@@ -394,7 +364,6 @@ export async function loadPlanReaderData(
 			agentName: version.agentName,
 			agentPrompt: version.agentPrompt,
 			changeSummary: version.changeSummary,
-			changeSummaryProse: version.changeSummaryProse,
 			createdAt: version.createdAt,
 			author: { id: author.id, name: author.name, image: author.image },
 			blocks: normalize(version.source),
