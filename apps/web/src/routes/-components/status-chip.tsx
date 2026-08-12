@@ -1,31 +1,42 @@
+import { Badge } from "@plantifiles/ui/components/badge";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { cva } from "class-variance-authority";
+import type { ComponentProps } from "react";
+import type { PlanStatus } from "#/lib/app-data";
 
-export type PlanStatus = "draft" | "in_review" | "approved" | "building" | "shipped" | "archived";
+type BadgeProps = ComponentProps<typeof Badge>;
 
-const statusVariants = cva(
-	"inline-flex h-5 items-center gap-1.5 rounded-full px-2 text-[11px] font-medium uppercase tracking-wide",
-	{
-		variants: {
-			status: {
-				draft: "bg-muted text-muted-foreground",
-				in_review: "bg-accent/15 text-accent-foreground",
-				approved: "bg-success/15 text-success",
-				building: "bg-accent/15 text-accent-foreground",
-				shipped: "border border-success/50 text-success",
-				archived: "bg-muted text-muted-foreground/70",
-			},
-		},
-	},
-);
+/* One mapping, consumed by the dashboard, the reader masthead, and the Slack
+   unfurl. Green is the product, so review states carry brand ink and only
+   genuinely good outcomes claim --success. */
+const STATUS_VARIANT: Record<PlanStatus, NonNullable<BadgeProps["variant"]>> = {
+	draft: "secondary",
+	in_review: "brand",
+	approved: "success",
+	building: "brand",
+	shipped: "success-outline",
+	archived: "quiet",
+};
 
-function StatusChip({ status, className }: { status: PlanStatus; className?: string }) {
+function StatusChip({
+	status,
+	size,
+	className,
+}: {
+	status: PlanStatus;
+	size?: BadgeProps["size"];
+	className?: string;
+}) {
 	return (
-		<span className={cn(statusVariants({ status }), className)} data-status={status}>
+		<Badge
+			variant={STATUS_VARIANT[status]}
+			size={size}
+			className={cn("font-mono tracking-[0.12em]", className)}
+			data-status={status}
+		>
 			{status === "building" && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
 			{status.replace("_", " ")}
-		</span>
+		</Badge>
 	);
 }
 
-export { StatusChip, statusVariants };
+export { StatusChip, STATUS_VARIANT };

@@ -62,7 +62,7 @@ function SourceEditor({
 						".cm-scroller": { fontFamily: "var(--font-mono)", fontSize: "13px", lineHeight: "1.6" },
 						".cm-gutters": { backgroundColor: "var(--muted)", color: "var(--muted-foreground)", border: "0" },
 						".cm-activeLine, .cm-activeLineGutter": {
-							backgroundColor: "color-mix(in oklab, var(--accent) 10%, transparent)",
+							backgroundColor: "color-mix(in oklab, var(--brand-ink) 10%, transparent)",
 						},
 						".cm-content": { padding: "12px 0" },
 					}),

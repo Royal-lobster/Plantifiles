@@ -27,8 +27,8 @@ function Onboarding() {
 	return (
 		<section className="mx-auto max-w-md space-y-6 py-16">
 			<div className="space-y-2">
-				<p className="font-mono text-accent text-xs uppercase tracking-widest">First workspace</p>
-				<h1 className="font-semibold text-3xl tracking-tight">Where does planning happen?</h1>
+				<p className="label-eyebrow">First workspace</p>
+				<h1 className="font-display font-medium text-3xl tracking-tight">Where does planning happen?</h1>
 				<p className="text-muted-foreground">Create the workspace your agents will publish into.</p>
 			</div>
 			<form

@@ -122,7 +122,7 @@ function PlanEditor({
 					<AlertTriangle className="size-4 text-warning" />
 					<span>{conflict.message}</span>
 					<a
-						className="font-medium text-accent underline underline-offset-4"
+						className="font-medium text-brand-ink underline underline-offset-4"
 						href={`/p/${encodeURIComponent(workspaceSlug)}/${encodeURIComponent(planSlug)}?compareFrom=${data.version.number}`}
 					>
 						View v{data.version.number} → v{conflict.currentVersion} diff
@@ -167,6 +167,7 @@ function PlanEditor({
 							<article className="space-y-6">
 								<PlanRenderProvider
 									skim={false}
+									blocks={data.blocks}
 									decisions={data.decisions}
 									comments={[]}
 									currentBlockKeys={currentBlockKeys}

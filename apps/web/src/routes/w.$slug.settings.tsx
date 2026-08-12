@@ -24,8 +24,8 @@ function WorkspaceSettings() {
 	return (
 		<section className="space-y-8">
 			<header>
-				<p className="font-mono text-accent text-xs uppercase tracking-widest">Workspace / Settings</p>
-				<h1 className="mt-2 font-semibold text-3xl tracking-tight">{data.workspace.name}</h1>
+				<p className="label-eyebrow">Workspace · Settings</p>
+				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight">{data.workspace.name}</h1>
 			</header>
 			<form
 				className="max-w-xl space-y-4 rounded-lg border bg-card p-5"
@@ -89,7 +89,7 @@ function WorkspaceSettings() {
 				<div className="overflow-hidden rounded-lg border bg-card">
 					{data.members.map((member) => (
 						<div key={member.id} className="flex h-14 items-center gap-3 border-b px-4 last:border-b-0">
-							<span className="flex size-8 items-center justify-center rounded-full bg-accent/15 font-medium text-accent-foreground text-xs">
+							<span className="flex size-8 items-center justify-center rounded-full bg-brand-ink/12 font-medium text-brand-ink text-xs">
 								{member.name.slice(0, 2).toUpperCase()}
 							</span>
 							<span className="min-w-0 flex-1">
