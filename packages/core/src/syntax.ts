@@ -1,5 +1,6 @@
 import type { Root, RootContent } from "mdast";
 import remarkFrontmatter from "remark-frontmatter";
+import remarkGfm from "remark-gfm";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -43,7 +44,16 @@ function isMdxAttribute(value: unknown): value is MdxAttribute {
 	);
 }
 
-const parser = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]).use(remarkMdx);
+/**
+ * `remark-gfm` is not optional here. The renderer parses with it, so without it
+ * core and the renderer disagree about Markdown: a table collapses into one
+ * enormous paragraph — tripping `paragraph-length` with a diagnostic that blames
+ * paragraph length and blocks the publish — and a `- [ ] item` checklist, which
+ * the authoring skill tells every agent to write inside `<Phase>`, parses as an
+ * unchecked-null list item whose text still contains the literal brackets.
+ * One pipeline, one gate.
+ */
+const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ["yaml"]).use(remarkMdx);
 
 export function parseSource(source: string): ParsedSource {
 	const normalizedSource = source.replace(/\r\n?/g, "\n");
