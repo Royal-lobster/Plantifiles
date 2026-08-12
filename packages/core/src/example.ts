@@ -41,6 +41,15 @@ graph LR
 - [ ] Webhook worker reconciles nightly
 </Phase>
 
+<Diagram lang="mermaid">
+\`\`\`mermaid
+sequenceDiagram
+  Checkout->>Stripe: create subscription
+  Stripe-->>Worker: invoice.paid webhook
+  Worker->>Ledger: append read-only record
+\`\`\`
+</Diagram>
+
 <Risk severity="high">
 Webhook replay could double-charge. Idempotency keys are mandatory.
 </Risk>

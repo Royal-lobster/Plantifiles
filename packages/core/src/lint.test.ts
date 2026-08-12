@@ -50,7 +50,7 @@ describe("lint", () => {
 	});
 
 	it.each(["Decision", "Phase", "Diagram"])("requires at least one %s", (component) => {
-		const source = EXAMPLE_PLAN.replace(new RegExp(`<${component}[^>]*>[\\s\\S]*?</${component}>`), "");
+		const source = EXAMPLE_PLAN.replace(new RegExp(`<${component}[^>]*>[\\s\\S]*?</${component}>`, "g"), "");
 		expect(findingsFor(source, "required-components").some((finding) => finding.message.includes(component))).toBe(
 			true,
 		);
@@ -99,6 +99,23 @@ describe("lint", () => {
 	it("warns when no rejected alternative is recorded", () => {
 		const source = EXAMPLE_PLAN.replace(/<Rejected[\s\S]*?<\/Rejected>\n/, "");
 		expect(findingsFor(source, "rejected-alternative")).toHaveLength(1);
+	});
+
+	it("warns when the plan carries fewer than two diagrams", () => {
+		const source = EXAMPLE_PLAN.replace(/<Diagram[\s\S]*?<\/Diagram>\n/, "");
+		const report = lint(source);
+		const findings = report.findings.filter((finding) => finding.rule === "diagram-count");
+		expect(findings).toHaveLength(1);
+		expect(findings[0]).toMatchObject({
+			severity: "warning",
+			message: "Plan has 1 diagram; use at least two and vary the diagram type.",
+		});
+		expect(report.canPublish).toBe(true);
+		expect(report.score).toBe(lint(EXAMPLE_PLAN).score - 3);
+	});
+
+	it("accepts a plan with two diagrams", () => {
+		expect(findingsFor(EXAMPLE_PLAN, "diagram-count")).toEqual([]);
 	});
 
 	it("warns when read time exceeds twelve minutes", () => {

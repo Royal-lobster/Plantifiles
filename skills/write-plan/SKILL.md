@@ -22,6 +22,7 @@ Done means the published URL opens, lint is at least 90, and the version records
 - Begin every `##` section with a one-line summary paragraph under 30 words.
 - Keep each paragraph within 5 sentences and 120 words.
 - Include at least one `<Decision>`, `<Phase>`, and `<Diagram>`.
+- Draw at least two `<Diagram>` blocks; one diagram earns a warning.
 - Give every `<Decision>` an `owner`.
 - Put at least two `<Option>` blocks in each `<Tradeoff>` and mark exactly one `recommended`.
 - Set every `<Risk>` severity to `low`, `med`, or `high`.
@@ -30,6 +31,26 @@ Done means the published URL opens, lint is at least 90, and the version records
 - Put block-component children on lines between the opening and closing tags.
 - Include a `<Rejected>` block naming an alternative and why it lost.
 - Keep estimated read time at or below 12 minutes.
+
+## Diagrams
+
+Draw at least two diagrams and match each diagram type to what it explains.
+
+| Mermaid type | Use it for |
+|---|---|
+| `flowchart` / `graph` | Pipelines, data flow, control flow |
+| `sequenceDiagram` | Cross-service or cross-actor ordering and failure paths |
+| `stateDiagram-v2` | Lifecycles and status transitions |
+| `erDiagram` | New tables and the relationships between them |
+
+A plan whose only diagram is `graph LR` is under-drawn. Every diagram must add information the prose does not
+already carry; if the picture only restates a sentence, delete it and draw the thing the reader cannot infer.
+
+## Code sketches
+
+Use `<CodeSketch>` when the precise shape of a payload, table row, or function signature is clearer as a type
+than as prose. Keep it to the smallest sketch that pins the contract, and prefer a type or a signature over an
+implementation body. Reviewers should be able to disagree with the shape without reading the algorithm.
 
 ## Component vocabulary
 
@@ -60,6 +81,16 @@ Ship the change in small, reversible phases while preserving the current contrac
 
 The current path is costly to change and has no single owner.
 
+<Diagram lang="mermaid">
+```mermaid
+sequenceDiagram
+Client->>Service: submit request
+Service->>Legacy: write through old contract
+Legacy--xService: timeout on retry
+Service-->>Client: 500 with no recovery path
+```
+</Diagram>
+
 <Decision owner="@owner" id="cutover-strategy">
 Should the team cut over in one release or run both paths until production evidence is sufficient?
 </Decision>
@@ -81,6 +112,15 @@ It keeps two contracts alive indefinitely and makes every future change pay the 
 
 The implementation proves the new path before removing the old one.
 
+<Diagram lang="mermaid">
+```mermaid
+graph LR
+A[Existing interface] --> B[Dual run]
+B --> C[Compare outputs]
+C --> D[New path]
+```
+</Diagram>
+
 <Phase n="1" title="Prove the path">
 - [ ] Add the new path behind the existing interface
 - [ ] Compare outputs on representative production-shaped inputs
@@ -91,24 +131,27 @@ The implementation proves the new path before removing the old one.
 - [ ] Remove the old path and its configuration
 </Phase>
 
+<Diagram lang="mermaid">
+```mermaid
+stateDiagram-v2
+[*] --> DualRun
+DualRun --> Proven: outputs match
+DualRun --> Reverted: mismatch found
+Proven --> CutOver
+CutOver --> [*]
+```
+</Diagram>
+
 <Risk severity="high">
 A silent output mismatch could corrupt downstream state. Compare canonical outputs before changing traffic.
 </Risk>
 
-<Diagram lang="mermaid">
-```mermaid
-graph LR
-A[Existing interface] --> B[Dual run]
-B --> C[Compare outputs]
-C --> D[New path]
-```
-</Diagram>
-
 <CodeSketch lang="ts" file="src/new-path.ts">
 ```ts
-export function execute(input: Input): Output {
-  return transform(input)
-}
+export type Input = { id: string; amountCents: number };
+export type Output = { id: string; status: "proven" | "cut-over" };
+
+export declare function execute(input: Input): Output;
 ```
 </CodeSketch>
 

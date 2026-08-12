@@ -217,6 +217,15 @@ export function lint(source: string): LintReport {
 		add("rejected-alternative", "warning", "Record at least one rejected alternative and why it was rejected.");
 	}
 
+	const diagramCount = components.filter((node) => componentName(node) === "Diagram").length;
+	if (diagramCount < 2) {
+		add(
+			"diagram-count",
+			"warning",
+			`Plan has ${diagramCount} diagram${diagramCount === 1 ? "" : "s"}; use at least two and vary the diagram type.`,
+		);
+	}
+
 	const documentWords = words(content.map(nodeText).join(" ")).length;
 	const readTimeMinutes = documentWords / 200;
 	if (readTimeMinutes > 12) {
