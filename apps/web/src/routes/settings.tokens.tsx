@@ -4,10 +4,11 @@ import { Input } from "@plantifiles/ui/components/input";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { formatUtcTimestamp } from "#/lib/format-time";
 import { guardLoader } from "#/lib/loader-guard";
 import { createTokenForPage, getTokensForPage, revokeTokenForPage } from "#/lib/token-data";
+import { SettingsRow, SettingsRowDivider, SettingsSection } from "./-components/settings-section";
 
 export const Route = createFileRoute("/settings/tokens")({
 	loader: () => guardLoader(() => getTokensForPage()),
@@ -23,63 +24,85 @@ function TokenSettings() {
 	const [name, setName] = useState("");
 	const [plaintext, setPlaintext] = useState<string>();
 	const [copied, setCopied] = useState(false);
+	const tokensSectionId = useId();
+
 	return (
-		<section className="space-y-6">
+		<section className="space-y-8">
 			<header>
 				<h1 className="font-medium text-2xl tracking-tight">Agent tokens</h1>
 				<p className="mt-1 text-muted-foreground text-sm">
 					Tokens authenticate the CLI and MCP server. A plaintext token is shown once.
 				</p>
 			</header>
-			<form
-				className="flex max-w-xl gap-2"
-				onSubmit={async (event) => {
-					event.preventDefault();
-					const created = await createToken({ data: { name } });
-					setPlaintext(created.token);
-					setName("");
-					await router.invalidate();
-				}}
+
+			<SettingsSection
+				id={tokensSectionId}
+				icon={KeyRound}
+				title="Tokens"
+				description="Create and revoke credentials for agents and command-line tools."
 			>
-				<Input
-					aria-label="Token name"
-					value={name}
-					onChange={(event) => setName(event.target.value)}
-					placeholder="Claude Code on work laptop"
-					required
-				/>
-				<Button type="submit">
-					<KeyRound /> Create token
-				</Button>
-			</form>
-			<div className="overflow-hidden rounded-lg border bg-card">
-				{tokens.length === 0 ? (
-					<div className="p-8 text-center text-muted-foreground text-sm">No API tokens yet.</div>
-				) : (
-					tokens.map((token) => (
-						<div key={token.id} className="flex h-14 items-center gap-3 border-b px-4 last:border-b-0">
-							<KeyRound className="size-4 text-muted-foreground" />
-							<span className="min-w-0 flex-1">
-								<span className="block truncate font-medium text-sm">{token.name}</span>
-								<span className="block text-muted-foreground text-xs">
-									{token.lastUsedAt ? `Last used ${formatUtcTimestamp(token.lastUsedAt)}` : "Never used"}
-								</span>
-							</span>
-							<Button
-								variant="ghost"
-								size="icon"
-								aria-label={`Revoke ${token.name}`}
-								onClick={async () => {
-									await revokeToken({ data: { id: token.id } });
-									await router.invalidate();
-								}}
-							>
-								<Trash2 />
+				<SettingsRow
+					label="Create a token"
+					hint="Give each device or agent its own token so access can be revoked independently."
+					control={
+						<form
+							className="flex w-full flex-wrap justify-end gap-2 sm:w-auto"
+							onSubmit={async (event) => {
+								event.preventDefault();
+								const created = await createToken({ data: { name } });
+								setPlaintext(created.token);
+								setName("");
+								await router.invalidate();
+							}}
+						>
+							<Input
+								className="min-w-0 flex-1"
+								aria-label="Token name"
+								value={name}
+								onChange={(event) => setName(event.target.value)}
+								placeholder="Claude Code on work laptop"
+								required
+							/>
+							<Button type="submit">
+								<KeyRound /> Create token
 							</Button>
-						</div>
+						</form>
+					}
+				/>
+				<SettingsRowDivider />
+
+				{tokens.length === 0 ? (
+					<div className="px-4 py-8 text-center">
+						<KeyRound className="mx-auto size-6 text-muted-foreground" />
+						<p className="mt-2 font-medium text-sm">No API tokens yet</p>
+						<p className="mt-1 text-muted-foreground text-xs">Create one above to connect an agent.</p>
+					</div>
+				) : (
+					tokens.map((token, index) => (
+						<Fragment key={token.id}>
+							{index > 0 ? <SettingsRowDivider /> : null}
+							<SettingsRow
+								label={token.name}
+								hint={token.lastUsedAt ? `Last used ${formatUtcTimestamp(token.lastUsedAt)}` : "Never used"}
+								control={
+									<Button
+										variant="ghost"
+										size="icon"
+										aria-label={`Revoke ${token.name}`}
+										onClick={async () => {
+											await revokeToken({ data: { id: token.id } });
+											await router.invalidate();
+										}}
+									>
+										<Trash2 />
+									</Button>
+								}
+							/>
+						</Fragment>
 					))
 				)}
-			</div>
+			</SettingsSection>
+
 			<Dialog
 				open={Boolean(plaintext)}
 				onOpenChange={(open) => {
