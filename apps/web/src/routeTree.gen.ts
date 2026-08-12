@@ -17,9 +17,6 @@ import { Route as SettingsTokensRouteImport } from './routes/settings.tokens'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as ApiDevSignInRouteImport } from './routes/api.dev.sign-in'
 import { Route as ApiPlansIdRouteImport } from './routes/api.plans.$id'
-import { Route as ApiSlackCallbackRouteImport } from './routes/api.slack.callback'
-import { Route as ApiSlackEventsRouteImport } from './routes/api.slack.events'
-import { Route as ApiSlackInstallRouteImport } from './routes/api.slack.install'
 import { Route as ApiTokensIdRouteImport } from './routes/api.tokens.$id'
 import { Route as PWorkspaceSlugPlanSlugRouteImport } from './routes/p.$workspaceSlug.$planSlug'
 import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills.write-plan.SKILL[.]md'
@@ -69,21 +66,6 @@ const ApiPlansIdRoute = ApiPlansIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiPlansRoute,
-} as any)
-const ApiSlackCallbackRoute = ApiSlackCallbackRouteImport.update({
-  id: '/api/slack/callback',
-  path: '/api/slack/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSlackEventsRoute = ApiSlackEventsRouteImport.update({
-  id: '/api/slack/events',
-  path: '/api/slack/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSlackInstallRoute = ApiSlackInstallRouteImport.update({
-  id: '/api/slack/install',
-  path: '/api/slack/install',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTokensIdRoute = ApiTokensIdRouteImport.update({
   id: '/$id',
@@ -142,9 +124,6 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/sign-in': typeof ApiDevSignInRoute
   '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/slack/callback': typeof ApiSlackCallbackRoute
-  '/api/slack/events': typeof ApiSlackEventsRoute
-  '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
@@ -164,9 +143,6 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/sign-in': typeof ApiDevSignInRoute
   '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/slack/callback': typeof ApiSlackCallbackRoute
-  '/api/slack/events': typeof ApiSlackEventsRoute
-  '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
@@ -187,9 +163,6 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/sign-in': typeof ApiDevSignInRoute
   '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/slack/callback': typeof ApiSlackCallbackRoute
-  '/api/slack/events': typeof ApiSlackEventsRoute
-  '/api/slack/install': typeof ApiSlackInstallRoute
   '/api/tokens/$id': typeof ApiTokensIdRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
@@ -211,9 +184,6 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/sign-in'
     | '/api/plans/$id'
-    | '/api/slack/callback'
-    | '/api/slack/events'
-    | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
     | '/skills/write-plan/SKILL.md'
@@ -233,9 +203,6 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/sign-in'
     | '/api/plans/$id'
-    | '/api/slack/callback'
-    | '/api/slack/events'
-    | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
     | '/skills/write-plan/SKILL.md'
@@ -255,9 +222,6 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/sign-in'
     | '/api/plans/$id'
-    | '/api/slack/callback'
-    | '/api/slack/events'
-    | '/api/slack/install'
     | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
     | '/skills/write-plan/SKILL.md'
@@ -277,9 +241,6 @@ export interface RootRouteChildren {
   SettingsTokensRoute: typeof SettingsTokensRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDevSignInRoute: typeof ApiDevSignInRoute
-  ApiSlackCallbackRoute: typeof ApiSlackCallbackRoute
-  ApiSlackEventsRoute: typeof ApiSlackEventsRoute
-  ApiSlackInstallRoute: typeof ApiSlackInstallRoute
   PWorkspaceSlugPlanSlugRoute: typeof PWorkspaceSlugPlanSlugRouteWithChildren
   SkillsWritePlanSKILLDotmdRoute: typeof SkillsWritePlanSKILLDotmdRoute
   WSlugDecisionsRoute: typeof WSlugDecisionsRoute
@@ -344,27 +305,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/plans/$id'
       preLoaderRoute: typeof ApiPlansIdRouteImport
       parentRoute: typeof ApiPlansRoute
-    }
-    '/api/slack/callback': {
-      id: '/api/slack/callback'
-      path: '/api/slack/callback'
-      fullPath: '/api/slack/callback'
-      preLoaderRoute: typeof ApiSlackCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/slack/events': {
-      id: '/api/slack/events'
-      path: '/api/slack/events'
-      fullPath: '/api/slack/events'
-      preLoaderRoute: typeof ApiSlackEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/slack/install': {
-      id: '/api/slack/install'
-      path: '/api/slack/install'
-      fullPath: '/api/slack/install'
-      preLoaderRoute: typeof ApiSlackInstallRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/tokens/$id': {
       id: '/api/tokens/$id'
@@ -492,9 +432,6 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsTokensRoute: SettingsTokensRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDevSignInRoute: ApiDevSignInRoute,
-  ApiSlackCallbackRoute: ApiSlackCallbackRoute,
-  ApiSlackEventsRoute: ApiSlackEventsRoute,
-  ApiSlackInstallRoute: ApiSlackInstallRoute,
   PWorkspaceSlugPlanSlugRoute: PWorkspaceSlugPlanSlugRouteWithChildren,
   SkillsWritePlanSKILLDotmdRoute: SkillsWritePlanSKILLDotmdRoute,
   WSlugDecisionsRoute: WSlugDecisionsRoute,

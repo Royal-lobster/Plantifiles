@@ -231,22 +231,6 @@ export const membership = sqliteTable(
 		check("membership_role_ck", sql`${table.role} in ('owner','admin','member','viewer')`),
 	],
 );
-export const slackInstallation = sqliteTable("slack_installation", {
-	id: text("id").primaryKey(),
-	workspaceId: text("workspace_id")
-		.notNull()
-		.unique()
-		.references(() => workspace.id, { onDelete: "cascade" }),
-	teamId: text("team_id").notNull().unique(),
-	teamName: text("team_name"),
-	botUserId: text("bot_user_id"),
-	encryptedAccessToken: text("encrypted_access_token").notNull(),
-	installedById: text("installed_by_id")
-		.notNull()
-		.references(() => user.id),
-	createdAt: createdAt(),
-	updatedAt: updatedAt(),
-});
 
 export const apiToken = sqliteTable("api_token", {
 	id: text("id").primaryKey(),

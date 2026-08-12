@@ -1,5 +1,5 @@
 import { normalize } from "@plantifiles/core";
-import { decision, membership, plan, planVersion, slackInstallation, user, workspace } from "@plantifiles/db/schema";
+import { decision, membership, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -116,12 +116,7 @@ export const getWorkspaceSettings = createServerFn({ method: "GET" })
 			.innerJoin(user, eq(membership.userId, user.id))
 			.where(eq(membership.workspaceId, target.id))
 			.orderBy(asc(user.name));
-		const [slack] = await db
-			.select({ teamId: slackInstallation.teamId, teamName: slackInstallation.teamName })
-			.from(slackInstallation)
-			.where(eq(slackInstallation.workspaceId, target.id))
-			.limit(1);
-		return { workspace: target, members, role: access[0].role, slack: slack ?? null };
+		return { workspace: target, members, role: access[0].role };
 	});
 
 export const updateWorkspaceSettings = createServerFn({ method: "POST" })

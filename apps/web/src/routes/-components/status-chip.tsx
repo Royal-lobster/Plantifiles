@@ -5,9 +5,9 @@ import type { PlanStatus } from "#/lib/app-data";
 
 type BadgeProps = ComponentProps<typeof Badge>;
 
-/* One mapping, consumed by the dashboard, the reader masthead, and the Slack
-   unfurl. Green is the product, so review states carry brand ink and only
-   genuinely good outcomes claim --success. */
+/* One mapping, consumed by the dashboard and the reader masthead. Green is the
+   product, so review states carry brand ink and only genuinely good outcomes
+   claim --success. */
 const STATUS_VARIANT: Record<PlanStatus, NonNullable<BadgeProps["variant"]>> = {
 	draft: "secondary",
 	in_review: "brand",
