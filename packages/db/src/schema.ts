@@ -83,6 +83,7 @@ export const plan = sqliteTable(
 			.references(() => workspace.id, { onDelete: "cascade" }),
 		slug: text("slug").notNull(),
 		title: text("title").notNull(),
+		emoji: text("emoji"),
 		status: text("status", {
 			enum: ["draft", "in_review", "approved", "archived"],
 		})

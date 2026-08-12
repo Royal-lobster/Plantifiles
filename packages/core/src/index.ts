@@ -1,4 +1,5 @@
 export { diff } from "./diff.js";
+export { planEmojiFromSource } from "./emoji.js";
 export { EXAMPLE_PLAN } from "./example.js";
 export { lint } from "./lint.js";
 export { normalize } from "./normalize.js";

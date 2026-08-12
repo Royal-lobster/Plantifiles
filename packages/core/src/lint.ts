@@ -1,4 +1,5 @@
 import type { Node } from "unist";
+import { planEmojiFromSource } from "./emoji.js";
 import { normalize } from "./normalize.js";
 import {
 	booleanAttribute,
@@ -51,7 +52,7 @@ function blockAtLine(blocks: Block[], line: number): string | undefined {
 	return match?.key;
 }
 
-export function lint(source: string): LintReport {
+export function lint(source: string, options: { emoji?: string | undefined } = {}): LintReport {
 	let parsed: ParsedSource;
 	try {
 		parsed = parseSource(source);
@@ -211,6 +212,10 @@ export function lint(source: string): LintReport {
 		if (name === "Callout" && !VALID_CALLOUT_KINDS.has(stringAttribute(node, "kind") ?? "")) {
 			add("component-vocabulary", "error", '<Callout> kind must be "note" or "warning".', node);
 		}
+	}
+
+	if (!(options.emoji ?? planEmojiFromSource(parsed.source))) {
+		add("plan-emoji", "warning", "Choose one emoji that represents the plan and add it to frontmatter.");
 	}
 
 	if (!components.some((node) => componentName(node) === "Rejected")) {

@@ -11,6 +11,7 @@ import {
 	workspace,
 } from "@plantifiles/db/schema";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { resolvePlanEmoji } from "./plan-emoji";
 import { authenticateRequest, requireIdentity } from "./request-auth.server";
 import { getDb, getRuntimeEnv } from "./runtime.server";
 
@@ -21,6 +22,7 @@ export type PublishPlanInput = {
 	slug?: string | undefined;
 	title: string;
 	source: string;
+	emoji?: string | undefined;
 	agentName?: string | undefined;
 	agentPrompt?: string | undefined;
 	force?: boolean | undefined;
@@ -28,6 +30,7 @@ export type PublishPlanInput = {
 
 export type PublishVersionInput = {
 	source: string;
+	emoji?: string | undefined;
 	agentName?: string | undefined;
 	agentPrompt?: string | undefined;
 	force?: boolean | undefined;
@@ -56,11 +59,15 @@ function slugify(value: string): string {
 		.slice(0, 80);
 }
 
-function assertPublishableSource(source: string, force = false): { blocks: Block[]; report: LintReport } {
+function assertPublishableSource(
+	source: string,
+	emoji: string | null,
+	force = false,
+): { blocks: Block[]; report: LintReport } {
 	if (new TextEncoder().encode(source).byteLength > MAX_SOURCE_BYTES) {
 		throw new Response("Plan source exceeds the 1 MB v1 limit.", { status: 413 });
 	}
-	const report = lint(source);
+	const report = lint(source, { emoji: emoji ?? undefined });
 	if (!force && !report.canPublish) {
 		throw Response.json({ error: "lint_failed", report }, { status: 422 });
 	}
@@ -119,14 +126,15 @@ export async function createPlan(request: Request, input: PublishPlanInput) {
 		.limit(1);
 	if (existing[0]) throw new Response("A plan with this slug already exists.", { status: 409 });
 
-	const { blocks, report } = assertPublishableSource(input.source, input.force);
+	const emoji = resolvePlanEmoji(input.source, input.emoji);
+	const { blocks, report } = assertPublishableSource(input.source, emoji, input.force);
 	const planId = crypto.randomUUID();
 	const versionId = crypto.randomUUID();
 	const runtime = getRuntimeEnv();
 	const statements: D1PreparedStatement[] = [
 		runtime.DB.prepare(
-			"insert into plan (id, workspace_id, slug, title, status, visibility, created_by_id, current_version_id, updated_at) values (?, ?, ?, ?, 'draft', 'workspace', ?, ?, unixepoch())",
-		).bind(planId, targetWorkspace.id, planSlug, input.title, identity.user.id, versionId),
+			"insert into plan (id, workspace_id, slug, title, emoji, status, visibility, created_by_id, current_version_id, updated_at) values (?, ?, ?, ?, ?, 'draft', 'workspace', ?, ?, unixepoch())",
+		).bind(planId, targetWorkspace.id, planSlug, input.title, emoji, identity.user.id, versionId),
 		runtime.DB.prepare(
 			"insert into plan_version (id, plan_id, number, source, lint_score, lint_report, lint_overridden, author_id, agent_name, agent_prompt, created_at) values (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, unixepoch())",
 		).bind(
@@ -168,7 +176,8 @@ export async function createPlanVersion(request: Request, planId: string, input:
 	if (!current) throw new Response("Plan not found", { status: 404 });
 	await assertWorkspaceAccess(current.workspace.id, identity.user.id);
 
-	const { blocks, report } = assertPublishableSource(input.source, input.force);
+	const emoji = resolvePlanEmoji(input.source, input.emoji, current.plan.emoji);
+	const { blocks, report } = assertPublishableSource(input.source, emoji, input.force);
 	const structural = diff(normalize(current.version.source), blocks);
 	const versionId = crypto.randomUUID();
 	const versionNumber = current.version.number + 1;
@@ -192,8 +201,8 @@ export async function createPlanVersion(request: Request, planId: string, input:
 		...blockStatements(blocks, versionId),
 		...decisionStatements(blocks, planId),
 		runtime.DB.prepare(
-			"update plan set current_version_id = ?, status = case when status in ('approved') then 'in_review' else status end, updated_at = unixepoch() where id = ?",
-		).bind(versionId, planId),
+			"update plan set current_version_id = ?, emoji = ?, status = case when status in ('approved') then 'in_review' else status end, updated_at = unixepoch() where id = ?",
+		).bind(versionId, emoji, planId),
 	];
 	await runtime.DB.batch(statements);
 
@@ -238,6 +247,7 @@ export async function listPlans(request: Request, workspaceSlug: string, status?
 			id: plan.id,
 			slug: plan.slug,
 			title: plan.title,
+			emoji: plan.emoji,
 			status: plan.status,
 			updatedAt: plan.updatedAt,
 			version: planVersion.number,
@@ -383,6 +393,7 @@ export function renderPlanMarkdown(document: PlanDocument): string {
 	return [
 		"---",
 		`title: ${yamlString(document.plan.title)}`,
+		...(document.plan.emoji ? [`emoji: ${yamlString(document.plan.emoji)}`] : []),
 		`version: ${document.version.number}`,
 		`status: ${yamlString(document.plan.status)}`,
 		`url: ${yamlString(canonicalUrl)}`,

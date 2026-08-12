@@ -96,6 +96,23 @@ describe("lint", () => {
 		expect(findings[0]?.message).toContain("<Decision>");
 	});
 
+	it("warns without an emoji and still permits publishing", () => {
+		const source = EXAMPLE_PLAN.replace("emoji: 🧾\n", "");
+		const report = lint(source);
+		expect(report.findings.filter((finding) => finding.rule === "plan-emoji")).toEqual([
+			expect.objectContaining({
+				severity: "warning",
+				message: "Choose one emoji that represents the plan and add it to frontmatter.",
+			}),
+		]);
+		expect(report.canPublish).toBe(true);
+	});
+
+	it("accepts an emoji supplied outside frontmatter", () => {
+		const source = EXAMPLE_PLAN.replace("emoji: 🧾\n", "");
+		expect(lint(source, { emoji: "🛡️" }).findings.some((finding) => finding.rule === "plan-emoji")).toBe(false);
+	});
+
 	it("warns when no rejected alternative is recorded", () => {
 		const source = EXAMPLE_PLAN.replace(/<Rejected[\s\S]*?<\/Rejected>\n/, "");
 		expect(findingsFor(source, "rejected-alternative")).toHaveLength(1);

@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { errorResponse, readJson } from "#/lib/http";
+import { planEmojiSchema } from "#/lib/plan-emoji";
 import { createPlanVersion, getVersionHistory } from "#/lib/plans.server";
 
 const publishVersionSchema = z.object({
 	source: z.string(),
+	emoji: planEmojiSchema.optional(),
 	agentName: z.string().min(1).optional(),
 	agentPrompt: z.string().optional(),
 	force: z.boolean().optional(),

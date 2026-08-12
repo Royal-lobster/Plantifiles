@@ -1,5 +1,6 @@
 export const EXAMPLE_PLAN = `---
 title: Billing migration to Stripe
+emoji: 🧾
 ---
 
 <TLDR>
