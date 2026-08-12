@@ -166,7 +166,6 @@ function PlanEditor({
 						{rendered ? (
 							<article className="space-y-6">
 								<PlanRenderProvider
-									skim={false}
 									blocks={data.blocks}
 									decisions={data.decisions}
 									comments={[]}

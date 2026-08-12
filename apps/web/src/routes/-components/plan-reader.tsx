@@ -15,17 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@plantifiles/ui/components/toggle-
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-	ArrowRight,
-	Check,
-	Eye,
-	FileDown,
-	GitCompareArrows,
-	History,
-	ListTree,
-	MoreHorizontal,
-	Pencil,
-} from "lucide-react";
+import { ArrowRight, Check, FileDown, GitCompareArrows, History, ListTree, MoreHorizontal, Pencil } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatUtcTimestamp } from "#/lib/format-time";
 import type { PlanRouteData } from "#/lib/plan-data";
@@ -95,7 +85,6 @@ function useActiveBlockKey(keys: string[]): string | undefined {
 
 function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderProps) {
 	const router = useRouter();
-	const [skim, setSkim] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [showDiff, setShowDiff] = useState(compareFrom !== undefined);
 	const [reviewMessage, setReviewMessage] = useState("");
@@ -156,7 +145,6 @@ function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderPr
 		data.plan.status === "archived" || data.plan.status === "in_review"
 			? undefined
 			: NEXT_STATUS_LABEL[data.plan.status];
-	const readingModes = [...(skim ? ["skim"] : []), ...(showDiff ? ["diff"] : [])];
 
 	async function refreshReview(resultMessage: string) {
 		setReviewMessage(resultMessage);
@@ -268,16 +256,12 @@ function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderPr
 					)}
 					<ToggleGroup
 						type="multiple"
-						value={readingModes}
+						value={showDiff ? ["diff"] : []}
 						onValueChange={(value: string[]) => {
-							setSkim(value.includes("skim"));
 							setShowDiff(comparable && value.includes("diff"));
 						}}
 						aria-label="Reading mode"
 					>
-						<ToggleGroupItem value="skim" aria-label="Skim mode">
-							<Eye /> Skim
-						</ToggleGroupItem>
 						{comparable && (
 							<ToggleGroupItem value="diff" aria-label="Compare versions">
 								<GitCompareArrows /> Diff
@@ -385,7 +369,6 @@ function PlanReader({ data, workspaceSlug, planSlug, compareFrom }: PlanReaderPr
 				<div aria-hidden className="hidden xl:block" />
 				<article className="relative mx-auto min-w-0 max-w-measure space-y-7 xl:mx-0">
 					<PlanRenderProvider
-						skim={skim}
 						decisions={data.decisions}
 						comments={data.comments}
 						changedKeys={changedKeys}

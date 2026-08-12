@@ -58,7 +58,6 @@ type PlanBlockProps = ComponentProps<"div"> & {
 	"data-block-key"?: string;
 };
 type PlanRenderContextValue = {
-	skim: boolean;
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
 	changedKeys: Record<string, true>;
@@ -78,7 +77,6 @@ type PlanRenderContextValue = {
 };
 
 const PlanRenderContext = createContext<PlanRenderContextValue>({
-	skim: false,
 	decisions: [],
 	comments: [],
 	changedKeys: {},
@@ -91,15 +89,6 @@ const PlanRenderContext = createContext<PlanRenderContextValue>({
 	workspaceSlug: "",
 	planSlug: "",
 });
-
-const SKIM_KIND: Record<string, true> = {
-	TLDR: true,
-	Decision: true,
-	Tradeoff: true,
-	Risk: true,
-	Diagram: true,
-	Phase: true,
-};
 
 /* Below xl there is no gutter to hide an affordance in, so the comment button
    only rides along with blocks that carry a decision-grade claim. Prose still
@@ -140,7 +129,6 @@ function planBlockIndex(blocks: PlanBlockSummary[]): {
 
 function PlanRenderProvider({
 	children,
-	skim,
 	blocks,
 	decisions,
 	comments,
@@ -156,7 +144,6 @@ function PlanRenderProvider({
 	onResolveDecision,
 }: {
 	children: ReactNode;
-	skim: boolean;
 	blocks: PlanBlockSummary[];
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
@@ -174,7 +161,6 @@ function PlanRenderProvider({
 	const { figureNumbers, phaseContinues } = useMemo(() => planBlockIndex(blocks), [blocks]);
 	const value = useMemo(
 		() => ({
-			skim,
 			decisions,
 			comments,
 			changedKeys,
@@ -191,7 +177,6 @@ function PlanRenderProvider({
 			onResolveDecision,
 		}),
 		[
-			skim,
 			decisions,
 			comments,
 			changedKeys,
@@ -240,7 +225,6 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 				{children}
 			</div>
 		);
-	if (context.skim && (!kind || !SKIM_KIND[kind])) return null;
 	const threads = context.comments.filter((item) => item.blockKey === key && !item.parentId);
 	const openThreads = threads.filter((item) => !item.resolvedAt).length;
 	const canComment = Boolean(
@@ -720,7 +704,7 @@ function Phase({
 	blockKey?: string;
 	children?: ReactNode;
 }) {
-	const { skim, phaseContinues } = useContext(PlanRenderContext);
+	const { phaseContinues } = useContext(PlanRenderContext);
 	const continues = Boolean(blockKey && phaseContinues[blockKey]);
 	return (
 		<section className="relative pl-12">
@@ -732,11 +716,9 @@ function Phase({
 				{n}
 			</span>
 			<h3 className="pt-1 font-display font-medium text-xl tracking-tight">{title}</h3>
-			{!skim && (
-				<div className="mt-3 [&_li]:flex [&_li]:items-start [&_li]:gap-2.5 [&_li]:pl-0 [&_ul]:space-y-2.5 [&_ul]:pl-0">
-					{children}
-				</div>
-			)}
+			<div className="mt-3 [&_li]:flex [&_li]:items-start [&_li]:gap-2.5 [&_li]:pl-0 [&_ul]:space-y-2.5 [&_ul]:pl-0">
+				{children}
+			</div>
 		</section>
 	);
 }

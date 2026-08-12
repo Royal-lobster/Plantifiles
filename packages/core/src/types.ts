@@ -57,5 +57,3 @@ export type StructuralDiff = {
 	changes: BlockChange[];
 	summary: string;
 };
-
-export type SkimBlock = Pick<Block, "key" | "kind" | "source" | "title" | "ordinal">;

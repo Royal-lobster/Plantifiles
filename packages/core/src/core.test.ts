@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { diff } from "./diff.js";
 import { EXAMPLE_PLAN } from "./example.js";
 import { normalize } from "./normalize.js";
-import { skim } from "./skim.js";
 
 describe("normalize", () => {
 	it("keeps block keys stable when content changes under the same heading path", () => {
@@ -68,16 +67,5 @@ New?
 	it("reports no structural changes for identical blocks", () => {
 		const blocks = normalize(EXAMPLE_PLAN);
 		expect(diff(blocks, blocks)).toEqual({ changes: [], summary: "No structural changes." });
-	});
-});
-
-describe("skim", () => {
-	it("keeps review-critical components and projects phases to their titles", () => {
-		const projection = skim(normalize(EXAMPLE_PLAN));
-		expect(new Set(projection.map((block) => block.kind))).toEqual(
-			new Set(["TLDR", "Decision", "Tradeoff", "Diagram", "Phase", "Risk"]),
-		);
-		expect(projection.find((block) => block.kind === "Phase")?.source).toBe("Dual-write");
-		expect(projection.some((block) => block.kind === "Rejected")).toBe(false);
 	});
 });
