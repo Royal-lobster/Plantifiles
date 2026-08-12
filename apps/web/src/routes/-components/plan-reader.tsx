@@ -107,8 +107,10 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 		});
 	}
 
+	// Title, metadata and prose share one measure-wide column, centred in the
+	// shell, so nothing is indented relative to anything else.
 	return (
-		<section>
+		<section className="mx-auto max-w-measure">
 			<header className="border-b pb-7">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
 				<h1 className="mt-1 max-w-[34ch] font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
@@ -204,7 +206,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 			    shell there is no room for a third track, and a collapsed outline is a
 			    click a bailing reader never spends. Headings carry the navigation. */}
 			<div className="mt-10">
-				<article className="relative min-w-0 max-w-measure space-y-7">
+				<article className="relative min-w-0 space-y-7">
 					<PlanRenderProvider
 						decisions={data.decisions}
 						comments={data.comments}

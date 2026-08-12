@@ -10,10 +10,10 @@ import {
 	DropdownMenuTrigger,
 } from "@plantifiles/ui/components/dropdown-menu";
 import { TooltipProvider } from "@plantifiles/ui/components/tooltip";
-import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Check, ChevronsUpDown, Palette, Slash } from "lucide-react";
 import type { NavigationData } from "#/lib/app-data";
+import { LogoBadge } from "./brand";
 import { type Theme, useTheme } from "./theme-provider";
 
 const NAV_LINKS = [
@@ -151,9 +151,7 @@ function AppShell({ navigation, children }: { navigation: NavigationData; childr
 				<header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
 					<div className="mx-auto flex h-14 w-full max-w-shell items-center gap-1 px-4 sm:px-6">
 						<Link to="/" className="flex items-center gap-2 font-medium tracking-tight">
-							<span className="grid size-6 place-items-center rounded-md bg-primary font-mono text-[0.625rem] text-primary-foreground">
-								P
-							</span>
+							<LogoBadge />
 							<span className="hidden sm:inline">Plantifiles</span>
 						</Link>
 						{workspaceSlug && (
@@ -170,31 +168,19 @@ function AppShell({ navigation, children }: { navigation: NavigationData; childr
 
 					{workspaceSlug && (
 						<nav className="mx-auto w-full max-w-shell px-4 sm:px-6" aria-label="Sections">
-							<ul className="-mb-px flex gap-1 overflow-x-auto">
+							{/* -mb-px lets each tab's 2px rule sit on the header's 1px border
+							    instead of floating above it. */}
+							<ul className="-mb-px flex gap-5 overflow-x-auto">
 								{NAV_LINKS.map((item) => (
 									<li key={item.label}>
 										<Link
 											to={item.to}
 											params={{ slug: workspaceSlug }}
 											activeOptions={{ exact: item.exact }}
-											className="group block px-1 py-1.5"
+											className="block border-b-2 border-transparent pt-1 pb-2.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
+											activeProps={{ className: "border-foreground text-foreground" }}
 										>
-											{({ isActive }) => (
-												<span
-													className={cn(
-														"block rounded-md px-2.5 py-1 text-muted-foreground text-sm transition-colors group-hover:bg-muted group-hover:text-foreground",
-														isActive && "text-foreground",
-													)}
-												>
-													{item.label}
-													<span
-														className={cn(
-															"mt-1.5 -mb-[calc(0.375rem+1px)] block h-px",
-															isActive ? "bg-foreground" : "bg-transparent",
-														)}
-													/>
-												</span>
-											)}
+											{item.label}
 										</Link>
 									</li>
 								))}

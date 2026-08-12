@@ -11,16 +11,11 @@
 	--font-display: var(--font-sans);
 	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
-	/* One container for chrome and content, so the nav's left edge and the page's
-	   left edge agree. 5xl rather than screen-2xl: the reading list carries a
-	   title and a metadata line, and at 1536px that reads as an empty room.
-
-	   The measure is absolute, not `ch`: `ch` resolves against the root's 16px
-	   while the article renders at 15px, so `68ch` silently became 721px — 111
-	   characters per line, measured. At a 6.49px average advance, 32rem is ~79
-	   characters, near the top of the 50-75 band the reading research supports.
-	   This is the one number to turn if plans feel too narrow or too wide. */
-	--container-shell: 64rem;
+	/* The whole UI is capped at 2xl. Prose sits narrower still, centred inside it,
+	   so the page never spreads and the reading column never runs past ~79
+	   characters — measured at a 6.49px average advance, inside the band the
+	   reading research supports. Turn these two if it feels wrong. */
+	--container-shell: 42rem;
 	--container-measure: 32rem;
 
 	--color-background: var(--background);
