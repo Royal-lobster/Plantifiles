@@ -138,7 +138,7 @@ function WorkspaceSettings() {
 							<SettingsRow
 								label={
 									<span className="flex min-w-0 items-center gap-3">
-										<Avatar seed={member.id} name={member.name} image={member.image} className="size-8" />
+										<Avatar seed={member.id} name={member.name} className="size-8" />
 										<span className="min-w-0">
 											<span className="block truncate">{member.name}</span>
 											<span className="block truncate font-normal text-muted-foreground text-xs">{member.email}</span>
