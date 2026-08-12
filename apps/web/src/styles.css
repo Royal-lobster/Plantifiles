@@ -11,12 +11,10 @@
 	--font-display: var(--font-sans);
 	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
-	/* The whole UI is capped at 2xl. Prose sits narrower still, centred inside it,
-	   so the page never spreads and the reading column never runs past ~79
-	   characters — measured at a 6.49px average advance, inside the band the
-	   reading research supports. Turn these two if it feels wrong. */
-	--container-shell: 42rem;
-	--container-measure: 32rem;
+	/* The whole UI is capped at 4xl, and the shell is also the reading measure:
+	   chrome, the plans grid and the plan column all share one edge. This is the
+	   single knob for page width. */
+	--container-shell: 56rem;
 
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
