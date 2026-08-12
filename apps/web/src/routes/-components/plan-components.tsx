@@ -1,33 +1,39 @@
+import { Badge } from "@plantifiles/ui/components/badge";
 import { Button } from "@plantifiles/ui/components/button";
+import { ButtonGroup, ButtonGroupButton, ButtonGroupLabel } from "@plantifiles/ui/components/button-group";
 import { Checkbox } from "@plantifiles/ui/components/checkbox";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@plantifiles/ui/components/dialog";
 import { Textarea } from "@plantifiles/ui/components/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@plantifiles/ui/components/tooltip";
 import { cn } from "@plantifiles/ui/lib/utils";
 import {
 	AlertTriangle,
 	Bot,
+	Check,
 	CheckCircle2,
 	ChevronRight,
+	Copy,
 	HelpCircle,
 	Info,
+	Maximize2,
 	MessageSquare,
+	Minus,
+	Plus,
 	Reply,
+	RotateCcw,
 	Scale,
 	X,
 } from "lucide-react";
-import {
-	type ComponentProps,
-	createContext,
-	type FormEvent,
-	isValidElement,
-	type ReactElement,
-	type ReactNode,
-	useContext,
-	useEffect,
-	useId,
-	useMemo,
-	useRef,
-	useState,
+import type {
+	ComponentProps,
+	FormEvent,
+	ReactElement,
+	KeyboardEvent as ReactKeyboardEvent,
+	ReactNode,
+	PointerEvent as ReactPointerEvent,
+	WheelEvent as ReactWheelEvent,
 } from "react";
+import { createContext, isValidElement, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 
 type ReaderDecision = { key: string; status: "open" | "resolved"; resolution: string | null };
 type ReaderComment = {
@@ -43,6 +49,9 @@ type ReaderComment = {
 };
 type CreateCommentValue = { blockKey?: string; parentId?: string; body: string; agentAssisted?: boolean };
 type ReviewResult = { status: string; reason: string | null };
+type RiskSeverity = "low" | "med" | "high";
+/** The slice of a normalized block the reader's presentation actually needs. */
+type PlanBlockSummary = { key: string; kind: string };
 type PlanBlockProps = ComponentProps<"div"> & {
 	node?: unknown;
 	"data-block-kind"?: string;
@@ -54,6 +63,10 @@ type PlanRenderContextValue = {
 	comments: ReaderComment[];
 	changedKeys: Record<string, true>;
 	currentBlockKeys: Record<string, true>;
+	/** Figure numbers by block key, so diagrams can be cited like a manuscript. */
+	figureNumbers: Record<string, number>;
+	/** Phase blocks that are followed by another phase, which draw the spine on. */
+	phaseContinues: Record<string, true>;
 	viewerId: string | null;
 	isCurrentVersion: boolean;
 	versionNumberById: Record<string, number>;
@@ -70,6 +83,8 @@ const PlanRenderContext = createContext<PlanRenderContextValue>({
 	comments: [],
 	changedKeys: {},
 	currentBlockKeys: {},
+	figureNumbers: {},
+	phaseContinues: {},
 	viewerId: null,
 	isCurrentVersion: false,
 	versionNumberById: {},
@@ -86,9 +101,47 @@ const SKIM_KIND: Record<string, true> = {
 	Phase: true,
 };
 
+/* Below xl there is no gutter to hide an affordance in, so the comment button
+   only rides along with blocks that carry a decision-grade claim. Prose still
+   takes comments on the desktop hover. */
+const COMMENTABLE_ON_NARROW: Record<string, true> = {
+	TLDR: true,
+	Decision: true,
+	Tradeoff: true,
+	Risk: true,
+	Diagram: true,
+	Phase: true,
+	Rejected: true,
+	CodeSketch: true,
+	Callout: true,
+};
+
+/**
+ * Figures are numbered once, from the block list, so the caption, the margin
+ * mark, and the lightbox title all cite the same figure; the same pass records
+ * which phase blocks are followed by another phase and so draw the spine on.
+ */
+function planBlockIndex(blocks: PlanBlockSummary[]): {
+	figureNumbers: Record<string, number>;
+	phaseContinues: Record<string, true>;
+} {
+	const figureNumbers: Record<string, number> = {};
+	const phaseContinues: Record<string, true> = {};
+	let figure = 1;
+	blocks.forEach((block, index) => {
+		if (block.kind === "Diagram") {
+			figureNumbers[block.key] = figure;
+			figure += 1;
+		}
+		if (block.kind === "Phase" && blocks[index + 1]?.kind === "Phase") phaseContinues[block.key] = true;
+	});
+	return { figureNumbers, phaseContinues };
+}
+
 function PlanRenderProvider({
 	children,
 	skim,
+	blocks,
 	decisions,
 	comments,
 	changedKeys = {},
@@ -104,6 +157,7 @@ function PlanRenderProvider({
 }: {
 	children: ReactNode;
 	skim: boolean;
+	blocks: PlanBlockSummary[];
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
 	changedKeys?: Record<string, true>;
@@ -117,6 +171,7 @@ function PlanRenderProvider({
 	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
 	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
 }) {
+	const { figureNumbers, phaseContinues } = useMemo(() => planBlockIndex(blocks), [blocks]);
 	const value = useMemo(
 		() => ({
 			skim,
@@ -124,6 +179,8 @@ function PlanRenderProvider({
 			comments,
 			changedKeys,
 			currentBlockKeys,
+			figureNumbers,
+			phaseContinues,
 			viewerId,
 			isCurrentVersion,
 			versionNumberById,
@@ -139,6 +196,8 @@ function PlanRenderProvider({
 			comments,
 			changedKeys,
 			currentBlockKeys,
+			figureNumbers,
+			phaseContinues,
 			viewerId,
 			isCurrentVersion,
 			versionNumberById,
@@ -150,6 +209,24 @@ function PlanRenderProvider({
 		],
 	);
 	return <PlanRenderContext.Provider value={value}>{children}</PlanRenderContext.Provider>;
+}
+
+/**
+ * Every top-level block owns a live left margin. Marginalia sit inline above the
+ * block on narrow screens and swing out into the document's gutter from `xl`,
+ * which is where a reviewed manuscript keeps its remarks.
+ */
+function BlockMargin({ spaced, children }: { spaced: boolean; children: ReactNode }) {
+	return (
+		<div
+			className={cn(
+				"flex flex-wrap items-center gap-2 xl:-left-8 xl:absolute xl:top-0.5 xl:mb-0 xl:w-(--container-gutter) xl:-translate-x-full xl:flex-col xl:items-end xl:gap-1.5",
+				spaced && "mb-2",
+			)}
+		>
+			{children}
+		</div>
+	);
 }
 
 function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProps) {
@@ -165,33 +242,77 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 		);
 	if (context.skim && (!kind || !SKIM_KIND[kind])) return null;
 	const threads = context.comments.filter((item) => item.blockKey === key && !item.parentId);
+	const openThreads = threads.filter((item) => !item.resolvedAt).length;
 	const canComment = Boolean(
 		context.viewerId && context.isCurrentVersion && context.currentBlockKeys[key] && context.onCreateComment,
 	);
+	const figure = context.figureNumbers[key];
+	const changed = Boolean(context.changedKeys[key]);
+	const decision = kind === "Decision" ? context.decisions.find((item) => item.key === key) : undefined;
+	const marks = Boolean(figure !== undefined || changed || decision || threads.length > 0);
+	const hasMargin = marks || canComment;
+	const spaced = marks || Boolean(canComment && kind && COMMENTABLE_ON_NARROW[kind]);
 	return (
 		<div
 			className={cn(
 				"group/plan-block relative scroll-mt-20",
-				context.changedKeys[key] && "rounded-lg ring-2 ring-warning/60 ring-offset-4 ring-offset-background",
+				changed && "-mx-4 rounded-lg bg-warning/[0.07] px-4 py-3",
 				className,
 			)}
 			{...props}
 		>
-			{canComment && (
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					className="-left-2 absolute top-0 z-10 size-7 -translate-x-full opacity-100 shadow-sm sm:opacity-0 sm:group-hover/plan-block:opacity-100 sm:focus:opacity-100"
-					aria-label={`Comment on ${kind ?? "block"}`}
-					onClick={() => setComposing((value) => !value)}
-				>
-					<MessageSquare className="size-3.5" />
-				</Button>
+			{hasMargin && (
+				<BlockMargin spaced={spaced}>
+					{changed && <span className="font-mono text-[10px] text-warning uppercase tracking-[0.14em]">changed</span>}
+					{decision && (
+						<span
+							className={cn(
+								"font-mono text-[10px] uppercase tracking-[0.14em]",
+								decision.status === "resolved" ? "text-success" : "text-decision",
+							)}
+						>
+							{decision.status === "resolved" ? "resolved" : "open decision"}
+						</span>
+					)}
+					{figure !== undefined && (
+						<a
+							href={`#${encodeURIComponent(key)}`}
+							className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.14em] hover:text-brand-ink"
+						>
+							Fig. {figure}
+						</a>
+					)}
+					{threads.length > 0 && (
+						<span className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+							<MessageSquare className="size-3" />
+							{openThreads > 0 ? `${openThreads} open` : `${threads.length}`}
+						</span>
+					)}
+					{canComment && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									variant="quiet"
+									size="icon-xs"
+									className={cn(
+										"xl:opacity-0 xl:group-hover/plan-block:opacity-100 xl:focus-visible:opacity-100",
+										kind && COMMENTABLE_ON_NARROW[kind] ? "opacity-100" : "hidden xl:inline-flex",
+									)}
+									aria-label={`Comment on ${kind ?? "block"}`}
+									onClick={() => setComposing((value) => !value)}
+								>
+									<Plus />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent side="left">Comment</TooltipContent>
+						</Tooltip>
+					)}
+				</BlockMargin>
 			)}
 			{children}
 			{(threads.length > 0 || composing) && (
-				<div className="mt-3 space-y-3 border-l-2 border-accent/30 pl-3">
+				<div className="mt-4 space-y-3 border-l-2 border-brand-ink/25 pl-4">
 					{threads.map((thread) => (
 						<CommentThread key={thread.id} comment={thread} />
 					))}
@@ -210,6 +331,7 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 		</div>
 	);
 }
+
 function CommentComposer({
 	label,
 	onSubmit,
@@ -239,7 +361,7 @@ function CommentComposer({
 	}
 	return (
 		<form className="space-y-2 rounded-md border bg-card p-3" onSubmit={submit}>
-			<label className="font-medium text-xs" htmlFor={inputId}>
+			<label className="label-eyebrow" htmlFor={inputId}>
 				{label}
 			</label>
 			<Textarea
@@ -282,34 +404,34 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 		}
 	}
 	return (
-		<div className={cn("space-y-2 rounded-md border bg-background p-3", root.resolvedAt && "opacity-70")}>
+		<div className={cn("space-y-2 text-sm", root.resolvedAt && "opacity-60")}>
 			<div className="flex items-start justify-between gap-3">
 				<div className="flex min-w-0 items-center gap-2 text-xs">
-					<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent/15 font-semibold text-accent">
+					<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-ink/15 font-semibold text-[10px] text-brand-ink">
 						{root.author.name.slice(0, 1).toUpperCase()}
 					</span>
 					<span className="truncate font-medium">{root.author.name}</span>
-					<time className="text-muted-foreground" dateTime={root.createdAt}>
+					<time className="font-mono text-muted-foreground" dateTime={root.createdAt}>
 						{root.createdAt.slice(0, 10)}
 					</time>
 					{root.agentAssisted && (
 						<span className="inline-flex items-center gap-1 text-muted-foreground" title="Agent-assisted comment">
-							<Bot className="size-3" /> Agent-assisted
+							<Bot className="size-3" /> agent
 						</span>
 					)}
 				</div>
 				{root.resolvedAt && (
-					<span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 font-mono text-[10px] text-success uppercase">
+					<Badge variant="success" size="sm">
 						<CheckCircle2 className="size-3" /> Resolved
-					</span>
+					</Badge>
 				)}
 			</div>
-			<p className="whitespace-pre-wrap text-sm leading-6">{root.body}</p>
+			<p className="whitespace-pre-wrap leading-6">{root.body}</p>
 			{replies.map((reply) => (
-				<div key={reply.id} className="ml-4 border-l pl-3 text-sm">
+				<div key={reply.id} className="ml-3 border-l pl-3">
 					<div className="mb-1 flex items-center gap-2 text-xs">
 						<span className="font-medium">{reply.author.name}</span>
-						<time className="text-muted-foreground" dateTime={reply.createdAt}>
+						<time className="font-mono text-muted-foreground" dateTime={reply.createdAt}>
 							{reply.createdAt.slice(0, 10)}
 						</time>
 						{reply.agentAssisted && <Bot className="size-3 text-muted-foreground" aria-label="Agent-assisted reply" />}
@@ -319,14 +441,14 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 			))}
 			{error && <p className="text-destructive text-xs">{error}</p>}
 			{context.viewerId && context.isCurrentVersion && (
-				<div className="flex gap-2">
+				<div className="flex gap-1">
 					{canReply && (
-						<Button type="button" variant="ghost" size="sm" onClick={() => setReplying((value) => !value)}>
-							<Reply className="size-3.5" /> Reply
+						<Button type="button" variant="quiet" size="xs" onClick={() => setReplying((value) => !value)}>
+							<Reply /> Reply
 						</Button>
 					)}
-					<Button type="button" variant="ghost" size="sm" disabled={busy} onClick={toggleResolved}>
-						<CheckCircle2 className="size-3.5" /> {root.resolvedAt ? "Reopen" : "Resolve"}
+					<Button type="button" variant="quiet" size="xs" disabled={busy} onClick={toggleResolved}>
+						<CheckCircle2 /> {root.resolvedAt ? "Reopen" : "Resolve"}
 					</Button>
 				</div>
 			)}
@@ -351,18 +473,16 @@ function DetachedCommentThreads() {
 	);
 	if (roots.length === 0) return null;
 	return (
-		<details className="mt-10 rounded-lg border bg-muted/20">
-			<summary className="cursor-pointer px-4 py-3 font-medium text-sm">
-				From an earlier version ({roots.length})
-			</summary>
-			<div className="space-y-4 border-t p-4">
+		<details className="mt-12 border-t pt-4">
+			<summary className="label-eyebrow cursor-pointer">From an earlier version ({roots.length})</summary>
+			<div className="mt-4 space-y-5">
 				{roots.map((thread) => {
 					const version = context.versionNumberById[thread.versionId];
 					return (
 						<div key={thread.id} className="space-y-2">
 							{version && (
 								<a
-									className="font-mono text-accent text-xs underline underline-offset-4"
+									className="font-mono text-brand-ink text-xs underline underline-offset-4"
 									href={`/p/${context.workspaceSlug}/${context.planSlug}/v/${version}`}
 								>
 									Anchored on v{version}
@@ -378,15 +498,22 @@ function DetachedCommentThreads() {
 }
 
 function PlanParagraph({ node: _node, className, ...props }: ComponentProps<"p"> & { node?: unknown }) {
-	return <p className={cn("leading-7 text-foreground/90", className)} {...props} />;
+	return <p className={cn("text-[0.9375rem] text-foreground/90 leading-7", className)} {...props} />;
 }
 
+/* A rule above the section, the way a manuscript opens one, rather than an
+   underline that makes every heading look like a table header. */
 function PlanHeading2({ node: _node, className, ...props }: ComponentProps<"h2"> & { node?: unknown }) {
-	return <h2 className={cn("mt-10 border-b pb-2 font-semibold text-2xl tracking-tight", className)} {...props} />;
+	return (
+		<h2
+			className={cn("mt-7 border-t pt-6 font-display font-medium text-[1.75rem] tracking-tight", className)}
+			{...props}
+		/>
+	);
 }
 
 function PlanHeading3({ node: _node, className, ...props }: ComponentProps<"h3"> & { node?: unknown }) {
-	return <h3 className={cn("mt-8 font-semibold text-xl tracking-tight", className)} {...props} />;
+	return <h3 className={cn("mt-6 font-display font-medium text-xl tracking-tight", className)} {...props} />;
 }
 
 function PlanList({ node: _node, className, ...props }: ComponentProps<"ul"> & { node?: unknown }) {
@@ -411,19 +538,33 @@ function PlanPre({ node: _node, className, ...props }: ComponentProps<"pre"> & {
 }
 
 function PlanCode({ node: _node, className, ...props }: ComponentProps<"code"> & { node?: unknown }) {
-	return <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]", className)} {...props} />;
+	return <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]", className)} {...props} />;
 }
 
 function PlanLink({ node: _node, className, ...props }: ComponentProps<"a"> & { node?: unknown }) {
-	return <a className={cn("font-medium text-accent underline underline-offset-4", className)} {...props} />;
+	return (
+		<a
+			className={cn(
+				"font-medium text-foreground underline decoration-brand-ink decoration-2 underline-offset-4 hover:text-brand-ink",
+				className,
+			)}
+			{...props}
+		/>
+	);
 }
 
 function PlanInput({ node: _node, checked, ...props }: ComponentProps<"input"> & { node?: unknown }) {
 	return <Checkbox checked={Boolean(checked)} disabled aria-label={props["aria-label"] ?? "Checklist item"} />;
 }
 
+/* The standfirst. A plan's first paragraph is the only thing most readers
+   finish, so it is set as display type at reading size, not as a card. */
 function TLDR({ children }: { children?: ReactNode }) {
-	return <div className="text-lg leading-8 [&>p]:text-foreground">{children}</div>;
+	return (
+		<div className="font-display text-foreground text-xl leading-[1.7] tracking-tight sm:text-[1.375rem]">
+			{children}
+		</div>
+	);
 }
 
 function Decision({ owner, blockKey, children }: { owner: string; blockKey?: string; children?: ReactNode }) {
@@ -454,36 +595,43 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 		}
 	}
 	return (
-		<section className="rounded-lg border bg-card">
-			<header className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-				<HelpCircle className="size-4 text-decision" />
-				<span className="font-semibold text-sm">Decision</span>
+		<section
+			className={cn(
+				"overflow-hidden rounded-lg border bg-card",
+				status === "open" ? "border-decision/35" : "border-border",
+			)}
+		>
+			<header
+				className={cn(
+					"flex flex-wrap items-center gap-2 border-b px-5 py-2.5",
+					status === "open" ? "border-decision/25 bg-decision/[0.07]" : "bg-muted/40",
+				)}
+			>
+				<HelpCircle className={cn("size-4", status === "open" ? "text-decision" : "text-muted-foreground")} />
+				<span className="label-eyebrow text-foreground">Decision</span>
 				<span className="ml-auto font-mono text-muted-foreground text-xs">{owner}</span>
-				<span
-					className={cn(
-						"rounded-full px-2 py-0.5 font-mono text-[10px] uppercase",
-						status === "resolved" ? "bg-success/15 text-success" : "bg-warning/15 text-warning",
-					)}
-				>
+				<Badge variant={status === "resolved" ? "success" : "decision"} size="sm">
 					{status}
-				</span>
+				</Badge>
 			</header>
-			<div className="px-4 py-4 [&>p]:font-medium">{children}</div>
+			<div className="px-5 py-4 [&>p]:font-display [&>p]:text-foreground [&>p]:text-lg [&>p]:leading-[1.55]">
+				{children}
+			</div>
 			{record?.resolution && (
-				<footer className="border-t bg-muted/40 px-4 py-3 text-sm">
-					<span className="font-medium">Resolution: </span>
-					{record.resolution}
+				<footer className="flex gap-2.5 border-t bg-success/[0.06] px-5 py-3 text-sm">
+					<Check className="mt-0.5 size-4 shrink-0 text-success" />
+					<p className="leading-6">{record.resolution}</p>
 				</footer>
 			)}
 			{canResolve && (
-				<div className="border-t px-4 py-3">
+				<div className="border-t px-5 py-3">
 					{!resolving ? (
 						<Button type="button" size="sm" variant="outline" onClick={() => setResolving(true)}>
 							Resolve decision
 						</Button>
 					) : (
 						<form className="space-y-2" onSubmit={submit}>
-							<label className="font-medium text-xs" htmlFor={resolutionId}>
+							<label className="label-eyebrow" htmlFor={resolutionId}>
 								Resolution
 							</label>
 							<Textarea
@@ -510,73 +658,137 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 	);
 }
 
+/* A tradeoff is a weighing, so it is drawn as one: options share a beam and the
+   recommended arm sits heavier than the alternatives it beat. */
 function Tradeoff({ children }: { children?: ReactNode }) {
 	return (
 		<section>
-			<header className="mb-3 flex items-center gap-2 font-semibold text-sm">
-				<Scale className="size-4 text-accent" />
-				Tradeoff
+			<header className="flex items-center gap-2 border-b pb-2">
+				<Scale className="size-4 text-brand-ink" />
+				<span className="label-eyebrow text-foreground">Tradeoff</span>
 			</header>
-			<div className="grid gap-3 md:grid-cols-2">{children}</div>
+			<div className="grid gap-x-5 gap-y-4 md:grid-cols-2">{children}</div>
 		</section>
 	);
 }
 
 function Option({ name, recommended, children }: { name: string; recommended?: boolean; children?: ReactNode }) {
 	return (
-		<section className={cn("rounded-md bg-muted/40 p-4", recommended && "ring-1 ring-accent")}>
+		<section
+			className={cn(
+				"border-t-2 px-4 pt-3 pb-4",
+				recommended ? "border-brand-ink bg-brand-ink/[0.05]" : "border-border/70 text-muted-foreground",
+			)}
+		>
 			<header className="mb-2 flex items-center gap-2">
-				<span className="font-medium">{name}</span>
+				<span className={cn("font-medium", recommended ? "text-foreground" : "text-foreground/70")}>{name}</span>
 				{recommended && (
-					<span className="ml-auto rounded-full bg-accent/15 px-2 py-0.5 font-mono text-[10px] text-accent uppercase">
+					<Badge variant="brand" size="sm" className="ml-auto">
 						Recommended
-					</span>
+					</Badge>
 				)}
 			</header>
-			<div className="space-y-2 text-sm">{children}</div>
+			<div className="space-y-2 text-sm leading-6">{children}</div>
 		</section>
 	);
 }
 
 function Rejected({ what, children }: { what: string; children?: ReactNode }) {
 	return (
-		<details className="rounded-lg border bg-card">
-			<summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-medium text-sm">
-				<ChevronRight className="size-4 transition-transform [[open]>&]:rotate-90" />
-				<X className="size-4 text-destructive" />
-				Rejected: {what}
+		<details className="group/rejected border-y py-2.5">
+			<summary className="flex cursor-pointer list-none items-center gap-2 text-muted-foreground text-sm">
+				<ChevronRight className="size-3.5 transition-transform group-open/rejected:rotate-90" />
+				<X className="size-3.5 text-destructive/70" />
+				<span className="label-eyebrow">Rejected</span>
+				<span className="text-foreground/70 line-through decoration-destructive/40">{what}</span>
 			</summary>
-			<div className="border-t px-4 py-3 text-sm">{children}</div>
+			<div className="mt-2.5 pl-7 text-sm leading-6">{children}</div>
 		</details>
 	);
 }
 
-function Phase({ n, title, children }: { n: string; title: string; children?: ReactNode }) {
-	const { skim } = useContext(PlanRenderContext);
+/* Phases are a spine: consecutive phase blocks link into one continuous line so
+   delivery reads as a sequence rather than as five unrelated bordered boxes. */
+function Phase({
+	n,
+	title,
+	blockKey,
+	children,
+}: {
+	n: string;
+	title: string;
+	blockKey?: string;
+	children?: ReactNode;
+}) {
+	const { skim, phaseContinues } = useContext(PlanRenderContext);
+	const continues = Boolean(blockKey && phaseContinues[blockKey]);
 	return (
-		<section className="flex gap-4">
-			<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent/15 font-mono font-semibold text-accent text-sm">
+		<section className="relative pl-12">
+			<span
+				aria-hidden
+				className={cn("absolute top-9 left-[0.9375rem] w-px bg-border", continues ? "-bottom-8" : "bottom-1")}
+			/>
+			<span className="absolute top-0 left-0 flex size-8 items-center justify-center rounded-full border-2 border-phase/40 bg-background font-mono font-semibold text-phase text-xs">
 				{n}
 			</span>
-			<div className="min-w-0 flex-1">
-				<h3 className="pt-1 font-semibold">{title}</h3>
-				{!skim && <div className="mt-2 [&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_ul]:pl-0">{children}</div>}
-			</div>
+			<h3 className="pt-1 font-display font-medium text-xl tracking-tight">{title}</h3>
+			{!skim && (
+				<div className="mt-3 [&_li]:flex [&_li]:items-start [&_li]:gap-2.5 [&_li]:pl-0 [&_ul]:space-y-2.5 [&_ul]:pl-0">
+					{children}
+				</div>
+			)}
 		</section>
 	);
 }
 
-function Risk({ severity, children }: { severity: "low" | "med" | "high"; children?: ReactNode }) {
+const RISK_LEVEL: Record<RiskSeverity, { bars: number; label: string; wrapper: string; ink: string; fill: string }> = {
+	low: {
+		bars: 1,
+		label: "low",
+		wrapper: "border-l-risk-low bg-risk-low/[0.04]",
+		ink: "text-risk-low",
+		fill: "bg-risk-low",
+	},
+	med: {
+		bars: 2,
+		label: "medium",
+		wrapper: "border-l-risk-med bg-risk-med/[0.06]",
+		ink: "text-risk-med",
+		fill: "bg-risk-med",
+	},
+	high: {
+		bars: 3,
+		label: "high",
+		wrapper: "border-l-risk-high bg-risk-high/[0.07]",
+		ink: "text-risk-high",
+		fill: "bg-risk-high",
+	},
+};
+
+/* Severity is drawn, not just named: three rungs, filled to the stated level, so
+   a page of risks can be scanned for the one that actually matters. */
+function Risk({ severity, children }: { severity: RiskSeverity; children?: ReactNode }) {
+	const level = RISK_LEVEL[severity] ?? RISK_LEVEL.med;
 	return (
-		<section
-			className="rounded-lg border border-l-4 bg-card p-4"
-			style={{ borderLeftColor: `var(--risk-${severity})` }}
-		>
-			<header className="mb-2 flex items-center gap-2 font-semibold text-sm">
-				<AlertTriangle className="size-4" style={{ color: `var(--risk-${severity})` }} />
-				Risk · <span className="font-mono uppercase">{severity}</span>
+		<section className={cn("rounded-r-lg border border-l-[3px] p-5", level.wrapper)}>
+			<header className="mb-2 flex items-center gap-2">
+				<AlertTriangle className={cn("size-4", level.ink)} />
+				<span className="label-eyebrow text-foreground">Risk</span>
+				<span className={cn("font-mono text-[11px] uppercase tracking-[0.14em]", level.ink)}>{level.label}</span>
+				<span className="ml-auto flex items-end gap-0.5" aria-hidden>
+					{[0, 1, 2].map((rung) => (
+						<span
+							key={rung}
+							className={cn(
+								"w-1 rounded-sm",
+								rung === 0 ? "h-1.5" : rung === 1 ? "h-2.5" : "h-3.5",
+								rung < level.bars ? level.fill : "bg-current opacity-15",
+							)}
+						/>
+					))}
+				</span>
 			</header>
-			<div className="text-sm">{children}</div>
+			<div className="text-[0.9375rem] leading-7">{children}</div>
 		</section>
 	);
 }
@@ -587,6 +799,11 @@ function reactNodeText(node: ReactNode): string {
 	if (isValidElement(node)) return reactNodeText((node as ReactElement<{ children?: ReactNode }>).props.children);
 	return "";
 }
+
+/**
+ * Mermaid rejects OKLCH, and every token in this theme is OKLCH, so colours are
+ * pushed through a one-pixel canvas to come back as rgb().
+ */
 function mermaidColor(value: string): string {
 	const canvas = document.createElement("canvas");
 	canvas.width = 1;
@@ -603,7 +820,7 @@ function mermaidColor(value: string): string {
 	return alpha === 255 ? `rgb(${red}, ${green}, ${blue})` : `rgba(${red}, ${green}, ${blue}, ${alpha / 255})`;
 }
 
-function MermaidFigure({ chart }: { chart: string }) {
+function MermaidFigure({ chart, className }: { chart: string; className?: string }) {
 	const reactId = useId();
 	const id = useMemo(() => `plantifiles-${reactId.replace(/[^a-zA-Z0-9]/g, "")}`, [reactId]);
 	const [svg, setSvg] = useState<string>();
@@ -623,17 +840,46 @@ function MermaidFigure({ chart }: { chart: string }) {
 		void (async () => {
 			if (import.meta.env.SSR) return;
 			try {
+				// Mermaid touches window/document at import time and must never reach the
+				// Worker's SSR pass, so the specifier stays dynamic on purpose.
 				const mermaid = (await import("mermaid")).default;
 				const styles = getComputedStyle(document.documentElement);
+				const token = (name: string) => mermaidColor(styles.getPropertyValue(name).trim());
+				const surface = token("--background");
+				const ink = token("--foreground");
+				const edge = token("--diagram-edge");
+				const node = token("--diagram-node");
+				const quiet = token("--muted");
 				mermaid.initialize({
 					startOnLoad: false,
 					securityLevel: "strict",
 					theme: "base",
+					fontFamily: styles.getPropertyValue("--font-sans").trim() || "sans-serif",
+					/* The base theme derives every colour it is not given by rotating the
+					   primary hue, which turns a green product's edge labels magenta. Give
+					   it the whole palette from the tokens instead. */
 					themeVariables: {
-						background: mermaidColor(styles.getPropertyValue("--background").trim()),
-						primaryColor: mermaidColor(styles.getPropertyValue("--diagram-node").trim()),
-						primaryTextColor: mermaidColor(styles.getPropertyValue("--foreground").trim()),
-						lineColor: mermaidColor(styles.getPropertyValue("--diagram-edge").trim()),
+						background: surface,
+						mainBkg: node,
+						primaryColor: node,
+						primaryTextColor: ink,
+						primaryBorderColor: edge,
+						secondaryColor: quiet,
+						secondaryTextColor: ink,
+						secondaryBorderColor: edge,
+						tertiaryColor: quiet,
+						tertiaryTextColor: ink,
+						tertiaryBorderColor: edge,
+						lineColor: edge,
+						textColor: ink,
+						edgeLabelBackground: surface,
+						labelBackgroundColor: surface,
+						noteBkgColor: quiet,
+						noteTextColor: ink,
+						noteBorderColor: edge,
+						clusterBkg: quiet,
+						clusterBorder: edge,
+						titleColor: ink,
 					},
 				});
 				const rendered = await mermaid.render(`${id}-${theme}`, chart);
@@ -672,42 +918,195 @@ function MermaidFigure({ chart }: { chart: string }) {
 	}, [svg]);
 	if (error) return <pre className="overflow-x-auto p-4 text-destructive text-xs">{error}</pre>;
 	if (!svg) return <pre className="overflow-x-auto p-4 font-mono text-muted-foreground text-xs">{chart}</pre>;
-	return <div ref={rootRef} className="flex justify-center overflow-x-auto p-6" />;
+	return <div ref={rootRef} className={cn("flex justify-center", className)} />;
 }
 
-function Diagram({ lang, children }: { lang: "mermaid" | "d2"; children?: ReactNode }) {
-	const chart = reactNodeText(children).trim();
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 6;
+const ZOOM_STEP = 1.25;
+
+type ZoomView = { scale: number; x: number; y: number };
+const ZOOM_RESET: ZoomView = { scale: 1, x: 0, y: 0 };
+
+function DiagramLightbox({
+	chart,
+	figure,
+	lang,
+}: {
+	chart: string;
+	figure: number | undefined;
+	lang: "mermaid" | "d2";
+}) {
+	const [view, setView] = useState<ZoomView>(ZOOM_RESET);
+	const [copied, setCopied] = useState(false);
+	const dragRef = useRef<{ pointer: number; x: number; y: number } | null>(null);
+
+	function zoomBy(factor: number) {
+		setView((current) => ({
+			...current,
+			scale: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current.scale * factor)),
+		}));
+	}
+
+	function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+		dragRef.current = { pointer: event.pointerId, x: event.clientX - view.x, y: event.clientY - view.y };
+		event.currentTarget.setPointerCapture(event.pointerId);
+	}
+
+	function onPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+		const drag = dragRef.current;
+		if (!drag || drag.pointer !== event.pointerId) return;
+		setView((current) => ({ ...current, x: event.clientX - drag.x, y: event.clientY - drag.y }));
+	}
+
+	function onPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+		if (dragRef.current?.pointer === event.pointerId) dragRef.current = null;
+	}
+
+	function onWheel(event: ReactWheelEvent<HTMLButtonElement>) {
+		event.preventDefault();
+		zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
+	}
+
+	function onKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+		const pan = 60;
+		if (event.key === "+" || event.key === "=") zoomBy(ZOOM_STEP);
+		else if (event.key === "-") zoomBy(1 / ZOOM_STEP);
+		else if (event.key === "0") setView(ZOOM_RESET);
+		else if (event.key === "ArrowLeft") setView((current) => ({ ...current, x: current.x + pan }));
+		else if (event.key === "ArrowRight") setView((current) => ({ ...current, x: current.x - pan }));
+		else if (event.key === "ArrowUp") setView((current) => ({ ...current, y: current.y + pan }));
+		else if (event.key === "ArrowDown") setView((current) => ({ ...current, y: current.y - pan }));
+		else return;
+		event.preventDefault();
+	}
+
 	return (
-		<section className="overflow-hidden rounded-lg border bg-muted/20">
-			<div className="min-h-32">
-				{lang === "mermaid" ? (
-					<MermaidFigure chart={chart} />
-				) : (
-					<pre className="overflow-x-auto p-6 font-mono text-sm">{chart}</pre>
-				)}
+		<DialogContent
+			className="flex h-[88vh] w-[calc(100%-2rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0"
+			onOpenAutoFocus={() => setView(ZOOM_RESET)}
+		>
+			<div className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 pr-12">
+				<DialogTitle className="label-eyebrow text-foreground">
+					{figure === undefined ? "Diagram" : `Fig. ${figure}`}
+				</DialogTitle>
+				<ButtonGroup aria-label="Zoom" className="ml-auto">
+					<ButtonGroupButton onClick={() => zoomBy(1 / ZOOM_STEP)} aria-label="Zoom out">
+						<Minus />
+					</ButtonGroupButton>
+					<ButtonGroupLabel>{Math.round(view.scale * 100)}%</ButtonGroupLabel>
+					<ButtonGroupButton onClick={() => zoomBy(ZOOM_STEP)} aria-label="Zoom in">
+						<Plus />
+					</ButtonGroupButton>
+					<ButtonGroupButton onClick={() => setView(ZOOM_RESET)} aria-label="Reset view">
+						<RotateCcw />
+					</ButtonGroupButton>
+				</ButtonGroup>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={async () => {
+						await navigator.clipboard.writeText(chart);
+						setCopied(true);
+						setTimeout(() => setCopied(false), 1500);
+					}}
+				>
+					{copied ? <Check /> : <Copy />}
+					{copied ? "Copied" : "Copy source"}
+				</Button>
 			</div>
-			<details className="border-t">
-				<summary className="cursor-pointer px-4 py-2 font-mono text-muted-foreground text-xs">View source</summary>
-				<div className="border-t [&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0">{children}</div>
-			</details>
-		</section>
+			<button
+				type="button"
+				aria-label="Drag to pan, scroll to zoom, arrow keys to move, plus and minus to zoom"
+				className="flex-1 cursor-grab overflow-hidden bg-muted/20 active:cursor-grabbing"
+				onPointerDown={onPointerDown}
+				onPointerMove={onPointerMove}
+				onPointerUp={onPointerUp}
+				onPointerCancel={onPointerUp}
+				onWheel={onWheel}
+				onKeyDown={onKeyDown}
+			>
+				<div
+					className="flex h-full w-full items-center justify-center"
+					style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
+				>
+					{lang === "mermaid" ? (
+						<MermaidFigure chart={chart} className="[&_svg]:h-auto [&_svg]:w-[68rem] [&_svg]:max-w-none" />
+					) : (
+						<pre className="p-6 font-mono text-sm">{chart}</pre>
+					)}
+				</div>
+			</button>
+			<p className="border-t px-4 py-2 font-mono text-[10px] text-muted-foreground">
+				scroll to zoom · drag to pan · esc to close
+			</p>
+		</DialogContent>
+	);
+}
+
+function Diagram({ lang, blockKey, children }: { lang: "mermaid" | "d2"; blockKey?: string; children?: ReactNode }) {
+	const { figureNumbers } = useContext(PlanRenderContext);
+	const chart = reactNodeText(children).trim();
+	const figure = blockKey ? figureNumbers[blockKey] : undefined;
+	return (
+		<figure className="group/diagram">
+			<Dialog>
+				<DialogTrigger asChild>
+					<button
+						type="button"
+						aria-label={figure === undefined ? "Enlarge diagram" : `Enlarge figure ${figure}`}
+						className="relative block w-full cursor-zoom-in overflow-hidden rounded-lg border bg-card p-6 outline-none transition-colors hover:border-brand-ink/40 focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						{lang === "mermaid" ? (
+							<MermaidFigure chart={chart} />
+						) : (
+							<pre className="overflow-x-auto text-left font-mono text-sm">{chart}</pre>
+						)}
+						<span className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-md border bg-background/90 px-2 py-1 font-mono text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/diagram:opacity-100">
+							<Maximize2 className="size-3" /> zoom
+						</span>
+					</button>
+				</DialogTrigger>
+				<DiagramLightbox chart={chart} figure={figure} lang={lang} />
+			</Dialog>
+			<figcaption className="mt-2 flex flex-wrap items-baseline gap-x-4">
+				{figure !== undefined && <span className="label-eyebrow">Fig. {figure}</span>}
+				<details className="min-w-0 flex-1">
+					<summary className="cursor-pointer font-mono text-[11px] text-muted-foreground hover:text-foreground">
+						View source
+					</summary>
+					<div className="[&_pre]:my-2 [&_pre]:text-xs">{children}</div>
+				</details>
+			</figcaption>
+		</figure>
 	);
 }
 
 function CodeSketch({ lang: _lang, file, children }: { lang: string; file?: string; children?: ReactNode }) {
 	return (
 		<section className="overflow-hidden rounded-lg border bg-card">
-			{file && <header className="border-b bg-muted px-4 py-2 font-mono text-muted-foreground text-xs">{file}</header>}
+			{file && (
+				<header className="flex items-center gap-2 border-b bg-muted/60 px-4 py-2 font-mono text-[11px] text-muted-foreground">
+					<span className="size-1.5 rounded-full bg-brand-ink/60" />
+					{file}
+				</header>
+			)}
 			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0">{children}</div>
 		</section>
 	);
 }
 
 function Callout({ kind, children }: { kind: "note" | "warning"; children?: ReactNode }) {
-	const Icon = kind === "warning" ? AlertTriangle : Info;
+	const warning = kind === "warning";
+	const Icon = warning ? AlertTriangle : Info;
 	return (
-		<aside className="flex gap-3 rounded-md border bg-muted/40 p-4 text-sm">
-			<Icon className={cn("mt-1 size-4 shrink-0", kind === "warning" ? "text-warning" : "text-accent")} />
+		<aside
+			className={cn(
+				"flex gap-3 border-l-2 py-1 pl-4 text-sm leading-6",
+				warning ? "border-warning bg-warning/[0.06] py-3 pr-4" : "border-brand-ink/50",
+			)}
+		>
+			<Icon className={cn("mt-1 size-4 shrink-0", warning ? "text-warning" : "text-brand-ink")} />
 			<div>{children}</div>
 		</aside>
 	);
@@ -718,7 +1117,12 @@ function PlanStrong({ node: _node, className, ...props }: ComponentProps<"strong
 }
 
 function PlanBlockquote({ node: _node, className, ...props }: ComponentProps<"blockquote"> & { node?: unknown }) {
-	return <blockquote className={cn("border-l-2 pl-4 text-muted-foreground italic", className)} {...props} />;
+	return (
+		<blockquote
+			className={cn("border-l-2 pl-4 font-display text-lg text-muted-foreground italic", className)}
+			{...props}
+		/>
+	);
 }
 
 const planComponents = {

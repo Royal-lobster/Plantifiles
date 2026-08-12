@@ -55,10 +55,14 @@ describe("runtime plan renderer", () => {
 		expect(html).toContain("A concise summary.");
 		expect(html).toContain("Decision");
 		expect(html).toContain("Recommended");
-		expect(html).toContain("Rejected: A shortcut");
-		expect(html).toContain("Risk ·");
+		expect(html).toContain("Rejected");
+		expect(html).toContain("A shortcut");
+		expect(html).toContain("Risk");
+		expect(html).toContain("high");
+		expect(html).toContain("Enlarge diagram");
 		expect(html).toContain("View source");
 		expect(html).toContain("src/example.ts");
+		expect(html).toContain('data-block-kind="Phase"');
 	});
 
 	it("throws for an unknown capitalized component", async () => {
