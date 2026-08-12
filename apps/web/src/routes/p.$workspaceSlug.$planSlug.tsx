@@ -30,6 +30,6 @@ function PlanPage() {
 	const data = Route.useLoaderData();
 	const { workspaceSlug, planSlug } = Route.useParams();
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
-	if (pathname.includes(`/${planSlug}/v/`) || pathname.endsWith(`/${planSlug}/edit`)) return <Outlet />;
+	if (pathname.includes(`/${planSlug}/v/`)) return <Outlet />;
 	return <PlanReader data={data} workspaceSlug={workspaceSlug} planSlug={planSlug} />;
 }

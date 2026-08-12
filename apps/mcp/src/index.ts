@@ -60,7 +60,6 @@ async function main() {
 				agentName: z.string().min(1).optional(),
 				agentPrompt: z.string().optional(),
 				force: z.boolean().optional(),
-				baseVersion: z.number().int().positive().optional(),
 			}),
 		},
 		async ({ planId, ...input }) => {

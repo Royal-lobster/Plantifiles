@@ -28,7 +28,6 @@ import { Route as WSlugDecisionsRouteImport } from './routes/w.$slug.decisions'
 import { Route as WSlugSettingsRouteImport } from './routes/w.$slug.settings'
 import { Route as ApiPlansIdCommentsRouteImport } from './routes/api.plans.$id.comments'
 import { Route as ApiPlansIdVersionsRouteImport } from './routes/api.plans.$id.versions'
-import { Route as PWorkspaceSlugPlanSlugEditRouteImport } from './routes/p.$workspaceSlug.$planSlug.edit'
 import { Route as PWorkspaceSlugPlanSlugVNumberRouteImport } from './routes/p.$workspaceSlug.$planSlug.v.$number'
 
 const IndexRoute = IndexRouteImport.update({
@@ -127,12 +126,6 @@ const ApiPlansIdVersionsRoute = ApiPlansIdVersionsRouteImport.update({
   path: '/versions',
   getParentRoute: () => ApiPlansIdRoute,
 } as any)
-const PWorkspaceSlugPlanSlugEditRoute =
-  PWorkspaceSlugPlanSlugEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => PWorkspaceSlugPlanSlugRoute,
-  } as any)
 const PWorkspaceSlugPlanSlugVNumberRoute =
   PWorkspaceSlugPlanSlugVNumberRouteImport.update({
     id: '/v/$number',
@@ -160,7 +153,6 @@ export interface FileRoutesByFullPath {
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/edit': typeof PWorkspaceSlugPlanSlugEditRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
 }
 export interface FileRoutesByTo {
@@ -183,7 +175,6 @@ export interface FileRoutesByTo {
   '/w/$slug': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/edit': typeof PWorkspaceSlugPlanSlugEditRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
 }
 export interface FileRoutesById {
@@ -207,7 +198,6 @@ export interface FileRoutesById {
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/edit': typeof PWorkspaceSlugPlanSlugEditRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
 }
 export interface FileRouteTypes {
@@ -232,7 +222,6 @@ export interface FileRouteTypes {
     | '/w/$slug/'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/p/$workspaceSlug/$planSlug/edit'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -255,7 +244,6 @@ export interface FileRouteTypes {
     | '/w/$slug'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/p/$workspaceSlug/$planSlug/edit'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   id:
     | '__root__'
@@ -278,7 +266,6 @@ export interface FileRouteTypes {
     | '/w/$slug/'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/p/$workspaceSlug/$planSlug/edit'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesById: FileRoutesById
 }
@@ -435,13 +422,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlansIdVersionsRouteImport
       parentRoute: typeof ApiPlansIdRoute
     }
-    '/p/$workspaceSlug/$planSlug/edit': {
-      id: '/p/$workspaceSlug/$planSlug/edit'
-      path: '/edit'
-      fullPath: '/p/$workspaceSlug/$planSlug/edit'
-      preLoaderRoute: typeof PWorkspaceSlugPlanSlugEditRouteImport
-      parentRoute: typeof PWorkspaceSlugPlanSlugRoute
-    }
     '/p/$workspaceSlug/$planSlug/v/$number': {
       id: '/p/$workspaceSlug/$planSlug/v/$number'
       path: '/v/$number'
@@ -491,13 +471,11 @@ const ApiTokensRouteWithChildren = ApiTokensRoute._addFileChildren(
 )
 
 interface PWorkspaceSlugPlanSlugRouteChildren {
-  PWorkspaceSlugPlanSlugEditRoute: typeof PWorkspaceSlugPlanSlugEditRoute
   PWorkspaceSlugPlanSlugVNumberRoute: typeof PWorkspaceSlugPlanSlugVNumberRoute
 }
 
 const PWorkspaceSlugPlanSlugRouteChildren: PWorkspaceSlugPlanSlugRouteChildren =
   {
-    PWorkspaceSlugPlanSlugEditRoute: PWorkspaceSlugPlanSlugEditRoute,
     PWorkspaceSlugPlanSlugVNumberRoute: PWorkspaceSlugPlanSlugVNumberRoute,
   }
 

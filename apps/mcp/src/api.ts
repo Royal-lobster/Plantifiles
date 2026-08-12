@@ -76,7 +76,6 @@ export class PlantifilesApi {
 			agentName?: string | undefined;
 			agentPrompt?: string | undefined;
 			force?: boolean | undefined;
-			baseVersion?: number | undefined;
 		},
 	): Promise<PublishedPlan> {
 		return this.#json(`/api/plans/${encodeURIComponent(planId)}/versions`, {

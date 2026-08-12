@@ -8,7 +8,6 @@ const publishVersionSchema = z.object({
 	agentName: z.string().min(1).optional(),
 	agentPrompt: z.string().optional(),
 	force: z.boolean().optional(),
-	baseVersion: z.number().int().positive().optional(),
 });
 
 export const Route = createFileRoute("/api/plans/$id/versions")({

@@ -31,7 +31,6 @@ export type PublishVersionInput = {
 	agentName?: string | undefined;
 	agentPrompt?: string | undefined;
 	force?: boolean | undefined;
-	baseVersion?: number | undefined;
 };
 export type PlanComment = typeof comment.$inferSelect & {
 	author: { id: string; name: string; image: string | null };
@@ -194,16 +193,6 @@ export async function createPlanVersion(request: Request, planId: string, input:
 	const current = rows[0];
 	if (!current) throw new Response("Plan not found", { status: 404 });
 	await assertWorkspaceAccess(current.workspace.id, identity.user.id);
-	if (input.baseVersion !== undefined && input.baseVersion !== current.version.number) {
-		throw Response.json(
-			{
-				error: "version_conflict",
-				message: `Version ${current.version.number} landed while you were editing version ${input.baseVersion}.`,
-				currentVersion: current.version.number,
-			},
-			{ status: 409 },
-		);
-	}
 
 	const { blocks, report } = assertPublishableSource(input.source, input.force);
 	const structural = diff(normalize(current.version.source), blocks);

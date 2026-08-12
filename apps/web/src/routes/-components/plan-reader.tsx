@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Check, FileDown, History, ListTree, MoreHorizontal, Pencil } from "lucide-react";
+import { ArrowRight, Check, FileDown, History, ListTree, MoreHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatUtcTimestamp } from "#/lib/format-time";
 import type { PlanRouteData } from "#/lib/plan-data";
@@ -102,7 +102,6 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
 	const currentApprovals = isCurrentVersion ? data.approvals.length : 0;
-	const canEdit = Boolean(data.viewer && isCurrentVersion);
 	const canAdvance = Boolean(data.viewer && isCurrentVersion && data.plan.status !== "archived");
 	const nextStatusLabel =
 		data.plan.status === "archived" || data.plan.status === "in_review"
@@ -229,13 +228,6 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 								{copied ? <Check /> : <FileDown />}
 								{copied ? "Copied Markdown URL" : "Copy Markdown URL"}
 							</DropdownMenuItem>
-							{canEdit && (
-								<DropdownMenuItem asChild>
-									<Link to="/p/$workspaceSlug/$planSlug/edit" params={{ workspaceSlug, planSlug }}>
-										<Pencil /> Edit source
-									</Link>
-								</DropdownMenuItem>
-							)}
 							<DropdownMenuSeparator />
 							<DropdownMenuItem asChild>
 								<a href="#version-history">
