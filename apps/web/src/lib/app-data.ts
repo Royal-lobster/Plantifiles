@@ -62,6 +62,7 @@ export type DashboardPlan = {
 	id: string;
 	slug: string;
 	title: string;
+	emoji: string | null;
 	status: PlanStatus;
 	updatedAt: string;
 	version: number;
