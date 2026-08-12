@@ -12,7 +12,7 @@ const workspaceParamsSchema = z.object({ slug: z.string().min(1) });
 
 export type NavigationData = {
 	user: { id: string; name: string; email: string; image: string | null } | null;
-	workspaces: Array<{ id: string; slug: string; name: string; role: "owner" | "admin" | "member" | "viewer" }>;
+	workspaces: Array<{ id: string; slug: string; name: string; role: "owner" | "member" }>;
 	plans: Array<{ id: string; slug: string; title: string; workspaceId: string }>;
 	decisions: Array<{ id: string; key: string; planId: string }>;
 };
@@ -131,7 +131,7 @@ export const updateWorkspaceSettings = createServerFn({ method: "POST" })
 			.where(and(eq(workspace.slug, data.slug), eq(membership.userId, identity.user.id)))
 			.limit(1);
 		const target = rows[0];
-		if (!target || !["owner", "admin"].includes(target.role)) throw new Response("Forbidden", { status: 403 });
+		if (!target || target.role !== "owner") throw new Response("Forbidden", { status: 403 });
 		await db
 			.update(workspace)
 			.set({ name: data.name, requiredApprovals: data.requiredApprovals })

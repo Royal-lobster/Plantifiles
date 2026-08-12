@@ -224,11 +224,11 @@ export const membership = sqliteTable(
 		workspaceId: text("workspace_id")
 			.notNull()
 			.references(() => workspace.id, { onDelete: "cascade" }),
-		role: text("role", { enum: ["owner", "admin", "member", "viewer"] }).notNull(),
+		role: text("role", { enum: ["owner", "member"] }).notNull(),
 	},
 	(table) => [
 		unique("membership_user_workspace").on(table.userId, table.workspaceId),
-		check("membership_role_ck", sql`${table.role} in ('owner','admin','member','viewer')`),
+		check("membership_role_ck", sql`${table.role} in ('owner','member')`),
 	],
 );
 

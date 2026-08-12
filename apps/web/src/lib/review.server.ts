@@ -36,8 +36,8 @@ async function requireReviewAccess(request: Request, planId: string): Promise<Re
 	return { ...access, identity };
 }
 
-function requireAdminOrOwner(role: MembershipRole): void {
-	if (role !== "owner" && role !== "admin") throw new Response("Owner or admin access required.", { status: 403 });
+function requireOwner(role: MembershipRole): void {
+	if (role !== "owner") throw new Response("Owner access required.", { status: 403 });
 }
 
 async function approvalGate(target: typeof plan.$inferSelect): Promise<{ allowed: boolean; reason: string | null }> {
@@ -111,7 +111,7 @@ export async function resolveDecision(request: Request, planId: string, key: str
 		.limit(1);
 	const target = rows[0];
 	if (!target) throw new Response("Decision not found.", { status: 404 });
-	if (target.ownerId !== access.identity.user.id) requireAdminOrOwner(access.role);
+	if (target.ownerId !== access.identity.user.id) requireOwner(access.role);
 	await getDb()
 		.update(decision)
 		.set({
@@ -141,7 +141,7 @@ export async function approveCurrentVersion(request: Request, planId: string) {
 
 export async function advancePlanStatus(request: Request, planId: string) {
 	const access = await requireReviewAccess(request, planId);
-	requireAdminOrOwner(access.role);
+	requireOwner(access.role);
 	const next = NEXT_STATUS[access.plan.status];
 	if (!next) return { status: access.plan.status, reason: "Archived is the final lifecycle state." };
 	if (next === "approved") {
