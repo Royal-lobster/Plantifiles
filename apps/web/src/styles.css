@@ -1,12 +1,22 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @source "../../../packages/ui/src";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+	/* Three voices: Inter for chrome, Newsreader for document display type,
+	   JetBrains Mono for editorial furniture (labels, folios, metadata). */
 	--font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Newsreader Variable", ui-serif, Georgia, serif;
 	--font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+	/* Reading measures, so no route hardcodes a column width. */
+	--container-measure: 68ch;
+	--container-gutter: 11rem;
+	--container-rail: 13rem;
+
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -27,6 +37,17 @@
 	--color-ring: var(--ring);
 	--color-sidebar: var(--sidebar);
 	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+
+	/* Plan-block semantics. Green is the product, so it carries the reading
+	   spine (phase, brand ink); judgment stays cool and risk stays red. */
+	--color-brand-ink: var(--brand-ink);
 	--color-decision: var(--decision);
 	--color-risk-low: var(--risk-low);
 	--color-risk-med: var(--risk-med);
@@ -36,75 +57,103 @@
 	--color-warning: var(--warning);
 	--color-diagram-node: var(--diagram-node);
 	--color-diagram-edge: var(--diagram-edge);
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
+
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
 	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
 }
 
 :root {
-	--background: oklch(0.985 0.006 285);
-	--foreground: oklch(0.19 0.025 285);
+	--radius: 0.625rem;
+
+	/* Warm neutrals around hue 107 under a bright chartreuse-green primary. */
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.153 0.006 107.1);
 	--card: oklch(1 0 0);
 	--card-foreground: var(--foreground);
 	--popover: oklch(1 0 0);
 	--popover-foreground: var(--foreground);
-	--primary: oklch(0.53 0.24 292);
-	--primary-foreground: oklch(0.985 0.005 285);
-	--secondary: oklch(0.95 0.018 285);
-	--secondary-foreground: oklch(0.26 0.04 285);
-	--muted: oklch(0.955 0.012 285);
-	--muted-foreground: oklch(0.5 0.035 285);
-	--accent: oklch(0.59 0.23 292);
-	--accent-foreground: oklch(0.39 0.2 292);
-	--destructive: oklch(0.57 0.23 27);
-	--border: oklch(0.88 0.02 285);
-	--input: oklch(0.86 0.025 285);
-	--ring: var(--accent);
-	--sidebar: oklch(0.965 0.013 285);
+	--primary: oklch(0.841 0.238 128.85);
+	--primary-foreground: oklch(0.405 0.101 131.063);
+	--secondary: oklch(0.962 0.008 106.9);
+	--secondary-foreground: oklch(0.228 0.013 107.4);
+	--muted: oklch(0.966 0.005 106.5);
+	--muted-foreground: oklch(0.58 0.031 107.3);
+	/* accent stays the neutral interaction surface shadcn expects; identity
+	   colour is --primary for fills and --brand-ink for text and strokes. */
+	--accent: oklch(0.958 0.008 106.9);
+	--accent-foreground: oklch(0.228 0.013 107.4);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.93 0.007 106.5);
+	--input: oklch(0.9 0.008 106.5);
+	--ring: oklch(0.648 0.2 131.684);
+	--sidebar: oklch(0.982 0.005 106.5);
 	--sidebar-foreground: var(--foreground);
-	--decision: oklch(0.6 0.2 266);
-	--risk-low: oklch(0.67 0.16 151);
-	--risk-med: oklch(0.74 0.16 75);
-	--risk-high: oklch(0.6 0.22 27);
-	--phase: oklch(0.58 0.2 292);
-	--success: oklch(0.58 0.17 151);
-	--warning: oklch(0.68 0.16 67);
-	--diagram-node: oklch(0.72 0.11 292);
-	--diagram-edge: oklch(0.48 0.08 285);
-	--radius: 0.625rem;
+	--sidebar-accent: oklch(0.95 0.012 106.9);
+	--sidebar-border: oklch(0.93 0.007 106.5);
+
+	--chart-1: oklch(0.897 0.196 126.665);
+	--chart-2: oklch(0.768 0.233 130.85);
+	--chart-3: oklch(0.648 0.2 131.684);
+	--chart-4: oklch(0.532 0.157 131.589);
+	--chart-5: oklch(0.453 0.124 130.933);
+
+	/* --primary is too light to sit on paper as text, so readable brand ink
+	   comes from the middle of the same green ramp. */
+	--brand-ink: var(--chart-3);
+	--phase: var(--chart-3);
+	--decision: oklch(0.53 0.12 245);
+	--risk-low: oklch(0.58 0.11 152);
+	--risk-med: oklch(0.66 0.15 68);
+	--risk-high: oklch(0.55 0.22 27.325);
+	--success: oklch(0.55 0.14 148);
+	--warning: oklch(0.66 0.15 68);
+	--diagram-node: var(--chart-1);
+	--diagram-edge: var(--chart-5);
 }
 
 .dark {
-	--background: oklch(0.155 0.025 285);
-	--foreground: oklch(0.94 0.012 285);
-	--card: oklch(0.19 0.03 285);
+	--background: oklch(0.153 0.006 107.1);
+	--foreground: oklch(0.988 0.003 106.5);
+	--card: oklch(0.196 0.009 107.4);
 	--card-foreground: var(--foreground);
-	--popover: oklch(0.2 0.03 285);
+	--popover: oklch(0.228 0.013 107.4);
 	--popover-foreground: var(--foreground);
-	--primary: oklch(0.72 0.18 292);
-	--primary-foreground: oklch(0.16 0.03 285);
-	--secondary: oklch(0.24 0.035 285);
-	--secondary-foreground: oklch(0.92 0.015 285);
-	--muted: oklch(0.235 0.025 285);
-	--muted-foreground: oklch(0.68 0.035 285);
-	--accent: oklch(0.72 0.19 292);
-	--accent-foreground: oklch(0.82 0.15 292);
-	--destructive: oklch(0.7 0.19 25);
-	--border: oklch(0.31 0.035 285);
-	--input: oklch(0.34 0.04 285);
-	--ring: var(--accent);
-	--sidebar: oklch(0.175 0.028 285);
+	--primary: oklch(0.768 0.233 130.85);
+	--primary-foreground: oklch(0.274 0.072 132.109);
+	--secondary: oklch(0.268 0.012 107.4);
+	--secondary-foreground: oklch(0.988 0.003 106.5);
+	--muted: oklch(0.253 0.011 107.4);
+	--muted-foreground: oklch(0.737 0.021 106.9);
+	--accent: oklch(0.286 0.016 107.4);
+	--accent-foreground: oklch(0.988 0.003 106.5);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 12%);
+	--input: oklch(1 0 0 / 18%);
+	--ring: oklch(0.768 0.233 130.85);
+	--sidebar: oklch(0.178 0.007 107.4);
 	--sidebar-foreground: var(--foreground);
-	--decision: oklch(0.72 0.15 266);
-	--risk-low: oklch(0.73 0.14 151);
-	--risk-med: oklch(0.78 0.14 75);
-	--risk-high: oklch(0.72 0.18 27);
-	--phase: oklch(0.72 0.17 292);
-	--success: oklch(0.7 0.15 151);
-	--warning: oklch(0.76 0.14 67);
-	--diagram-node: oklch(0.62 0.15 292);
-	--diagram-edge: oklch(0.72 0.06 285);
+	--sidebar-accent: oklch(0.253 0.011 107.4);
+	--sidebar-border: oklch(1 0 0 / 12%);
+
+	--chart-1: oklch(0.897 0.196 126.665);
+	--chart-2: oklch(0.768 0.233 130.85);
+	--chart-3: oklch(0.648 0.2 131.684);
+	--chart-4: oklch(0.532 0.157 131.589);
+	--chart-5: oklch(0.453 0.124 130.933);
+
+	--brand-ink: var(--chart-2);
+	--phase: var(--chart-2);
+	--decision: oklch(0.72 0.12 245);
+	--risk-low: oklch(0.72 0.13 152);
+	--risk-med: oklch(0.78 0.14 68);
+	--risk-high: oklch(0.7 0.19 22.216);
+	--success: oklch(0.72 0.15 148);
+	--warning: oklch(0.78 0.14 68);
+	--diagram-node: var(--chart-5);
+	--diagram-edge: var(--chart-2);
 }
 
 @layer base {
@@ -127,8 +176,12 @@
 	}
 
 	::selection {
-		background: color-mix(in oklab, var(--accent) 25%, transparent);
+		background: color-mix(in oklab, var(--primary) 40%, transparent);
 	}
+}
+
+@utility label-eyebrow {
+	@apply font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-muted-foreground;
 }
 
 /* Shiki emits both themes as CSS variables (defaultColor: false), so code blocks
