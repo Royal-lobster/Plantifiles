@@ -88,10 +88,10 @@ const PlanRenderContext = createContext<PlanRenderContextValue>({
 	planSlug: "",
 });
 
-/* Below xl there is no gutter to hide an affordance in, so the comment button
-   only rides along with blocks that carry a decision-grade claim. Prose still
-   takes comments on the desktop hover. */
-const COMMENTABLE_ON_NARROW: Record<string, true> = {
+/* Only blocks that carry a claim take comments. Prose does not: a hover-only
+   affordance on every paragraph reserved an invisible row above each one, which
+   read as a stray gap, and reviewers argue with claims rather than sentences. */
+const COMMENTABLE: Record<string, true> = {
 	TLDR: true,
 	Decision: true,
 	Tradeoff: true,
@@ -191,21 +191,12 @@ function PlanRenderProvider({
 }
 
 /**
- * Every top-level block owns a live left margin. Marginalia sit inline above the
- * block on narrow screens and swing out into the document's gutter from `xl`,
- * which is where a reviewed manuscript keeps its remarks.
+ * Block affordances sit inline, right-aligned, above their block. They used to
+ * swing into a left gutter, which pushed labels outside the column and left the
+ * page ragged on one side; one column with even edges reads better.
  */
 function BlockMargin({ spaced, children }: { spaced: boolean; children: ReactNode }) {
-	return (
-		<div
-			className={cn(
-				"flex flex-wrap items-center gap-2 xl:-left-8 xl:absolute xl:top-0.5 xl:mb-0 xl:w-(--container-gutter) xl:-translate-x-full xl:flex-col xl:items-end xl:gap-1.5",
-				spaced && "mb-2",
-			)}
-		>
-			{children}
-		</div>
-	);
+	return <div className={cn("flex flex-wrap items-center justify-end gap-2", spaced && "mb-1.5")}>{children}</div>;
 }
 
 function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProps) {
@@ -222,27 +213,23 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 	const threads = context.comments.filter((item) => item.blockKey === key && !item.parentId);
 	const openThreads = threads.filter((item) => !item.resolvedAt).length;
 	const canComment = Boolean(
-		context.viewerId && context.isCurrentVersion && context.currentBlockKeys[key] && context.onCreateComment,
+		kind &&
+			COMMENTABLE[kind] &&
+			context.viewerId &&
+			context.isCurrentVersion &&
+			context.currentBlockKeys[key] &&
+			context.onCreateComment,
 	);
 	const figure = context.figureNumbers[key];
-	const decision = kind === "Decision" ? context.decisions.find((item) => item.key === key) : undefined;
-	const marks = Boolean(figure !== undefined || decision || threads.length > 0);
+	// The Decision card header already carries an OPEN/RESOLVED pill, so the old
+	// margin label only said it twice.
+	const marks = Boolean(figure !== undefined || threads.length > 0);
 	const hasMargin = marks || canComment;
-	const spaced = marks || Boolean(canComment && kind && COMMENTABLE_ON_NARROW[kind]);
+	const spaced = marks || canComment;
 	return (
 		<div className={cn("group/plan-block relative scroll-mt-20", className)} {...props}>
 			{hasMargin && (
 				<BlockMargin spaced={spaced}>
-					{decision && (
-						<span
-							className={cn(
-								"font-mono text-[10px] uppercase tracking-[0.14em]",
-								decision.status === "resolved" ? "text-success" : "text-decision",
-							)}
-						>
-							{decision.status === "resolved" ? "resolved" : "open decision"}
-						</span>
-					)}
 					{figure !== undefined && (
 						<a
 							href={`#${encodeURIComponent(key)}`}
@@ -251,6 +238,7 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 							Fig. {figure}
 						</a>
 					)}
+
 					{threads.length > 0 && (
 						<span className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
 							<MessageSquare className="size-3" />
@@ -264,10 +252,7 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 									type="button"
 									variant="quiet"
 									size="icon-xs"
-									className={cn(
-										"xl:opacity-0 xl:group-hover/plan-block:opacity-100 xl:focus-visible:opacity-100",
-										kind && COMMENTABLE_ON_NARROW[kind] ? "opacity-100" : "hidden xl:inline-flex",
-									)}
+									className="opacity-70 transition-opacity hover:opacity-100"
 									aria-label={`Comment on ${kind ?? "block"}`}
 									onClick={() => setComposing((value) => !value)}
 								>
