@@ -107,10 +107,10 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 		});
 	}
 
-	// Title, metadata and prose share one measure-wide column, centred in the
-	// shell, so nothing is indented relative to anything else.
+	// The plan fills the shell, flush with the nav and the plans grid. The shell
+	// itself is the reading measure now, so there is no inset column.
 	return (
-		<section className="mx-auto max-w-measure">
+		<section>
 			<header className="border-b pb-7">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
 				<h1 className="mt-1 max-w-[34ch] font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
@@ -244,7 +244,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 					<History className="size-4 text-brand-ink" />
 					<h2 className="label-eyebrow text-foreground">Version history</h2>
 				</header>
-				<ol className="mt-5 max-w-measure">
+				<ol className="mt-5">
 					{data.versions.map((item, index) => (
 						<li key={item.id} className="relative pl-10">
 							{index < data.versions.length - 1 && (

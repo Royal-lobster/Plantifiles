@@ -145,7 +145,7 @@ function EmptyState({ slug }: { slug: string }) {
 	const [copied, setCopied] = useState(false);
 	const command = `plantifiles push plan.mdx --workspace ${slug}`;
 	return (
-		<div className="mt-10 max-w-measure">
+		<div className="mt-10">
 			<h2 className="font-display font-medium text-2xl">Nothing has been proposed yet.</h2>
 			<p className="mt-3 text-muted-foreground leading-7">
 				Publishing is the CLI's job. Run this from the agent session that wrote the plan.
