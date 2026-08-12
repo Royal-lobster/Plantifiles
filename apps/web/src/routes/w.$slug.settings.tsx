@@ -2,9 +2,12 @@ import { Button } from "@plantifiles/ui/components/button";
 import { Input } from "@plantifiles/ui/components/input";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useId, useState } from "react";
+import { Building2, ShieldCheck, Users } from "lucide-react";
+import { Fragment, useId, useState } from "react";
 import { getWorkspaceSettings, updateWorkspaceSettings } from "#/lib/app-data";
 import { guardLoader } from "#/lib/loader-guard";
+import { Avatar } from "./-components/brand";
+import { SettingsRow, SettingsRowDivider, SettingsSection } from "./-components/settings-section";
 
 export const Route = createFileRoute("/w/$slug/settings")({
 	loader: ({ params }) => guardLoader(() => getWorkspaceSettings({ data: params })),
@@ -21,63 +24,137 @@ function WorkspaceSettings() {
 	const [message, setMessage] = useState("");
 	const nameId = useId();
 	const approvalsId = useId();
+	const workspaceSectionId = useId();
+	const reviewSectionId = useId();
+	const membersSectionId = useId();
+	const canSave = data.role === "owner";
+
 	return (
 		<section className="space-y-8">
 			<header>
 				<h1 className="font-medium text-2xl tracking-tight">Settings</h1>
+				<p className="mt-1 text-muted-foreground text-sm">Workspace identity, review policy, and access.</p>
 			</header>
+
 			<form
-				className="max-w-xl space-y-4 rounded-lg border bg-card p-5"
+				className="space-y-6"
 				onSubmit={async (event) => {
 					event.preventDefault();
+					if (!canSave) return;
 					await update({ data: { slug, name, requiredApprovals } });
 					setMessage("Saved");
 				}}
 			>
-				<label className="grid gap-1.5 font-medium text-sm" htmlFor={nameId}>
-					Workspace name
-				</label>
-				<Input id={nameId} value={name} onChange={(event) => setName(event.target.value)} />
-				<label className="grid gap-1.5 font-medium text-sm" htmlFor={approvalsId}>
-					Required approvals
-				</label>
-				<Input
-					id={approvalsId}
-					type="number"
-					min={1}
-					max={20}
-					value={requiredApprovals}
-					onChange={(event) => setRequiredApprovals(Number(event.target.value))}
-				/>
-				<div className="flex items-center gap-3">
-					<Button type="submit">Save settings</Button>
-					{message && <span className="text-success text-sm">{message}</span>}
+				<SettingsSection
+					id={workspaceSectionId}
+					icon={Building2}
+					title="Workspace"
+					description="The identity shared by every plan in this workspace."
+				>
+					<SettingsRow
+						label="Name"
+						hint="Shown in navigation and workspace context."
+						control={
+							<Input
+								id={nameId}
+								aria-label="Workspace name"
+								value={name}
+								disabled={!canSave}
+								required
+								onChange={(event) => {
+									setName(event.target.value);
+									setMessage("");
+								}}
+							/>
+						}
+					/>
+					<SettingsRowDivider />
+					<SettingsRow
+						label="Slug"
+						hint="Read-only because it appears in every plan URL."
+						control={
+							<code className="rounded-md bg-muted px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
+								/{data.workspace.slug}
+							</code>
+						}
+					/>
+				</SettingsSection>
+
+				<SettingsSection
+					id={reviewSectionId}
+					icon={ShieldCheck}
+					title="Review"
+					description="The approval gate for plans in this workspace."
+				>
+					<SettingsRow
+						label="Required approvals"
+						hint="A plan cannot reach the approved status until its current version has this many approvals."
+						control={
+							<Input
+								id={approvalsId}
+								aria-label="Required approvals"
+								type="number"
+								min={1}
+								max={20}
+								value={requiredApprovals}
+								disabled={!canSave}
+								onChange={(event) => {
+									setRequiredApprovals(Number(event.target.value));
+									setMessage("");
+								}}
+							/>
+						}
+					/>
+				</SettingsSection>
+
+				<div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
+					{canSave ? (
+						<>
+							{message ? <span className="text-success text-sm">{message}</span> : null}
+							<Button type="submit">Save settings</Button>
+						</>
+					) : (
+						<p className="text-muted-foreground text-sm">Only workspace owners can change these settings.</p>
+					)}
 				</div>
 			</form>
-			<div className="space-y-3">
-				<div>
-					<h2 className="font-semibold text-lg">Members</h2>
-					<p className="text-muted-foreground text-sm">
-						Roles determine who can resolve decisions and change lifecycle state.
-					</p>
-				</div>
-				<div className="overflow-hidden rounded-lg border bg-card">
-					{data.members.map((member) => (
-						<div key={member.id} className="flex h-14 items-center gap-3 border-b px-4 last:border-b-0">
-							<span className="flex size-8 items-center justify-center rounded-full bg-brand-ink/12 font-medium text-brand-ink text-xs">
-								{member.name.slice(0, 2).toUpperCase()}
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="block truncate font-medium text-sm">{member.name}</span>
-								<span className="block truncate text-muted-foreground text-xs">{member.email}</span>
-							</span>
-							<span className="rounded-full bg-muted px-2 py-1 text-muted-foreground text-xs capitalize">
-								{member.role}
-							</span>
-						</div>
-					))}
-				</div>
-			</div>
+
+			<SettingsSection
+				id={membersSectionId}
+				icon={Users}
+				title="Members"
+				description="People who can read, review, and manage plans in this workspace."
+			>
+				{data.members.length === 0 ? (
+					<div className="px-4 py-8 text-center">
+						<Users className="mx-auto size-6 text-muted-foreground" />
+						<p className="mt-2 font-medium text-sm">No workspace members</p>
+						<p className="mt-1 text-muted-foreground text-xs">Members will appear here when they join.</p>
+					</div>
+				) : (
+					data.members.map((member, index) => (
+						<Fragment key={member.id}>
+							{index > 0 ? <SettingsRowDivider /> : null}
+							<SettingsRow
+								label={
+									<span className="flex min-w-0 items-center gap-3">
+										<Avatar seed={member.id} name={member.name} image={member.image} className="size-8" />
+										<span className="min-w-0">
+											<span className="block truncate">{member.name}</span>
+											<span className="block truncate font-normal text-muted-foreground text-xs">{member.email}</span>
+										</span>
+									</span>
+								}
+								control={
+									<span className="inline-flex rounded-full bg-muted px-2 py-1 text-muted-foreground text-xs capitalize">
+										{member.role}
+									</span>
+								}
+							/>
+						</Fragment>
+					))
+				)}
+			</SettingsSection>
 		</section>
 	);
 }
