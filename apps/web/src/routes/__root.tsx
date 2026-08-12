@@ -1,6 +1,5 @@
-import "@fontsource-variable/inter";
-import "@fontsource-variable/jetbrains-mono";
-import "@fontsource-variable/newsreader";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, HeadContent, Link, Scripts } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -32,15 +31,19 @@ function RootDocument({ children }: { children: ReactNode }) {
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				{/* Resolve the theme before first paint. Without this the server sends
-				    no class, the page paints light, and hydration then flips it to dark. */}
+				    no palette class, the page paints in the default tokens, and
+				    hydration then repaints. Must stay in step with THEME_CLASSES. */}
 				<script
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: must run before paint, so it cannot be a module
 					dangerouslySetInnerHTML={{
 						__html:
-							"try{var t=localStorage.getItem('plantifiles-theme');" +
-							"if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';" +
-							"if(t==='dark')document.documentElement.classList.add('dark');" +
-							"document.documentElement.style.colorScheme=t;}catch(e){}",
+							"try{var m={cream:['theme-cream'],paper:['theme-paper'],solarized:['theme-solarized']," +
+							"light:[],dark:['dark'],nord:['theme-nord','dark'],dracula:['theme-dracula','dark']," +
+							"groove:['theme-groove','dark']};" +
+							"var t=localStorage.getItem('plantifiles-theme');if(!m[t])t='cream';" +
+							"var c=m[t],r=document.documentElement;" +
+							"if(c.length)r.classList.add.apply(r.classList,c);" +
+							"r.style.colorScheme=c.indexOf('dark')>-1?'dark':'light';}catch(e){}",
 					}}
 				/>
 				<HeadContent />
