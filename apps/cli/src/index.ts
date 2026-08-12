@@ -14,11 +14,14 @@ const HELP = `plantifiles <command>
 
 Commands:
   login                         Save an API token
-  push <file> [options]         Publish a plan or create its next version
+  push <file> [--emoji <char>] Publish a plan or create its next version
   pull <id|url> [-o file]       Fetch byte-identical plan source
   lint <file>                   Lint a plan locally
   open <id>                     Open a plan in the browser
   status [--workspace slug]     List workspace plans
+
+Push options:
+  --emoji <char>               One representative emoji for the plan
 `;
 
 function titleFromSource(source: string, file: string): string {
@@ -55,6 +58,7 @@ async function push(args: string[]): Promise<void> {
 			title: { type: "string" },
 			agent: { type: "string" },
 			prompt: { type: "string" },
+			emoji: { type: "string" },
 			force: { type: "boolean", default: false },
 		},
 	});
@@ -73,6 +77,7 @@ async function push(args: string[]): Promise<void> {
 	const result = tracked
 		? await client.createVersion(tracked.planId, {
 				source,
+				emoji: parsed.values.emoji,
 				agentName: parsed.values.agent,
 				agentPrompt: parsed.values.prompt,
 				force: parsed.values.force,
@@ -80,6 +85,7 @@ async function push(args: string[]): Promise<void> {
 		: await client.createPlan({
 				workspaceSlug: workspace,
 				title: parsed.values.title ?? titleFromSource(source, file),
+				emoji: parsed.values.emoji,
 				source,
 				agentName: parsed.values.agent,
 				agentPrompt: parsed.values.prompt,

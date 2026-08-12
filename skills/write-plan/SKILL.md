@@ -9,15 +9,25 @@ Produce a reviewable plan whose decisions, alternatives, risks, and phases can s
 
 ## Workflow
 
-1. Draft MDX from the template below. Replace every placeholder and keep the component names and prop shapes exact.
-2. Name the real decision owner. Record at least one rejected alternative and the reason it lost.
-3. Run `plantifiles lint <file>` and fix every finding. Repeat until the command exits successfully with score 90 or higher.
-4. Publish with provenance: `plantifiles push <file> --workspace <slug> --agent <agent-name> --prompt "<feature request or planning prompt>"`.
+1. Choose one emoji that represents the plan's subject, and put it in frontmatter as `emoji: <emoji>`.
+2. Draft MDX from the template below. Replace every placeholder and keep the component names and prop shapes exact.
+3. Name the real decision owner. Record at least one rejected alternative and the reason it lost.
+4. Run `plantifiles lint <file>` and fix every finding. Repeat until the command exits successfully with score 90 or higher.
+5. Publish with provenance and the same emoji: `plantifiles push <file> --workspace <slug> --emoji <emoji> --agent <agent-name> --prompt "<feature request or planning prompt>"`.
 
-Done means the published URL opens, lint is at least 90, and the version records both the agent and prompt.
+Done means the published URL opens, lint is at least 90, and the version records the emoji, agent, and prompt.
+
+## Emoji examples
+
+Choose a single visual noun, not punctuation, an emoticon, or an emoji sequence used as decoration.
+
+- Billing migration — frontmatter `emoji: 🧾`; publish with `plantifiles push billing.mdx --workspace acme --emoji 🧾`.
+- Security fix — frontmatter `emoji: 🛡️`; publish with `plantifiles push security-fix.mdx --workspace acme --emoji 🛡️`.
+- Performance change — frontmatter `emoji: ⚡`; publish with `plantifiles push faster-queries.mdx --workspace acme --emoji ⚡`.
 
 ## Lint targets
 
+- Choose exactly one representative emoji and add it to frontmatter.
 - Open with exactly one `<TLDR>` as the first block after frontmatter; keep it under 60 words.
 - Begin every `##` section with a one-line summary paragraph under 30 words.
 - Keep each paragraph within 5 sentences and 120 words.
@@ -72,6 +82,7 @@ implementation body. Reviewers should be able to disagree with the shape without
 `````mdx
 ---
 title: Replace with the plan title
+emoji: 🧭
 ---
 <TLDR>
 Ship the change in small, reversible phases while preserving the current contract until the new path is proven.

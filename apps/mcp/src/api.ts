@@ -61,6 +61,7 @@ export class PlantifilesApi {
 		slug?: string | undefined;
 		title: string;
 		source: string;
+		emoji?: string | undefined;
 		agentName?: string | undefined;
 		agentPrompt?: string | undefined;
 		force?: boolean | undefined;
@@ -72,6 +73,7 @@ export class PlantifilesApi {
 		planId: string,
 		input: {
 			source: string;
+			emoji?: string | undefined;
 			agentName?: string | undefined;
 			agentPrompt?: string | undefined;
 			force?: boolean | undefined;

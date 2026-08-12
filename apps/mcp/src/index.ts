@@ -36,6 +36,10 @@ async function main() {
 				slug: z.string().min(1).optional(),
 				title: z.string().min(1),
 				source: z.string(),
+				emoji: z
+					.string()
+					.optional()
+					.describe("Pick one representative emoji for the plan's subject, such as 🧾 for billing."),
 				agentName: z.string().min(1).optional(),
 				agentPrompt: z.string().optional(),
 				force: z.boolean().optional(),
@@ -57,6 +61,10 @@ async function main() {
 			inputSchema: z.object({
 				planId: z.string().min(1),
 				source: z.string(),
+				emoji: z
+					.string()
+					.optional()
+					.describe("Pick one representative emoji for the plan's subject; it replaces the current emoji."),
 				agentName: z.string().min(1).optional(),
 				agentPrompt: z.string().optional(),
 				force: z.boolean().optional(),

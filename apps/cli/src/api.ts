@@ -16,6 +16,7 @@ export type PlanDetail = {
 export type PlanStatus = {
 	id: string;
 	slug: string;
+	emoji: string | null;
 	title: string;
 	status: string;
 	version: number;
@@ -72,6 +73,7 @@ export class PlantifilesClient {
 	createPlan(input: {
 		workspaceSlug: string;
 		title: string;
+		emoji?: string | undefined;
 		source: string;
 		agentName?: string | undefined;
 		agentPrompt?: string | undefined;
@@ -84,6 +86,7 @@ export class PlantifilesClient {
 		planId: string,
 		input: {
 			source: string;
+			emoji?: string | undefined;
 			agentName?: string | undefined;
 			agentPrompt?: string | undefined;
 			force: boolean;
