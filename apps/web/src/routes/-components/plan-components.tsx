@@ -60,7 +60,6 @@ type PlanBlockProps = ComponentProps<"div"> & {
 type PlanRenderContextValue = {
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
-	changedKeys: Record<string, true>;
 	currentBlockKeys: Record<string, true>;
 	/** Figure numbers by block key, so diagrams can be cited like a manuscript. */
 	figureNumbers: Record<string, number>;
@@ -79,7 +78,6 @@ type PlanRenderContextValue = {
 const PlanRenderContext = createContext<PlanRenderContextValue>({
 	decisions: [],
 	comments: [],
-	changedKeys: {},
 	currentBlockKeys: {},
 	figureNumbers: {},
 	phaseContinues: {},
@@ -132,7 +130,6 @@ function PlanRenderProvider({
 	blocks,
 	decisions,
 	comments,
-	changedKeys = {},
 	currentBlockKeys,
 	viewerId,
 	isCurrentVersion,
@@ -147,7 +144,6 @@ function PlanRenderProvider({
 	blocks: PlanBlockSummary[];
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
-	changedKeys?: Record<string, true>;
 	currentBlockKeys: Record<string, true>;
 	viewerId: string | null;
 	isCurrentVersion: boolean;
@@ -163,7 +159,6 @@ function PlanRenderProvider({
 		() => ({
 			decisions,
 			comments,
-			changedKeys,
 			currentBlockKeys,
 			figureNumbers,
 			phaseContinues,
@@ -179,7 +174,6 @@ function PlanRenderProvider({
 		[
 			decisions,
 			comments,
-			changedKeys,
 			currentBlockKeys,
 			figureNumbers,
 			phaseContinues,
@@ -231,23 +225,14 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 		context.viewerId && context.isCurrentVersion && context.currentBlockKeys[key] && context.onCreateComment,
 	);
 	const figure = context.figureNumbers[key];
-	const changed = Boolean(context.changedKeys[key]);
 	const decision = kind === "Decision" ? context.decisions.find((item) => item.key === key) : undefined;
-	const marks = Boolean(figure !== undefined || changed || decision || threads.length > 0);
+	const marks = Boolean(figure !== undefined || decision || threads.length > 0);
 	const hasMargin = marks || canComment;
 	const spaced = marks || Boolean(canComment && kind && COMMENTABLE_ON_NARROW[kind]);
 	return (
-		<div
-			className={cn(
-				"group/plan-block relative scroll-mt-20",
-				changed && "-mx-4 rounded-lg bg-warning/[0.07] px-4 py-3",
-				className,
-			)}
-			{...props}
-		>
+		<div className={cn("group/plan-block relative scroll-mt-20", className)} {...props}>
 			{hasMargin && (
 				<BlockMargin spaced={spaced}>
-					{changed && <span className="font-mono text-[10px] text-warning uppercase tracking-[0.14em]">changed</span>}
 					{decision && (
 						<span
 							className={cn(
