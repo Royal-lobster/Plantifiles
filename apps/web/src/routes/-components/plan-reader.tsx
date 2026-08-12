@@ -112,85 +112,88 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 		<section>
 			<header className="border-b pb-7">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
-				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
-					{data.plan.emoji && (
-						<span aria-hidden className="shrink-0 leading-none">
-							{data.plan.emoji}
-						</span>
-					)}
-					<span>{data.plan.title}</span>
-				</h1>
+				{/* One row: identity on the left, the actions in the space beside it. */}
+				<div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+					<div className="min-w-0">
+						<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
+							{data.plan.emoji && (
+								<span aria-hidden className="shrink-0 leading-none">
+									{data.plan.emoji}
+								</span>
+							)}
+							<span>{data.plan.title}</span>
+						</h1>
 
-				{/* Only what a reviewer acts on: where the plan stands, which version
+						{/* Only what a reviewer acts on: where the plan stands, which version
 				    they are reading, and what still blocks it. Author and agent live in
 				    version history; the lint score is an authoring metric, not a
 				    reading one; and the approval count is already spelled out by the
 				    gate sentence below when it blocks. */}
-				<div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
-					<StatusChip status={data.plan.status} size="sm" />
-					{data.versions.length > 1 ? (
-						<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
-							<SelectTrigger
-								className="h-6 gap-1 rounded-sm border-0 bg-muted px-2 font-mono text-xs shadow-none focus-visible:ring-1"
-								aria-label="Plan version"
-							>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{data.versions.map((item) => (
-									<SelectItem key={item.id} value={String(item.number)}>
-										v{item.number}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					) : (
-						<span className="rounded-sm bg-muted px-2 py-0.5">v{data.version.number}</span>
-					)}
-					<span>{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read</span>
-					{openDecisions > 0 && (
-						<>
-							<span className="text-border">·</span>
-							<a href={`#${encodeURIComponent(firstOpenDecision ?? "")}`} className="text-warning hover:underline">
-								{openDecisions} open {openDecisions === 1 ? "decision" : "decisions"}
-							</a>
-						</>
-					)}
-				</div>
+						<div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
+							<StatusChip status={data.plan.status} size="sm" />
+							{data.versions.length > 1 ? (
+								<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
+									<SelectTrigger
+										className="h-6 gap-1 rounded-sm border-0 bg-muted px-2 font-mono text-xs shadow-none focus-visible:ring-1"
+										aria-label="Plan version"
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{data.versions.map((item) => (
+											<SelectItem key={item.id} value={String(item.number)}>
+												v{item.number}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							) : (
+								<span className="rounded-sm bg-muted px-2 py-0.5">v{data.version.number}</span>
+							)}
+							<span>{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read</span>
+							{openDecisions > 0 && (
+								<>
+									<span className="text-border">·</span>
+									<a href={`#${encodeURIComponent(firstOpenDecision ?? "")}`} className="text-warning hover:underline">
+										{openDecisions} open {openDecisions === 1 ? "decision" : "decisions"}
+									</a>
+								</>
+							)}
+						</div>
+					</div>
 
-				{/* One primary action, related reading modes segmented, everything else
-				    behind the overflow. A control that cannot act is not rendered. */}
-				<div className="mt-5 flex flex-wrap items-center gap-2">
-					{canAdvance && (
-						<Button size="sm" onClick={() => void runStatusAction()} disabled={reviewBusy}>
-							{data.plan.status === "in_review"
-								? reviewBusy
-									? "Approving…"
-									: "Approve current version"
-								: nextStatusLabel}
-							<ArrowRight />
-						</Button>
-					)}
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" size="icon-sm" aria-label="More plan actions">
-								<MoreHorizontal />
+					<div className="flex shrink-0 flex-wrap items-center gap-2">
+						{canAdvance && (
+							<Button size="sm" onClick={() => void runStatusAction()} disabled={reviewBusy}>
+								{data.plan.status === "in_review"
+									? reviewBusy
+										? "Approving…"
+										: "Approve current version"
+									: nextStatusLabel}
+								<ArrowRight />
 							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-52">
-							<DropdownMenuLabel className="label-eyebrow">This plan</DropdownMenuLabel>
-							<DropdownMenuItem onSelect={() => void copyMarkdownUrl()}>
-								{copied ? <Check /> : <FileDown />}
-								{copied ? "Copied Markdown URL" : "Copy Markdown URL"}
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem asChild>
-								<a href="#version-history">
-									<History /> Version history
-								</a>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+						)}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" size="icon-sm" aria-label="More plan actions">
+									<MoreHorizontal />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-52">
+								<DropdownMenuLabel className="label-eyebrow">This plan</DropdownMenuLabel>
+								<DropdownMenuItem onSelect={() => void copyMarkdownUrl()}>
+									{copied ? <Check /> : <FileDown />}
+									{copied ? "Copied Markdown URL" : "Copy Markdown URL"}
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<a href="#version-history">
+										<History /> Version history
+									</a>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				</div>
 				{reviewMessage && (
 					<p className={cn("mt-4 text-sm", reviewMessage.includes("block") ? "text-warning" : "text-muted-foreground")}>
