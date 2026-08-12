@@ -1077,6 +1077,44 @@ function PlanBlockquote({ node: _node, className, ...props }: ComponentProps<"bl
 	);
 }
 
+/**
+ * Tables were unreachable until core learned GFM, so they had never been styled.
+ * A comparison is the one task where prose measurably loses, so the table is
+ * worth real treatment: a ruled header, breathing room per cell, and its own
+ * horizontal scroll so a wide comparison never widens the column.
+ */
+function PlanTable({ node: _node, className, ...props }: ComponentProps<"table"> & { node?: unknown }) {
+	return (
+		<div className="-mx-1 my-5 overflow-x-auto rounded-lg border bg-card px-1">
+			<table className={cn("w-full border-collapse text-left text-sm", className)} {...props} />
+		</div>
+	);
+}
+
+function PlanThead({ node: _node, className, ...props }: ComponentProps<"thead"> & { node?: unknown }) {
+	return <thead className={cn("border-b bg-muted/40", className)} {...props} />;
+}
+
+function PlanTh({ node: _node, className, ...props }: ComponentProps<"th"> & { node?: unknown }) {
+	return (
+		<th
+			className={cn(
+				"px-3 py-2.5 align-bottom font-mono font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.12em]",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function PlanTr({ node: _node, className, ...props }: ComponentProps<"tr"> & { node?: unknown }) {
+	return <tr className={cn("border-b last:border-b-0", className)} {...props} />;
+}
+
+function PlanTd({ node: _node, className, ...props }: ComponentProps<"td"> & { node?: unknown }) {
+	return <td className={cn("px-3 py-2.5 align-top leading-6", className)} {...props} />;
+}
+
 const planComponents = {
 	div: PlanBlock,
 	p: PlanParagraph,
@@ -1091,6 +1129,11 @@ const planComponents = {
 	input: PlanInput,
 	strong: PlanStrong,
 	blockquote: PlanBlockquote,
+	table: PlanTable,
+	thead: PlanThead,
+	th: PlanTh,
+	tr: PlanTr,
+	td: PlanTd,
 	TLDR,
 	Decision,
 	Tradeoff,

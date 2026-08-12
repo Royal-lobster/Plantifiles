@@ -60,7 +60,6 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	const rendered = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
-	const currentApprovals = isCurrentVersion ? data.approvals.length : 0;
 	const canAdvance = Boolean(data.viewer && isCurrentVersion && data.plan.status !== "archived");
 	const nextStatusLabel =
 		data.plan.status === "archived" || data.plan.status === "in_review"
@@ -113,12 +112,21 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 		<section>
 			<header className="border-b pb-7">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
-				<h1 className="mt-1 max-w-[34ch] font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
-					{data.plan.title}
+				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
+					{data.plan.emoji && (
+						<span aria-hidden className="shrink-0 leading-none">
+							{data.plan.emoji}
+						</span>
+					)}
+					<span>{data.plan.title}</span>
 				</h1>
 
-				{/* One credit line carries the metadata that used to be six chips. */}
-				<div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
+				{/* Only what a reviewer acts on: where the plan stands, which version
+				    they are reading, and what still blocks it. Author and agent live in
+				    version history; the lint score is an authoring metric, not a
+				    reading one; and the approval count is already spelled out by the
+				    gate sentence below when it blocks. */}
+				<div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
 					<StatusChip status={data.plan.status} size="sm" />
 					{data.versions.length > 1 ? (
 						<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
@@ -139,18 +147,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 					) : (
 						<span className="rounded-sm bg-muted px-2 py-0.5">v{data.version.number}</span>
 					)}
-					<span>
-						{data.author.name}
-						{data.version.agentName ? ` via ${data.version.agentName}` : " by hand"}
-					</span>
-					<span className="text-border">·</span>
 					<span>{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read</span>
-					<span className="text-border">·</span>
-					<span title="Lint score">lint {data.version.lintReport.score}</span>
-					<span className="text-border">·</span>
-					<span className={currentApprovals >= data.workspace.requiredApprovals ? "text-success" : undefined}>
-						{currentApprovals}/{data.workspace.requiredApprovals} approvals
-					</span>
 					{openDecisions > 0 && (
 						<>
 							<span className="text-border">·</span>
