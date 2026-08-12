@@ -14,7 +14,7 @@
 - 2026-08-12 — Store the service base URL beside the CLI token instead of hardcoding a production origin; environment variables override both values.
 - 2026-08-12 — Resolve plan URLs through authenticated list and detail APIs so `pull` returns the stored source byte-for-byte rather than transport frontmatter.
 - 2026-08-12 — Key `.plantifiles.json` by git-root-relative file path, falling back to the working directory only outside a repository.
-- 2026-08-12 — Use a restrained violet accent and violet/rose diagram pair so status colors remain semantic and the product has one recognizable signature.
+- 2026-08-12 — Adopt a light playful green identity (`--primary: oklch(0.841 0.238 128.85)` over warm hue-107 neutrals) and re-derive the plan-block tokens against it, keeping judgment cool (`--decision` at hue 245) and risk red, because a green product still needs a red high risk.
 - 2026-08-12 — Compile MDX to serializable HAST in the route loader so SSR and hydration share one strict registry without shipping the Node-only normalizer to browsers.
 - 2026-08-12 — Export the structural diff as a browser-safe core subpath because the core barrel also exports the `node:crypto`-based normalizer.
 - 2026-08-12 — Convert CSS token colors through a one-pixel canvas before passing them to Mermaid because Mermaid rejects the design system's OKLCH values.
@@ -31,3 +31,13 @@
 - 2026-08-12 — Map 403 to the 404 page rather than a distinct "forbidden" screen so a plan the viewer cannot see does not confirm its own existence.
 - 2026-08-12 — Resolve the theme in a blocking inline script in `<head>` rather than in the provider effect, since the server cannot know the preference and hydration-time switching paints light first.
 - 2026-08-12 — Register both Shiki themes with `defaultColor: false` so code blocks follow the `.dark` class through CSS variables instead of pinning `github-dark` in both modes.
+- 2026-08-12 — Keep `--accent` as the neutral interaction surface shadcn expects and carry identity with `--primary` for fills plus a new `--brand-ink` (`--chart-3`/`--chart-2`) for text and strokes, because the bright chartreuse primary fails contrast as body-sized ink.
+- 2026-08-12 — Drive diagram colours from the chart ramp (`--diagram-node`/`--diagram-edge`) and hand Mermaid the whole palette rather than four variables, because its `base` theme derives what it is not given by rotating the primary hue, which turned a green product's edge labels magenta.
+- 2026-08-12 — Give the product three typographic voices — Inter for chrome, Newsreader for document display type, JetBrains Mono for editorial furniture — so a plan reads as a reviewed manuscript instead of a settings page.
+- 2026-08-12 — Declare reading measures as `--container-*` tokens (`measure` 68ch, `gutter`, `rail`) so no route hardcodes a column width and the prose measure survives layout changes.
+- 2026-08-12 — Replace the labelled 15rem nav sidebar with a 3.5rem icon spine plus Radix tooltips, spending the reclaimed width on the document's left margin instead of naming three destinations in chrome.
+- 2026-08-12 — Use the document's left margin as a live gutter: each top-level block swings its own decision status, figure number, change mark, and comment affordance into it at `xl`, and stacks them inline below that, because a remark belongs beside its subject.
+- 2026-08-12 — Number diagrams once from the normalized block list and pass the map through the render context, so the caption, the margin mark, and the lightbox title always cite the same figure.
+- 2026-08-12 — Group the dashboard by what a reader must do — unresolved decisions first, then review state — rather than presenting eight equal-weight columns, because the index exists to route attention.
+- 2026-08-12 — Give the plan header one primary action, a Radix `ToggleGroup` for reading modes, and an overflow menu for the rest, and omit the Diff control entirely when a plan has one version rather than rendering it disabled.
+- 2026-08-12 — Warn rather than error when a plan carries fewer than two diagrams, so existing single-diagram plans stay publishable while the lint score nudges authors toward varied diagram types.
