@@ -18,8 +18,7 @@ function DecisionsPage() {
 	return (
 		<section className="space-y-6">
 			<header>
-				<p className="label-eyebrow">Workspace · Decisions</p>
-				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight">Open decisions</h1>
+				<h1 className="font-medium text-2xl tracking-tight">Decisions</h1>
 				<p className="mt-1 text-muted-foreground text-sm">Everything still blocking a build, grouped by plan.</p>
 			</header>
 			{decisions.length === 0 ? (

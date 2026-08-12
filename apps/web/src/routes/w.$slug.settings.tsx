@@ -24,8 +24,7 @@ function WorkspaceSettings() {
 	return (
 		<section className="space-y-8">
 			<header>
-				<p className="label-eyebrow">Workspace · Settings</p>
-				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight">{data.workspace.name}</h1>
+				<h1 className="font-medium text-2xl tracking-tight">Settings</h1>
 			</header>
 			<form
 				className="max-w-xl space-y-4 rounded-lg border bg-card p-5"

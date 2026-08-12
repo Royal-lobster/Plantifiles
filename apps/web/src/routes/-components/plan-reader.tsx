@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Check, FileDown, History, ListTree, MoreHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Check, FileDown, History, MoreHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
 import { formatUtcTimestamp } from "#/lib/format-time";
 import type { PlanRouteData } from "#/lib/plan-data";
 import { renderPlan } from "#/lib/render-plan";
@@ -37,36 +37,6 @@ const NEXT_STATUS_LABEL: Record<Exclude<PlanRouteData["plan"]["status"], "archiv
 	approved: "Archive",
 };
 
-function outlineLabel(source: string): string {
-	return source
-		.replace(/^#{1,3}\s*/, "")
-		.replace(/<[^>]+>/g, "")
-		.trim()
-		.slice(0, 80);
-}
-
-/** Marks the outline entry the reader is currently inside, so a long document has a position. */
-function useActiveBlockKey(keys: string[]): string | undefined {
-	const [active, setActive] = useState<string>();
-	useEffect(() => {
-		const observer = new IntersectionObserver(
-			(entries) => {
-				const first = entries
-					.filter((entry) => entry.isIntersecting)
-					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-				if (first) setActive(first.target.id);
-			},
-			{ rootMargin: "-72px 0px -65% 0px" },
-		);
-		for (const key of keys) {
-			const element = document.getElementById(key);
-			if (element) observer.observe(element);
-		}
-		return () => observer.disconnect();
-	}, [keys]);
-	return active;
-}
-
 function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	const router = useRouter();
 	const [copied, setCopied] = useState(false);
@@ -88,15 +58,6 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 		[data.versions],
 	);
 	const rendered = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
-	const outline = useMemo(
-		() =>
-			data.blocks.filter(
-				(block) => block.kind === "Heading2" || block.kind === "Heading3" || block.kind === "Decision",
-			),
-		[data.blocks],
-	);
-	const outlineKeys = useMemo(() => outline.map((block) => block.key), [outline]);
-	const activeKey = useActiveBlockKey(outlineKeys);
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
 	const currentApprovals = isCurrentVersion ? data.approvals.length : 0;
@@ -149,11 +110,8 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 	return (
 		<section>
 			<header className="border-b pb-7">
-				<p className="label-eyebrow">
-					{data.workspace.name}
-					{isCurrentVersion ? "" : " · historical version"}
-				</p>
-				<h1 className="mt-3 max-w-[34ch] font-display font-medium text-4xl leading-[1.1] tracking-tight md:text-[3.25rem]">
+				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
+				<h1 className="mt-1 max-w-[34ch] font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
 					{data.plan.title}
 				</h1>
 
@@ -242,19 +200,11 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 				)}
 			</header>
 
-			<details className="mt-8 rounded-lg border p-3 xl:hidden">
-				<summary className="flex cursor-pointer items-center gap-2 font-medium text-sm">
-					<ListTree className="size-4" />
-					Document outline
-				</summary>
-				<Outline blocks={outline} activeKey={activeKey} />
-			</details>
-
-			<div className="mt-10 xl:grid xl:grid-cols-[var(--container-gutter)_minmax(0,var(--container-measure))_var(--container-rail)] xl:gap-x-8 2xl:gap-x-12">
-				{/* The gutter track is empty on purpose: each block swings its own
-				    marginalia into it, which keeps remarks beside their subject. */}
-				<div aria-hidden className="hidden xl:block" />
-				<article className="relative mx-auto min-w-0 max-w-measure space-y-7 xl:mx-0">
+			{/* One left-aligned column, flush with the nav and the title. The rail and the gutter track are gone: at a 64rem
+			    shell there is no room for a third track, and a collapsed outline is a
+			    click a bailing reader never spends. Headings carry the navigation. */}
+			<div className="mt-10">
+				<article className="relative min-w-0 max-w-measure space-y-7">
 					<PlanRenderProvider
 						decisions={data.decisions}
 						comments={data.comments}
@@ -283,10 +233,7 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 						<DetachedCommentThreads />
 					</PlanRenderProvider>
 				</article>
-				<aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
-					<p className="label-eyebrow">Outline</p>
-					<Outline blocks={outline} activeKey={activeKey} />
-				</aside>
+				{/* rail removed */}
 			</div>
 
 			{/* biome-ignore lint/correctness/useUniqueElementIds: stable fragment target for the overflow menu's jump link */}
@@ -350,28 +297,6 @@ function PlanReader({ data, workspaceSlug, planSlug }: PlanReaderProps) {
 				</ol>
 			</section>
 		</section>
-	);
-}
-
-function Outline({ blocks, activeKey }: { blocks: PlanRouteData["blocks"]; activeKey: string | undefined }) {
-	return (
-		<nav className="mt-3 space-y-0.5" aria-label="Document outline links">
-			{blocks.map((block) => (
-				<a
-					key={block.key}
-					href={`#${encodeURIComponent(block.key)}`}
-					className={cn(
-						"flex items-center gap-2 truncate rounded-sm py-1 text-xs transition-colors",
-						block.kind === "Heading3" && "pl-3",
-						block.kind === "Decision" && "pl-3 font-mono text-[11px]",
-						activeKey === block.key ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-					)}
-				>
-					{activeKey === block.key && <span aria-hidden className="h-3 w-0.5 shrink-0 rounded-full bg-brand-ink" />}
-					<span className="truncate">{block.title ?? outlineLabel(block.source)}</span>
-				</a>
-			))}
-		</nav>
 	);
 }
 

@@ -63,7 +63,7 @@ function groupPlans(plans: DashboardPlan[]): PlanGroup[] {
 }
 
 function Dashboard() {
-	const { workspace, plans } = Route.useLoaderData();
+	const { plans } = Route.useLoaderData();
 	const { slug } = Route.useParams();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
@@ -85,12 +85,8 @@ function Dashboard() {
 
 	return (
 		<section>
-			<header className="border-b pb-8">
-				<p className="label-eyebrow">Plan index</p>
-				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight md:text-5xl">{workspace.name}</h1>
-				<p className="mt-3 max-w-measure text-muted-foreground leading-7">
-					Review what agents proposed, then send approved context back to the build.
-				</p>
+			<header className="border-b pb-6">
+				<h1 className="font-medium text-2xl tracking-tight">Plans</h1>
 				<p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
 					<span>
 						{plans.length} {plans.length === 1 ? "plan" : "plans"}

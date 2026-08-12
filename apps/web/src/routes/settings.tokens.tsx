@@ -26,8 +26,7 @@ function TokenSettings() {
 	return (
 		<section className="space-y-6">
 			<header>
-				<p className="label-eyebrow">Personal · API tokens</p>
-				<h1 className="mt-3 font-display font-medium text-4xl tracking-tight">Agent access</h1>
+				<h1 className="font-medium text-2xl tracking-tight">Agent tokens</h1>
 				<p className="mt-1 text-muted-foreground text-sm">
 					Tokens authenticate the CLI and MCP server. A plaintext token is shown once.
 				</p>
