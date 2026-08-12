@@ -84,7 +84,7 @@ export const plan = sqliteTable(
 		slug: text("slug").notNull(),
 		title: text("title").notNull(),
 		status: text("status", {
-			enum: ["draft", "in_review", "approved", "building", "shipped", "archived"],
+			enum: ["draft", "in_review", "approved", "archived"],
 		})
 			.notNull()
 			.default("draft"),
@@ -101,7 +101,7 @@ export const plan = sqliteTable(
 	(table) => [
 		unique("plan_workspace_slug").on(table.workspaceId, table.slug),
 		index("plan_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
-		check("plan_status_ck", sql`${table.status} in ('draft','in_review','approved','building','shipped','archived')`),
+		check("plan_status_ck", sql`${table.status} in ('draft','in_review','approved','archived')`),
 		check("plan_visibility_ck", sql`${table.visibility} in ('private','workspace','public')`),
 	],
 );

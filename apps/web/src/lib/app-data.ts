@@ -56,7 +56,7 @@ export const getNavigationData = createServerFn({ method: "GET" }).handler(async
 	return { user: navigationUser, workspaces, plans, decisions };
 });
 
-export type PlanStatus = "draft" | "in_review" | "approved" | "building" | "shipped" | "archived";
+export type PlanStatus = "draft" | "in_review" | "approved" | "archived";
 
 export type DashboardPlan = {
 	id: string;

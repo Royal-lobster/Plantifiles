@@ -34,9 +34,7 @@ type PlanReaderProps = {
 
 const NEXT_STATUS_LABEL: Record<Exclude<PlanRouteData["plan"]["status"], "archived" | "in_review">, string> = {
 	draft: "Submit for review",
-	approved: "Start building",
-	building: "Mark shipped",
-	shipped: "Archive",
+	approved: "Archive",
 };
 
 function outlineLabel(source: string): string {

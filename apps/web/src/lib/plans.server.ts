@@ -220,7 +220,7 @@ export async function createPlanVersion(request: Request, planId: string, input:
 		...blockStatements(blocks, versionId),
 		...decisionStatements(blocks, planId),
 		runtime.DB.prepare(
-			"update plan set current_version_id = ?, status = case when status in ('approved', 'building', 'shipped') then 'in_review' else status end, updated_at = unixepoch() where id = ?",
+			"update plan set current_version_id = ?, status = case when status in ('approved') then 'in_review' else status end, updated_at = unixepoch() where id = ?",
 		).bind(versionId, planId),
 	];
 	await runtime.DB.batch(statements);
@@ -260,7 +260,7 @@ export async function listPlans(request: Request, workspaceSlug: string, status?
 	if (!targetWorkspace) throw new Response("Workspace not found", { status: 404 });
 	await assertWorkspaceAccess(targetWorkspace.id, identity.user.id);
 
-	const statusValues = ["draft", "in_review", "approved", "building", "shipped", "archived"] as const;
+	const statusValues = ["draft", "in_review", "approved", "archived"] as const;
 	const statusValue = statusValues.find((value) => value === status);
 	return db
 		.select({

@@ -12,8 +12,6 @@ const STATUS_VARIANT: Record<PlanStatus, NonNullable<BadgeProps["variant"]>> = {
 	draft: "secondary",
 	in_review: "brand",
 	approved: "success",
-	building: "brand",
-	shipped: "success-outline",
 	archived: "quiet",
 };
 
@@ -33,7 +31,6 @@ function StatusChip({
 			className={cn("font-mono tracking-[0.12em]", className)}
 			data-status={status}
 		>
-			{status === "building" && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
 			{status.replace("_", " ")}
 		</Badge>
 	);

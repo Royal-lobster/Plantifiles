@@ -11,7 +11,7 @@ import { guardLoader } from "#/lib/loader-guard";
 import { StatusChip } from "./-components/status-chip";
 
 const dashboardSearchSchema = z.object({
-	status: z.enum(["draft", "in_review", "approved", "building", "shipped", "archived"]).optional(),
+	status: z.enum(["draft", "in_review", "approved", "archived"]).optional(),
 	q: z.string().optional(),
 });
 
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/w/$slug/")({
 	pendingComponent: DashboardSkeleton,
 });
 
-const STATUS_ORDER: PlanStatus[] = ["draft", "in_review", "approved", "building", "shipped", "archived"];
+const STATUS_ORDER: PlanStatus[] = ["draft", "in_review", "approved", "archived"];
 
 function relativeTime(value: string): string {
 	const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
@@ -47,8 +47,6 @@ function groupPlans(plans: DashboardPlan[]): PlanGroup[] {
 		draft: [],
 		in_review: [],
 		approved: [],
-		building: [],
-		shipped: [],
 		archived: [],
 	};
 	for (const item of plans) {
@@ -58,9 +56,9 @@ function groupPlans(plans: DashboardPlan[]): PlanGroup[] {
 	return [
 		{ label: "Awaiting judgment", urgent: true, plans: blocked },
 		{ label: "In review", plans: byStatus.in_review },
-		{ label: "Moving", plans: [...byStatus.approved, ...byStatus.building] },
+		{ label: "Moving", plans: byStatus.approved },
 		{ label: "Drafts", plans: byStatus.draft },
-		{ label: "Closed", plans: [...byStatus.shipped, ...byStatus.archived] },
+		{ label: "Closed", plans: byStatus.archived },
 	].filter((group) => group.plans.length > 0);
 }
 

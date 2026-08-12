@@ -16,9 +16,7 @@ type ReviewAccess = {
 const NEXT_STATUS: Record<PlanStatus, PlanStatus | null> = {
 	draft: "in_review",
 	in_review: "approved",
-	approved: "building",
-	building: "shipped",
-	shipped: "archived",
+	approved: "archived",
 	archived: null,
 };
 
