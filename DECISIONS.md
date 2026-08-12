@@ -9,7 +9,6 @@
 - 2026-08-12 — Use one production D1 database and one KV namespace with the same binding names locally and remotely so Worker code has no environment-specific branches.
 - 2026-08-12 — Execute plan, version, block, and decision writes as one raw D1 batch so atomicity is explicit and every block insert stays below the 100-parameter limit.
 - 2026-08-12 — Replace author frontmatter in negotiated Markdown with canonical product metadata while preserving the byte-exact source on the JSON API for CLI pulls.
-- 2026-08-12 — Treat Anthropic prose summaries as best-effort and retain the deterministic structural summary when the API is absent or fails.
 - 2026-08-12 — Commit a deterministic local seed identity and token so integration and smoke runs do not depend on GitHub OAuth credentials.
 - 2026-08-12 — Store the service base URL beside the CLI token instead of hardcoding a production origin; environment variables override both values.
 - 2026-08-12 — Resolve plan URLs through authenticated list and detail APIs so `pull` returns the stored source byte-for-byte rather than transport frontmatter.
@@ -18,13 +17,8 @@
 - 2026-08-12 — Compile MDX to serializable HAST in the route loader so SSR and hydration share one strict registry without shipping the Node-only normalizer to browsers.
 - 2026-08-12 — Export the structural diff as a browser-safe core subpath because the core barrel also exports the `node:crypto`-based normalizer.
 - 2026-08-12 — Convert CSS token colors through a one-pixel canvas before passing them to Mermaid because Mermaid rejects the design system's OKLCH values.
-- 2026-08-12 — Move approved, building, or shipped plans back to review when a new version lands while preserving prior version approvals as history.
 - 2026-08-12 — Promote an in-review plan automatically once its last open decision is resolved and its current-version approval count meets the workspace gate.
-- 2026-08-12 — Run debounced editor lint and preview compilation in Worker server functions so the browser shares the exact publish gate and receives only serializable HAST.
-- 2026-08-12 — Instantiate CodeMirror 6 after hydration with its official `EditorView` API because the editor owns browser DOM and does not belong in SSR.
 - 2026-08-12 — Use the stable MCP TypeScript SDK v2 split server package and require both token and service URL so the stdio adapter stays a thin HTTP client.
-- 2026-08-12 - Map each Plantifiles workspace to one Slack team, restrict installation to owners and admins, and encrypt bot tokens with AES-GCM under `BETTER_AUTH_SECRET`.
-- 2026-08-12 - Keep the Slack Web API origin configurable only through Worker environment bindings so the complete OAuth and unfurl loop can be exercised against a local Slack simulator.
 - 2026-08-12 - Keep one canonical write-plan skill at `skills/write-plan/SKILL.md` and bundle that exact source into the Worker download route rather than maintaining a public-file copy.
 - 2026-08-12 - Render persisted timestamps in an explicit UTC format so Worker SSR and browser hydration produce identical text in every locale.
 - 2026-08-12 — Translate thrown `Response` objects into `notFound()`/`redirect()` at the loader boundary via `guardLoader`, because a raw `Response` reaching the router's dehydration step fails seroval and returns 500 instead of the intended status.
@@ -36,11 +30,10 @@
 - 2026-08-12 — Give the product three typographic voices — Inter for chrome, Newsreader for document display type, JetBrains Mono for editorial furniture — so a plan reads as a reviewed manuscript instead of a settings page.
 - 2026-08-12 — Declare reading measures as `--container-*` tokens (`measure` 68ch, `gutter`, `rail`) so no route hardcodes a column width and the prose measure survives layout changes.
 - 2026-08-12 — Replace the labelled 15rem nav sidebar with a 3.5rem icon spine plus Radix tooltips, spending the reclaimed width on the document's left margin instead of naming three destinations in chrome.
-- 2026-08-12 — Use the document's left margin as a live gutter: each top-level block swings its own decision status, figure number, change mark, and comment affordance into it at `xl`, and stacks them inline below that, because a remark belongs beside its subject.
 - 2026-08-12 — Number diagrams once from the normalized block list and pass the map through the render context, so the caption, the margin mark, and the lightbox title always cite the same figure.
 - 2026-08-12 — Group the dashboard by what a reader must do — unresolved decisions first, then review state — rather than presenting eight equal-weight columns, because the index exists to route attention.
-- 2026-08-12 — Give the plan header one primary action, a Radix `ToggleGroup` for reading modes, and an overflow menu for the rest, and omit the Diff control entirely when a plan has one version rather than rendering it disabled.
 - 2026-08-12 — Warn rather than error when a plan carries fewer than two diagrams, so existing single-diagram plans stay publishable while the lint score nudges authors toward varied diagram types.
 - 2026-08-12 — Parse with `remark-gfm` in `packages/core` as well as the renderer. Without it the two disagreed about Markdown: a comparison table collapsed into one paragraph and tripped `paragraph-length`, blocking the publish with a diagnostic that blamed paragraph length, and `- [ ]` checklists inside `<Phase>` — which the authoring skill instructs every agent to write — parsed as unchecked-null items with literal brackets left in the text.
 - 2026-08-12 — Correction to the earlier claim that editor lint and publish shared one gate: they did not, for tables and checklists, because only the renderer had `remark-gfm`. The parity fix above is what makes that claim true.
 - 2026-08-12 — Adding gfm rekeys blocks, because `normalize` derives kind from node type and ordinals are per-kind, so a table flipping `Paragraph` to `Table` shifts later paragraph ordinals in the same section. Measured the exposure before shipping: one published version contained a pipe table and it carried no comments, so no anchors moved and no migration was needed.
+- 2026-08-12 — Drizzle's generated SQLite `plan` rebuild enabled foreign keys before dropping the old table, which cascaded into every plan-owned row. The migration now snapshots and restores versions, blocks, comments, decisions, and approvals around the rebuild; a copy of the 34-version local database preserved all row counts.

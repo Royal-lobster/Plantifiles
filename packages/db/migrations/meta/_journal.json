@@ -15,6 +15,13 @@
       "when": 1786484221030,
       "tag": "0001_slimy_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786544028422,
+      "tag": "0002_concerned_runaways",
+      "breakpoints": true
     }
   ]
 }
