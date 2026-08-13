@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { compilePlan } from "../-data/compile-plan.server";
-import { type ReaderComment, PlanRenderProvider, planCommentIndex } from "./plan-render-context";
 import { renderPlan } from "./plan-render";
+import { PlanRenderProvider, planCommentIndex, type ReaderComment } from "./plan-render-context";
 
 const BLOCKS = `<TLDR>
 A concise summary.
@@ -48,7 +48,15 @@ export const answer = 42;
 
 <Callout kind="note">
 This is a note.
-</Callout>`;
+</Callout>
+
+<Prototype title="Checkout preview" viewport="mobile">
+\`\`\`html
+<main class="min-h-screen bg-indigo-950 p-8 text-white">
+  <h1 class="text-3xl font-bold">Confirm order</h1>
+</main>
+\`\`\`
+</Prototype>`;
 
 describe("runtime plan renderer", () => {
 	it("renders the complete plan component vocabulary without code generation", async () => {
@@ -78,6 +86,10 @@ describe("runtime plan renderer", () => {
 		expect(html).toContain("View source");
 		expect(html).toContain("src/example.ts");
 		expect(html).toContain('data-block-kind="Phase"');
+		expect(html).toContain('data-block-kind="Prototype"');
+		expect(html).toContain("Checkout preview");
+		expect(html).toContain('title="Checkout preview prototype"');
+		expect(html).toContain('sandbox=""');
 	});
 
 	it("throws for an unknown capitalized component", async () => {

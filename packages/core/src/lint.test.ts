@@ -122,6 +122,31 @@ describe("lint", () => {
 			"<CodeSketch> requires exactly one fenced code block.",
 		],
 		[
+			"Prototype title",
+			`${EXAMPLE_PLAN}\n<Prototype>\n\`\`\`html\n<div>Checkout</div>\n\`\`\`\n</Prototype>\n`,
+			"<Prototype> requires a title prop.",
+		],
+		[
+			"Prototype viewport",
+			`${EXAMPLE_PLAN}\n<Prototype title="Checkout" viewport="watch">\n\`\`\`html\n<div>Checkout</div>\n\`\`\`\n</Prototype>\n`,
+			'<Prototype> requires optional viewport="responsive|mobile|tablet|desktop" and exactly one fenced html code block.',
+		],
+		[
+			"Prototype inherited viewport key",
+			`${EXAMPLE_PLAN}\n<Prototype title="Checkout" viewport="constructor">\n\`\`\`html\n<div>Checkout</div>\n\`\`\`\n</Prototype>\n`,
+			'<Prototype> requires optional viewport="responsive|mobile|tablet|desktop" and exactly one fenced html code block.',
+		],
+		[
+			"Prototype fenced HTML",
+			`${EXAMPLE_PLAN}\n<Prototype title="Checkout">\n\`\`\`tsx\n<div>Checkout</div>\n\`\`\`\n</Prototype>\n`,
+			'<Prototype> requires optional viewport="responsive|mobile|tablet|desktop" and exactly one fenced html code block.',
+		],
+		[
+			"Prototype extra children",
+			`${EXAMPLE_PLAN}\n<Prototype title="Checkout">\nThis text would be silently discarded.\n\n\`\`\`html\n<div>Checkout</div>\n\`\`\`\n</Prototype>\n`,
+			'<Prototype> requires optional viewport="responsive|mobile|tablet|desktop" and exactly one fenced html code block.',
+		],
+		[
 			"Callout kind",
 			`${EXAMPLE_PLAN}\n<Callout kind="tip">\nUnsupported kind.\n</Callout>\n`,
 			'<Callout> kind must be "note" or "warning".',
@@ -141,6 +166,12 @@ const ready = true;
 <Callout kind="warning">
 Check the rollback signal.
 </Callout>
+
+<Prototype title="Checkout" viewport="mobile">
+\`\`\`html
+<div class="min-h-screen bg-slate-950 text-white">Checkout</div>
+\`\`\`
+</Prototype>
 `;
 
 		expect(findingsFor(source, "component-vocabulary")).toEqual([]);

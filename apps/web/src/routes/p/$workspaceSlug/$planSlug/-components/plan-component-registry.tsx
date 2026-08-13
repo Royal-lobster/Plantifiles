@@ -26,6 +26,7 @@ import {
 	TLDR,
 	Tradeoff,
 } from "./plan-prose-components";
+import { Prototype } from "./plan-prototype";
 import { Decision, PlanBlock } from "./plan-review-components";
 
 const planComponents = {
@@ -57,6 +58,7 @@ const planComponents = {
 	Diagram,
 	CodeSketch,
 	Callout,
+	Prototype,
 };
 
 export { planComponents };

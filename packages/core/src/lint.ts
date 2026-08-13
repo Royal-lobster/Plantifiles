@@ -25,6 +25,12 @@ const COMPONENT_SET = new Set<string>(COMPONENT_NAMES);
 const VALID_RISK_SEVERITIES = new Set(["low", "med", "high"]);
 const VALID_DIAGRAM_LANGUAGES = new Set(["mermaid", "d2"]);
 const VALID_CALLOUT_KINDS = new Set(["note", "warning"]);
+const VALID_PROTOTYPE_VIEWPORTS: Record<string, true> = {
+	responsive: true,
+	mobile: true,
+	tablet: true,
+	desktop: true,
+};
 
 function words(value: string): string[] {
 	return value.trim() ? value.trim().split(/\s+/) : [];
@@ -253,7 +259,9 @@ export function analyzePlan(source: string, options: { emoji?: string | undefine
 						? "n"
 						: name === "CodeSketch"
 							? "lang"
-							: undefined;
+							: name === "Prototype"
+								? "title"
+								: undefined;
 		if (requiredAttribute && !stringAttribute(node, requiredAttribute)) {
 			add("component-vocabulary", "error", `<${name}> requires a ${requiredAttribute} prop.`, node);
 		}
@@ -274,6 +282,23 @@ export function analyzePlan(source: string, options: { emoji?: string | undefine
 		}
 		if (name === "CodeSketch" && childNodes(node).filter((child) => child.type === "code").length !== 1) {
 			add("component-vocabulary", "error", "<CodeSketch> requires exactly one fenced code block.", node);
+		}
+		if (name === "Prototype") {
+			const viewport = attributeValue(node, "viewport");
+			const children = childNodes(node);
+			const hasValidViewport =
+				!viewport || (typeof viewport.value === "string" && Object.hasOwn(VALID_PROTOTYPE_VIEWPORTS, viewport.value));
+			const source = children[0];
+			const hasHtmlSource =
+				children.length === 1 && source?.type === "code" && "lang" in source && source.lang === "html";
+			if (!hasValidViewport || !hasHtmlSource) {
+				add(
+					"component-vocabulary",
+					"error",
+					'<Prototype> requires optional viewport="responsive|mobile|tablet|desktop" and exactly one fenced html code block.',
+					node,
+				);
+			}
 		}
 		if (name === "Callout" && !VALID_CALLOUT_KINDS.has(stringAttribute(node, "kind") ?? "")) {
 			add("component-vocabulary", "error", '<Callout> kind must be "note" or "warning".', node);
