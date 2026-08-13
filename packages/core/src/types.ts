@@ -11,6 +11,7 @@ export const COMPONENT_NAMES = [
 	"Diagram",
 	"CodeSketch",
 	"Callout",
+	"Prototype",
 ] as const;
 
 export type ComponentName = (typeof COMPONENT_NAMES)[number];
