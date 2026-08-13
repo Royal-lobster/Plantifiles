@@ -21,7 +21,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { createHighlighterCore } from "shiki/core";
 import { unified } from "unified";
-import { compilePrototypeDocument } from "./prototype-document.server";
+import { compilePrototypeDocuments } from "./prototype-document.server";
 
 const MDX_NODES = [
 	"mdxFlowExpression",
@@ -64,23 +64,25 @@ function prototypeSource(node: MdxElement): string | undefined {
 
 function compilePrototypes() {
 	return async (tree: Root): Promise<void> => {
-		await Promise.all(
-			tree.children.map(async (node) => {
-				if (!isMdxElement(node) || node.name !== "Prototype") return;
-				const titleAttribute = node.attributes.find(
-					(attribute) => attribute.type === "mdxJsxAttribute" && attribute.name === "title",
-				);
-				const title = typeof titleAttribute?.value === "string" ? titleAttribute.value : undefined;
-				const source = prototypeSource(node);
-				if (!title || source === undefined) throw new Error("<Prototype> could not be compiled.");
-				node.attributes.push({
-					type: "mdxJsxAttribute",
-					name: "srcDoc",
-					value: await compilePrototypeDocument(source, title),
-				});
-				node.children = [];
-			}),
-		);
+		const nodes = tree.children.filter((node): node is MdxElement => isMdxElement(node) && node.name === "Prototype");
+		const sources = nodes.map((node) => {
+			const titleAttribute = node.attributes.find(
+				(attribute) => attribute.type === "mdxJsxAttribute" && attribute.name === "title",
+			);
+			const title = typeof titleAttribute?.value === "string" ? titleAttribute.value : undefined;
+			const source = prototypeSource(node);
+			if (!title || source === undefined) throw new Error("<Prototype> could not be compiled.");
+			return { source, title };
+		});
+		const documents = await compilePrototypeDocuments(sources);
+		nodes.forEach((node, index) => {
+			node.attributes.push({
+				type: "mdxJsxAttribute",
+				name: "srcDoc",
+				value: documents[index] ?? "",
+			});
+			node.children = [];
+		});
 	};
 }
 

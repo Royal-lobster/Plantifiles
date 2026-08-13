@@ -48,9 +48,15 @@ const CONTENT_SECURITY_POLICY = [
 	"base-uri 'none'",
 ].join("; ");
 
-type PrototypeSource = {
+type PrototypeDocumentSource = {
+	source: string;
+	title: string;
+};
+
+type SanitizedPrototype = {
 	html: string;
 	candidates: string[];
+	title: string;
 };
 
 function isElement(node: DefaultTreeAdapterTypes.ChildNode): node is DefaultTreeAdapterTypes.Element {
@@ -91,11 +97,11 @@ function sanitizeChildren(parent: DefaultTreeAdapterTypes.ParentNode, candidates
 	});
 }
 
-function sanitizePrototypeHtml(source: string): PrototypeSource {
+function sanitizePrototype({ source, title }: PrototypeDocumentSource): SanitizedPrototype {
 	const fragment = parseFragment(source);
 	const candidates = new Set<string>();
 	sanitizeChildren(fragment, candidates);
-	return { html: serialize(fragment), candidates: [...candidates].sort() };
+	return { html: serialize(fragment), candidates: [...candidates].sort(), title };
 }
 
 function escapeHtml(value: string): string {
@@ -106,9 +112,14 @@ function escapeStyleEndTag(value: string): string {
 	return value.replace(/<\/style/gi, "<\\/style");
 }
 
-export async function compilePrototypeDocument(source: string, title: string): Promise<string> {
-	const prototype = sanitizePrototypeHtml(source);
+export async function compilePrototypeDocuments(sources: readonly PrototypeDocumentSource[]): Promise<string[]> {
+	if (sources.length === 0) return [];
+	const prototypes = sources.map(sanitizePrototype);
+	const candidates = [...new Set(prototypes.flatMap((prototype) => prototype.candidates))].sort();
 	const compiler = await compile(TAILWIND_SOURCE);
-	const css = escapeStyleEndTag(compiler.build(prototype.candidates));
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}"><title>${escapeHtml(title)}</title><style>${css}</style></head><body>${prototype.html}</body></html>`;
+	const css = escapeStyleEndTag(compiler.build(candidates));
+	return prototypes.map(
+		(prototype) =>
+			`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}"><title>${escapeHtml(prototype.title)}</title><style>${css}</style></head><body>${prototype.html}</body></html>`,
+	);
 }
