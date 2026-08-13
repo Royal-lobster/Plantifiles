@@ -18,16 +18,18 @@ pnpm exec wrangler d1 create plantifiles
 pnpm exec wrangler kv namespace create CACHE
 ```
 
-Copy the D1 database ID and KV namespace ID into `apps/web/wrangler.jsonc`. Then create local secrets and apply migrations:
+Copy the D1 database ID and KV namespace ID into `apps/web/wrangler.jsonc`. Plantifiles keeps local application configuration in `apps/web/config.vars`; private values are encrypted by dotvars. Obtain the project `VARS_KEY` through the team secret channel, then create the Worker binding file and apply migrations:
 
 ```bash
 cp apps/web/.dev.vars.example apps/web/.dev.vars
+# Set VARS_KEY in apps/web/.dev.vars.
+pnpm --filter @plantifiles/web vars:gen
 pnpm db:generate
 pnpm db:migrate:local
 pnpm dev
 ```
 
-Set `BETTER_AUTH_SECRET` to at least 32 random characters. `LOCAL_DEV="true"` exposes the local-only Demo User sign-in and is ignored unless the Worker is running locally. For real GitHub sign-in, set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`; the OAuth callback is `${PUBLIC_URL}/api/auth/callback/github`.
+The `dev` dotvars profile defines `BETTER_AUTH_SECRET`, GitHub OAuth credentials, `PUBLIC_URL`, and `LOCAL_DEV`. `LOCAL_DEV="true"` exposes the local-only Demo User sign-in. The GitHub callback is `${PUBLIC_URL}/api/auth/callback/github`.
 
 Open <http://localhost:3000/login>, sign in as Demo User, and create a token at `/settings/tokens`. The plaintext token appears once.
 
@@ -88,8 +90,7 @@ The Playwright smoke starts the local Worker, applies D1 migrations, signs in, m
 
 ## Production deployment
 
-Set the production `PUBLIC_URL` and production D1/KV IDs in `apps/web/wrangler.jsonc`. Provision secrets without committing them:
-
+Production currently reads its existing Cloudflare bindings when `VARS_KEY` and `VARS_ENV` are absent, so deployment remains compatible while the production dotvars profile is provisioned. Set the production `PUBLIC_URL` and production D1/KV IDs in `apps/web/wrangler.jsonc`, then provision the direct fallback secrets:
 ```bash
 cd apps/web
 pnpm exec wrangler secret put BETTER_AUTH_SECRET

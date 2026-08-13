@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
 import type { Heading, RootContent } from "mdast";
-import { componentName, lineOf, nodeSource, nodeText, parseSource, rootContent, stringAttribute } from "./syntax.js";
+import {
+	componentName,
+	lineOf,
+	nodeSource,
+	nodeText,
+	parseSource,
+	type ParsedSource,
+	rootContent,
+	stringAttribute,
+} from "./syntax.js";
 import type { Block } from "./types.js";
 
 function slug(value: string): string {
@@ -11,6 +20,10 @@ function slug(value: string): string {
 			.replace(/[^a-z0-9]+/g, "-")
 			.replace(/^-|-$/g, "") || "section"
 	);
+}
+
+export function isValidExplicitId(value: string): boolean {
+	return /^[A-Za-z][A-Za-z0-9_-]*$/.test(value);
 }
 
 function blockKind(node: RootContent): string {
@@ -40,8 +53,7 @@ function updateHeadingPath(path: string[], heading: Heading): string[] {
 	return next;
 }
 
-export function normalize(source: string): Block[] {
-	const parsed = parseSource(source);
+export function normalizeParsedSource(parsed: ParsedSource): Block[] {
 	const blocks: Block[] = [];
 	let headingPath: string[] = [];
 	const ordinals = new Map<string, number>();
@@ -54,7 +66,7 @@ export function normalize(source: string): Block[] {
 		ordinals.set(ordinalKey, ordinal);
 		const explicitId = stringAttribute(node, "id");
 		const normalizedBlockSource = nodeSource(parsed.source, node);
-		const key = explicitId ?? `${pathKey}:${slug(kind)}:${ordinal}`;
+		const key = explicitId && isValidExplicitId(explicitId) ? explicitId : `${pathKey}:${slug(kind)}:${ordinal}`;
 		const title = blockTitle(node);
 
 		blocks.push({
@@ -72,4 +84,8 @@ export function normalize(source: string): Block[] {
 	}
 
 	return blocks;
+}
+
+export function normalize(source: string): Block[] {
+	return normalizeParsedSource(parseSource(source));
 }

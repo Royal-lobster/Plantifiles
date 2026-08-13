@@ -1,0 +1,23 @@
+{
+	"name": "@plantifiles/api-client",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"test": "vitest run",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "tsc -p tsconfig.json --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.10"
+	}
+}

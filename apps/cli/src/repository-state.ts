@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 
-export type TrackedPlan = {
+type TrackedPlan = {
 	planId: string;
 	url: string;
 	workspace: string;

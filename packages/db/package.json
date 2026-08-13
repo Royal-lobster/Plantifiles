@@ -1,32 +1,32 @@
 {
-  "name": "@plantifiles/db",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./schema": {
-      "types": "./dist/schema.d.ts",
-      "default": "./dist/schema.js"
-    }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "generate": "drizzle-kit generate --config=./drizzle.config.ts",
-    "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "drizzle-orm": "0.45.2"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "drizzle-kit": "0.31.10",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.10"
-  }
+	"name": "@plantifiles/db",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./schema": {
+			"types": "./dist/schema.d.ts",
+			"default": "./dist/schema.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"generate": "drizzle-kit generate --config=./drizzle.config.ts",
+		"test": "vitest run --passWithNoTests",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"drizzle-orm": "0.45.2"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"drizzle-kit": "0.31.10",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.10"
+	}
 }

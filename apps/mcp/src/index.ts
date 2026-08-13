@@ -1,8 +1,8 @@
 #!/usr/bin/env node
+import { ApiError, PlantifilesClient } from "@plantifiles/api-client";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
-import { ApiError, PlantifilesApi } from "./api.js";
 
 function requiredEnvironment(name: "PLANTIFILES_TOKEN" | "PLANTIFILES_BASE_URL"): string {
 	const value = process.env[name]?.trim();
@@ -21,9 +21,9 @@ function textResult(value: unknown) {
 }
 
 async function main() {
-	const api = new PlantifilesApi({
+	const api = new PlantifilesClient({
 		token: requiredEnvironment("PLANTIFILES_TOKEN"),
-		baseUrl: requiredEnvironment("PLANTIFILES_BASE_URL").replace(/\/$/, ""),
+		baseUrl: requiredEnvironment("PLANTIFILES_BASE_URL"),
 	});
 	const server = new McpServer({ name: "plantifiles", version: "0.1.0" });
 
@@ -72,9 +72,9 @@ async function main() {
 		},
 		async ({ planId, ...input }) => {
 			try {
-				return textResult(await api.updatePlan(planId, input));
-			} catch (caught) {
-				return toolError(caught);
+				return textResult(await api.createVersion(planId, input));
+			} catch (error) {
+				return toolError(error);
 			}
 		},
 	);

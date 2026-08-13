@@ -1,7 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "./diff.js";
+import { analyzePlan } from "./index.js";
 import { EXAMPLE_PLAN } from "./example.js";
 import { normalize } from "./normalize.js";
+
+describe("analyzePlan", () => {
+	it("returns normalized blocks, the parsed tree, and a clean report from one analysis", () => {
+		const analysis = analyzePlan(EXAMPLE_PLAN);
+
+		expect(analysis.blocks).toEqual(normalize(EXAMPLE_PLAN));
+		expect(analysis).toMatchObject({ canPersist: true });
+		expect(analysis.report).toMatchObject({ errors: 0, score: 100, canPublish: true });
+	});
+
+	it("reports parse failures without producing persistable blocks", () => {
+		const analysis = analyzePlan("<Decision>\nThis block never closes.");
+
+		expect(analysis.canPersist).toBe(false);
+		expect(analysis.blocks).toEqual([]);
+		expect(analysis.tree).toBeUndefined();
+		expect(analysis.report).toMatchObject({
+			errors: 1,
+			canPublish: false,
+			findings: [expect.objectContaining({ rule: "valid-mdx", severity: "error", line: 1 })],
+		});
+	});
+});
 
 describe("normalize", () => {
 	it("keeps block keys stable when content changes under the same heading path", () => {
@@ -50,18 +74,48 @@ New?
 </Phase>`);
 		const result = diff(previous, next);
 
-		expect(result.changes.map((change) => [change.key, change.type])).toEqual(
-			expect.arrayContaining([
-				["summary", "moved"],
-				["choice", "modified"],
-				["gone", "removed"],
-				["new", "added"],
-			]),
+		expect(result.changes.map((change) => [change.key, change.type])).toEqual([
+			["summary", "moved"],
+			["choice", "modified"],
+			["gone", "removed"],
+			["root:paragraph:1", "added"],
+			["new", "added"],
+		]);
+		expect(result.summary).toBe(
+			"Removed Risk. Added Paragraph and Phase (Build). Modified Decision (New?). Moved TLDR.",
 		);
-		expect(result.summary).toContain("Removed Risk");
-		expect(result.summary).toContain("Phase (Build)");
-		expect(result.summary).toContain("Modified Decision");
-		expect(result.summary).toContain("Moved TLDR");
+	});
+
+	it("groups summary kinds with counts and a final conjunction", () => {
+		const previous = normalize(`<Risk id="first-risk" severity="low">
+First.
+</Risk>
+
+<Risk id="second-risk" severity="high">
+Second.
+</Risk>
+
+<Decision id="decision" owner="@dev">
+Ship?
+</Decision>`);
+
+		expect(diff(previous, []).summary).toBe("Removed 2 Risks and Decision (Ship?).");
+	});
+
+	it("reports a changed and reordered block only as modified", () => {
+		const previous = normalize(`<Decision id="choice" owner="@dev">
+Old?
+</Decision>`);
+		const next = normalize(`Inserted first.
+
+<Decision id="choice" owner="@dev">
+New?
+</Decision>`);
+
+		expect(diff(previous, next).changes.map(({ key, type }) => [key, type])).toEqual([
+			["choice", "modified"],
+			["root:paragraph:1", "added"],
+		]);
 	});
 
 	it("reports no structural changes for identical blocks", () => {

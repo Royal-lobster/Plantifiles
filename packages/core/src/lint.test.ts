@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXAMPLE_PLAN } from "./example.js";
-import { lint } from "./lint.js";
+import { analyzePlan, lint } from "./lint.js";
 
 function findingsFor(source: string, rule: string) {
 	return lint(source).findings.filter((finding) => finding.rule === rule);
@@ -94,6 +94,146 @@ describe("lint", () => {
 		const findings = findingsFor(source, "block-children-lines");
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain("<Decision>");
+	});
+
+	it.each([
+		["Option name", EXAMPLE_PLAN.replace(' name="Backfill everything"', ""), "<Option> requires a name prop."],
+		["Rejected what", EXAMPLE_PLAN.replace(' what="Chargebee"', ""), "<Rejected> requires a what prop."],
+		["Phase n", EXAMPLE_PLAN.replace(' n="1"', ""), "<Phase> requires a n prop."],
+		["Phase title", EXAMPLE_PLAN.replace(' title="Dual-write"', ""), "<Phase> requires a title prop."],
+		[
+			"Diagram language",
+			EXAMPLE_PLAN.replace('lang="mermaid"', 'lang="dot"'),
+			'<Diagram> requires lang="mermaid" or lang="d2" and exactly one fenced code block.',
+		],
+		[
+			"Diagram fenced code count",
+			EXAMPLE_PLAN.replace("```\n</Diagram>", "```\n\n```mermaid\ngraph TD\n  A --> B\n```\n</Diagram>"),
+			'<Diagram> requires lang="mermaid" or lang="d2" and exactly one fenced code block.',
+		],
+		[
+			"CodeSketch language",
+			`${EXAMPLE_PLAN}\n<CodeSketch>\n\`\`\`ts\nconst ready = true;\n\`\`\`\n</CodeSketch>\n`,
+			"<CodeSketch> requires a lang prop.",
+		],
+		[
+			"CodeSketch fenced code count",
+			`${EXAMPLE_PLAN}\n<CodeSketch lang="ts">\nDescribe the interface.\n</CodeSketch>\n`,
+			"<CodeSketch> requires exactly one fenced code block.",
+		],
+		[
+			"Callout kind",
+			`${EXAMPLE_PLAN}\n<Callout kind="tip">\nUnsupported kind.\n</Callout>\n`,
+			'<Callout> kind must be "note" or "warning".',
+		],
+	])("enforces the %s grammar", (_branch, source, message) => {
+		expect(findingsFor(source, "component-vocabulary").some((finding) => finding.message === message)).toBe(true);
+	});
+
+	it("accepts every supported component grammar branch", () => {
+		const source = `${EXAMPLE_PLAN.replace('lang="mermaid"', 'lang="d2"').replace('severity="high"', 'severity="med"')}
+<CodeSketch lang="ts">
+\`\`\`ts
+const ready = true;
+\`\`\`
+</CodeSketch>
+
+<Callout kind="warning">
+Check the rollback signal.
+</Callout>
+`;
+
+		expect(findingsFor(source, "component-vocabulary")).toEqual([]);
+		expect(findingsFor(source, "risk-severity")).toEqual([]);
+	});
+
+	it("rejects a Decision nested inside an Option and attributes it to the containing block", () => {
+		const source = EXAMPLE_PLAN.replace(
+			`  <Option name="Backfill everything">
+    One source of truth. Two weeks of work, risky mapping of legacy plans.
+  </Option>`,
+			`  <Option name="Backfill everything">
+    <Decision owner="@nested">
+      Should this Decision be nested?
+    </Decision>
+  </Option>`,
+		);
+		const analysis = analyzePlan(source);
+		const containingBlock = analysis.blocks.find((block) => block.kind === "Tradeoff");
+		if (!containingBlock) throw new Error("expected the containing Tradeoff block");
+		const [finding] = analysis.report.findings.filter(
+			(item) => item.rule === "component-placement" && item.message.includes("<Decision>"),
+		);
+		expect(finding).toMatchObject({
+			severity: "error",
+			line: source.slice(0, source.indexOf('<Decision owner="@nested">')).split("\n").length,
+			blockKey: containingBlock.key,
+		});
+		expect(analysis.canPersist).toBe(false);
+	});
+
+	it("rejects an Option that is not a direct Tradeoff child", () => {
+		const source = EXAMPLE_PLAN.replace(
+			`  <Option name="Backfill everything">
+    One source of truth. Two weeks of work, risky mapping of legacy plans.
+  </Option>`,
+			`  <Callout kind="note">
+    <Option name="Backfill everything">
+      One source of truth.
+    </Option>
+  </Callout>`,
+		);
+		const analysis = analyzePlan(source);
+		const containingBlock = analysis.blocks.find((block) => block.kind === "Tradeoff");
+		if (!containingBlock) throw new Error("expected the containing Tradeoff block");
+		const [finding] = analysis.report.findings.filter(
+			(item) => item.rule === "component-placement" && item.message.includes("<Option>"),
+		);
+		expect(finding).toMatchObject({
+			severity: "error",
+			line: source.slice(0, source.indexOf('<Option name="Backfill everything">')).split("\n").length,
+			blockKey: containingBlock.key,
+		});
+		expect(analysis.canPersist).toBe(false);
+	});
+
+	it.each(["Plan_1", "plan-1", "A"])("accepts fragment-safe explicit id %s", (id) => {
+		const source = EXAMPLE_PLAN.replace('id="historical-invoices"', `id="${id}"`);
+		expect(findingsFor(source, "component-id")).toEqual([]);
+	});
+
+	it.each(['id="1-starts-with-a-digit"', 'id="contains a space"', 'id="contains/a/slash"', 'id=""', "id={dynamicId}"])(
+		"rejects malformed explicit %s",
+		(attribute) => {
+			const source = EXAMPLE_PLAN.replace('id="historical-invoices"', attribute);
+			const analysis = analyzePlan(source);
+			const report = analysis.report;
+			const containingBlock = analysis.blocks.find((block) => block.kind === "Decision");
+			if (!containingBlock) throw new Error("expected the containing Decision block");
+
+			expect(report.findings.filter((finding) => finding.rule === "component-id")).toEqual([
+				expect.objectContaining({
+					severity: "error",
+					line: 14,
+					blockKey: containingBlock.key,
+				}),
+			]);
+			expect(report.canPublish).toBe(false);
+			expect(analysis.canPersist).toBe(false);
+		},
+	);
+
+	it("reports every occurrence of a duplicate explicit id with its source line and block", () => {
+		const source = EXAMPLE_PLAN.replace('<Risk severity="high">', '<Risk id="historical-invoices" severity="high">');
+		const analysis = analyzePlan(source);
+		const report = analysis.report;
+
+		expect(report.findings.filter((finding) => finding.rule === "component-id")).toEqual([
+			expect.objectContaining({ line: 14, blockKey: "historical-invoices" }),
+			expect.objectContaining({ line: 54, blockKey: "historical-invoices" }),
+		]);
+		expect(report.canPublish).toBe(false);
+		expect(analysis.canPersist).toBe(false);
 	});
 
 	it("warns without an emoji and still permits publishing", () => {

@@ -9,7 +9,7 @@ export type CliConfig = {
 
 export const CONFIG_PATH = join(homedir(), ".config", "plantifiles", "config.json");
 
-export async function loadConfig(): Promise<CliConfig | null> {
+async function loadConfig(): Promise<CliConfig | null> {
 	try {
 		return JSON.parse(await readFile(CONFIG_PATH, "utf8")) as CliConfig;
 	} catch (error) {

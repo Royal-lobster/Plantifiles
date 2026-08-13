@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
-const baseUrl = "http://localhost:3000";
 const cli = resolve(process.cwd(), "../cli/dist/index.js");
 
 function planSource(title: string): string {
@@ -60,7 +59,7 @@ A stale approval could release different source. Bind every approval to the immu
 `;
 }
 
-function runCli(args: string[], cwd: string, token: string): string {
+function runCli(args: string[], cwd: string, token: string, baseUrl: string): string {
 	return execFileSync(process.execPath, [cli, ...args], {
 		cwd,
 		encoding: "utf8",
@@ -68,19 +67,26 @@ function runCli(args: string[], cwd: string, token: string): string {
 	});
 }
 
-test("agent publish, browser review, approval, and version diff", async ({ page }) => {
+test("agent publish, browser review, approval, and version diff", async ({ page, baseURL }) => {
+	if (!baseURL) throw new Error("Playwright baseURL is required");
 	const agentRepo = await mkdtemp(`${tmpdir()}/plantifiles-playwright-`);
 	try {
 		await page.goto("/login");
+		await page.waitForLoadState("networkidle");
 		await page.getByRole("button", { name: "Sign in as Demo User" }).click();
-		await page.waitForURL("**/w/demo");
+		await expect(page).toHaveURL(/\/w\/demo$/);
 
 		await page.goto("/settings/tokens");
-		await page.getByRole("button", { name: "Open user menu" }).click();
-		await expect(page.getByRole("menuitem", { name: "Write-plan skill" })).toBeVisible();
-		await page.keyboard.press("Escape");
+		const userMenu = page.getByRole("button", { name: "Open user menu" });
+		const writePlanSkill = page.getByRole("menuitem", { name: "Write-plan skill" });
+		await expect(async () => {
+			await userMenu.click();
+			await expect(writePlanSkill).toBeVisible({ timeout: 1_000 });
+		}).toPass();
+		await writePlanSkill.press("Escape");
+		await expect(writePlanSkill).toBeHidden();
 		const tokenName = `Playwright ${Date.now()}`;
-		const tokenNameInput = page.getByLabel("Token name");
+		const tokenNameInput = page.getByRole("textbox", { name: "Create a token" });
 		await tokenNameInput.pressSequentially(tokenName);
 		await expect(tokenNameInput).toHaveValue(tokenName);
 		await tokenNameInput.press("Tab");
@@ -106,28 +112,41 @@ test("agent publish, browser review, approval, and version diff", async ({ page 
 			],
 			agentRepo,
 			token,
+			baseURL,
 		).trim();
 		const planUrl = firstPush.split("\n")[0];
-		expect(planUrl).toMatch(/^http:\/\/localhost:3000\/p\/demo\//);
-
 		if (!planUrl) throw new Error("CLI push returned no plan URL");
+		const parsedPlanUrl = new URL(planUrl);
+		expect(parsedPlanUrl.origin).toBe(baseURL);
+		expect(parsedPlanUrl.pathname).toMatch(/^\/p\/demo\//);
 		await page.goto("/w/demo");
 		const dashboardRow = page.getByRole("link", { name: new RegExp(title) });
 		await expect(dashboardRow).toContainText("draft");
 		await expect(dashboardRow).toContainText("v1");
-		await expect(dashboardRow).toContainText("claude-code");
 		await dashboardRow.click();
 
 		await expect(page.getByRole("heading", { name: title })).toBeVisible();
 		await expect(page.getByRole("navigation", { name: "Workspace navigation" })).toBeVisible();
 		await expect(page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]')).toBeVisible();
-		await expect(page.getByRole("navigation", { name: "Document outline links" })).toBeVisible();
-		await page.getByRole("button", { name: "Open user menu" }).click();
-		await page.getByRole("menuitem", { name: "Dark mode" }).click();
+		await page.getByRole("button", { name: /^Change theme/ }).click();
+		await page.getByRole("menuitemradio", { name: "Dark" }).click();
 		await expect(page.locator("html")).toHaveClass(/dark/);
-		await page.getByRole("button", { name: "Skim" }).click();
-		await expect(page.getByText("Dashboard deploys currently require coordination outside the plan")).toBeHidden();
-		await page.getByRole("button", { name: "Full document" }).click();
+
+		const planArticle = page.locator("main > article");
+		const tldrParagraph = page.locator('[data-block-kind="TLDR"] p');
+		await page.getByRole("button", { name: "Reading settings" }).click();
+		await page.getByRole("menuitem", { name: "Literata" }).click();
+		await page.getByRole("button", { name: "Text size, step 5 of 5" }).click();
+		await page.getByRole("button", { name: "Line width, step 1 of 3" }).click();
+		await expect(planArticle).toHaveCSS("font-family", /Literata/);
+		await expect(planArticle).toHaveCSS("font-size", "20px");
+		await expect(planArticle).toHaveCSS("max-width", "640px");
+		await expect(tldrParagraph).toHaveCSS("font-family", /Literata/);
+		await page.reload();
+		await expect(planArticle).toHaveCSS("font-family", /Literata/);
+		await expect(planArticle).toHaveCSS("font-size", "20px");
+		await expect(planArticle).toHaveCSS("max-width", "640px");
+		await expect(tldrParagraph).toHaveCSS("font-family", /Literata/);
 
 		const markdown = await page.request.get(planUrl, { headers: { Accept: "text/markdown" } });
 		expect(markdown.status()).toBe(200);
@@ -163,6 +182,7 @@ test("agent publish, browser review, approval, and version diff", async ({ page 
 			["push", planFile, "--agent", "codex", "--prompt", "Add reviewer availability risk"],
 			agentRepo,
 			token,
+			baseURL,
 		);
 		expect(secondPush).toContain("Modified TLDR");
 		expect(secondPush).toContain("Added Risk");
@@ -171,13 +191,10 @@ test("agent publish, browser review, approval, and version diff", async ({ page 
 		await expect(page.getByText("v2", { exact: true })).toBeVisible();
 		await expect(page.getByText(/^in review$/i)).toBeVisible();
 		await expect(page.locator("html")).toHaveClass(/dark/);
-		await page.getByRole("button", { name: "Diff" }).click();
-		const diffRegion = page.getByRole("region", { name: "Structural diff" });
-		await expect(diffRegion).toBeVisible();
-		await expect(diffRegion.getByText("Modified TLDR", { exact: false })).toBeVisible();
-		await expect(diffRegion.getByText("Added Risk", { exact: false })).toBeVisible();
+		await expect(page.getByText("Modified TLDR", { exact: false })).toBeVisible();
+		await expect(page.getByText("Added Risk", { exact: false })).toBeVisible();
 
-		const pulled = runCli(["pull", planUrl], agentRepo, token);
+		const pulled = runCli(["pull", planUrl], agentRepo, token, baseURL);
 		expect(pulled).toBe(await readFile(planFile, "utf8"));
 	} finally {
 		await rm(agentRepo, { recursive: true, force: true });

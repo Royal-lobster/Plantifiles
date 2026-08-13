@@ -19,7 +19,7 @@ function TooltipContent({
 				sideOffset={sideOffset}
 				className={cn(
 					"z-50 rounded-md border bg-popover px-2 py-1 font-medium text-popover-foreground text-xs shadow-md",
-					"data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+					"motion-reduce:animate-none data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
 					className,
 				)}
 				{...props}

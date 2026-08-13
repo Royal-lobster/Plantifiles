@@ -9,45 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ApiPlansRouteImport } from './routes/api.plans'
-import { Route as ApiTokensRouteImport } from './routes/api.tokens'
-import { Route as SettingsTokensRouteImport } from './routes/settings.tokens'
-import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
-import { Route as ApiDevSignInRouteImport } from './routes/api.dev.sign-in'
-import { Route as ApiPlansIdRouteImport } from './routes/api.plans.$id'
-import { Route as ApiTokensIdRouteImport } from './routes/api.tokens.$id'
-import { Route as PWorkspaceSlugPlanSlugRouteImport } from './routes/p.$workspaceSlug.$planSlug'
-import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills.write-plan.SKILL[.]md'
-import { Route as WSlugIndexRouteImport } from './routes/w.$slug.index'
-import { Route as WSlugDecisionsRouteImport } from './routes/w.$slug.decisions'
-import { Route as WSlugSettingsRouteImport } from './routes/w.$slug.settings'
-import { Route as ApiPlansIdCommentsRouteImport } from './routes/api.plans.$id.comments'
-import { Route as ApiPlansIdVersionsRouteImport } from './routes/api.plans.$id.versions'
-import { Route as PWorkspaceSlugPlanSlugVNumberRouteImport } from './routes/p.$workspaceSlug.$planSlug.v.$number'
+import { Route as LoginRouteRouteImport } from './routes/login/route'
+import { Route as homeIndexRouteImport } from './routes/(home)/index'
+import { Route as SettingsTokensRouteRouteImport } from './routes/settings/tokens/route'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiPlansIndexRouteImport } from './routes/api/plans/index'
+import { Route as ApiPlansIdRouteRouteImport } from './routes/api/plans/$id/route'
+import { Route as PWorkspaceSlugPlanSlugRouteRouteImport } from './routes/p/$workspaceSlug/$planSlug/route'
+import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills/write-plan/SKILL[.]md'
+import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
+import { Route as WSlugDecisionsRouteRouteImport } from './routes/w/$slug/decisions/route'
+import { Route as WSlugSettingsRouteRouteImport } from './routes/w/$slug/settings/route'
+import { Route as ApiPlansIdCommentsRouteImport } from './routes/api/plans/$id/comments'
+import { Route as ApiPlansIdVersionsRouteImport } from './routes/api/plans/$id/versions'
+import { Route as PWorkspaceSlugPlanSlugIndexRouteImport } from './routes/p/$workspaceSlug/$planSlug/index'
+import { Route as PWorkspaceSlugPlanSlugVNumberRouteRouteImport } from './routes/p/$workspaceSlug/$planSlug/v/$number/route'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
+const LoginRouteRoute = LoginRouteRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPlansRoute = ApiPlansRouteImport.update({
-  id: '/api/plans',
-  path: '/api/plans',
+const homeIndexRoute = homeIndexRouteImport.update({
+  id: '/(home)/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTokensRoute = ApiTokensRouteImport.update({
-  id: '/api/tokens',
-  path: '/api/tokens',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsTokensRoute = SettingsTokensRouteImport.update({
+const SettingsTokensRouteRoute = SettingsTokensRouteRouteImport.update({
   id: '/settings/tokens',
   path: '/settings/tokens',
   getParentRoute: () => rootRouteImport,
@@ -57,26 +45,22 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDevSignInRoute = ApiDevSignInRouteImport.update({
-  id: '/api/dev/sign-in',
-  path: '/api/dev/sign-in',
+const ApiPlansIndexRoute = ApiPlansIndexRouteImport.update({
+  id: '/api/plans/',
+  path: '/api/plans/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPlansIdRoute = ApiPlansIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiPlansRoute,
-} as any)
-const ApiTokensIdRoute = ApiTokensIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiTokensRoute,
-} as any)
-const PWorkspaceSlugPlanSlugRoute = PWorkspaceSlugPlanSlugRouteImport.update({
-  id: '/p/$workspaceSlug/$planSlug',
-  path: '/p/$workspaceSlug/$planSlug',
+const ApiPlansIdRouteRoute = ApiPlansIdRouteRouteImport.update({
+  id: '/api/plans/$id',
+  path: '/api/plans/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PWorkspaceSlugPlanSlugRouteRoute =
+  PWorkspaceSlugPlanSlugRouteRouteImport.update({
+    id: '/p/$workspaceSlug/$planSlug',
+    path: '/p/$workspaceSlug/$planSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SkillsWritePlanSKILLDotmdRoute =
   SkillsWritePlanSKILLDotmdRouteImport.update({
     id: '/skills/write-plan/SKILL.md',
@@ -88,12 +72,12 @@ const WSlugIndexRoute = WSlugIndexRouteImport.update({
   path: '/w/$slug/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WSlugDecisionsRoute = WSlugDecisionsRouteImport.update({
+const WSlugDecisionsRouteRoute = WSlugDecisionsRouteRouteImport.update({
   id: '/w/$slug/decisions',
   path: '/w/$slug/decisions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
+const WSlugSettingsRouteRoute = WSlugSettingsRouteRouteImport.update({
   id: '/w/$slug/settings',
   path: '/w/$slug/settings',
   getParentRoute: () => rootRouteImport,
@@ -101,188 +85,165 @@ const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
 const ApiPlansIdCommentsRoute = ApiPlansIdCommentsRouteImport.update({
   id: '/comments',
   path: '/comments',
-  getParentRoute: () => ApiPlansIdRoute,
+  getParentRoute: () => ApiPlansIdRouteRoute,
 } as any)
 const ApiPlansIdVersionsRoute = ApiPlansIdVersionsRouteImport.update({
   id: '/versions',
   path: '/versions',
-  getParentRoute: () => ApiPlansIdRoute,
+  getParentRoute: () => ApiPlansIdRouteRoute,
 } as any)
-const PWorkspaceSlugPlanSlugVNumberRoute =
-  PWorkspaceSlugPlanSlugVNumberRouteImport.update({
+const PWorkspaceSlugPlanSlugIndexRoute =
+  PWorkspaceSlugPlanSlugIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PWorkspaceSlugPlanSlugRouteRoute,
+  } as any)
+const PWorkspaceSlugPlanSlugVNumberRouteRoute =
+  PWorkspaceSlugPlanSlugVNumberRouteRouteImport.update({
     id: '/v/$number',
     path: '/v/$number',
-    getParentRoute: () => PWorkspaceSlugPlanSlugRoute,
+    getParentRoute: () => PWorkspaceSlugPlanSlugRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/api/plans': typeof ApiPlansRouteWithChildren
-  '/api/tokens': typeof ApiTokensRouteWithChildren
-  '/settings/tokens': typeof SettingsTokensRoute
+  '/login': typeof LoginRouteRoute
+  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/': typeof homeIndexRoute
+  '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
+  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  '/w/$slug/decisions': typeof WSlugDecisionsRouteRoute
+  '/w/$slug/settings': typeof WSlugSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/dev/sign-in': typeof ApiDevSignInRoute
-  '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/tokens/$id': typeof ApiTokensIdRoute
-  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
-  '/w/$slug/decisions': typeof WSlugDecisionsRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
+  '/api/plans/': typeof ApiPlansIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
+  '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
+  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/api/plans': typeof ApiPlansRouteWithChildren
-  '/api/tokens': typeof ApiTokensRouteWithChildren
-  '/settings/tokens': typeof SettingsTokensRoute
+  '/login': typeof LoginRouteRoute
+  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/': typeof homeIndexRoute
+  '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
+  '/w/$slug/decisions': typeof WSlugDecisionsRouteRoute
+  '/w/$slug/settings': typeof WSlugSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/dev/sign-in': typeof ApiDevSignInRoute
-  '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/tokens/$id': typeof ApiTokensIdRoute
-  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
-  '/w/$slug/decisions': typeof WSlugDecisionsRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
+  '/api/plans': typeof ApiPlansIndexRoute
   '/w/$slug': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
+  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugIndexRoute
+  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/api/plans': typeof ApiPlansRouteWithChildren
-  '/api/tokens': typeof ApiTokensRouteWithChildren
-  '/settings/tokens': typeof SettingsTokensRoute
+  '/login': typeof LoginRouteRoute
+  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/(home)/': typeof homeIndexRoute
+  '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
+  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  '/w/$slug/decisions': typeof WSlugDecisionsRouteRoute
+  '/w/$slug/settings': typeof WSlugSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/dev/sign-in': typeof ApiDevSignInRoute
-  '/api/plans/$id': typeof ApiPlansIdRouteWithChildren
-  '/api/tokens/$id': typeof ApiTokensIdRoute
-  '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteWithChildren
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
-  '/w/$slug/decisions': typeof WSlugDecisionsRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
+  '/api/plans/': typeof ApiPlansIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRoute
+  '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
+  '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/login'
-    | '/api/plans'
-    | '/api/tokens'
     | '/settings/tokens'
-    | '/api/auth/$'
-    | '/api/dev/sign-in'
+    | '/'
     | '/api/plans/$id'
-    | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
-    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
+    | '/api/auth/$'
+    | '/skills/write-plan/SKILL.md'
+    | '/api/plans/'
     | '/w/$slug/'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
+    | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/login'
-    | '/api/plans'
-    | '/api/tokens'
     | '/settings/tokens'
-    | '/api/auth/$'
-    | '/api/dev/sign-in'
+    | '/'
     | '/api/plans/$id'
-    | '/api/tokens/$id'
-    | '/p/$workspaceSlug/$planSlug'
-    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
+    | '/api/auth/$'
+    | '/skills/write-plan/SKILL.md'
+    | '/api/plans'
     | '/w/$slug'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
+    | '/p/$workspaceSlug/$planSlug'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   id:
     | '__root__'
-    | '/'
     | '/login'
-    | '/api/plans'
-    | '/api/tokens'
     | '/settings/tokens'
-    | '/api/auth/$'
-    | '/api/dev/sign-in'
+    | '/(home)/'
     | '/api/plans/$id'
-    | '/api/tokens/$id'
     | '/p/$workspaceSlug/$planSlug'
-    | '/skills/write-plan/SKILL.md'
     | '/w/$slug/decisions'
     | '/w/$slug/settings'
+    | '/api/auth/$'
+    | '/skills/write-plan/SKILL.md'
+    | '/api/plans/'
     | '/w/$slug/'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
+    | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  LoginRoute: typeof LoginRoute
-  ApiPlansRoute: typeof ApiPlansRouteWithChildren
-  ApiTokensRoute: typeof ApiTokensRouteWithChildren
-  SettingsTokensRoute: typeof SettingsTokensRoute
+  LoginRouteRoute: typeof LoginRouteRoute
+  SettingsTokensRouteRoute: typeof SettingsTokensRouteRoute
+  homeIndexRoute: typeof homeIndexRoute
+  ApiPlansIdRouteRoute: typeof ApiPlansIdRouteRouteWithChildren
+  PWorkspaceSlugPlanSlugRouteRoute: typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  WSlugDecisionsRouteRoute: typeof WSlugDecisionsRouteRoute
+  WSlugSettingsRouteRoute: typeof WSlugSettingsRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiDevSignInRoute: typeof ApiDevSignInRoute
-  PWorkspaceSlugPlanSlugRoute: typeof PWorkspaceSlugPlanSlugRouteWithChildren
   SkillsWritePlanSKILLDotmdRoute: typeof SkillsWritePlanSKILLDotmdRoute
-  WSlugDecisionsRoute: typeof WSlugDecisionsRoute
-  WSlugSettingsRoute: typeof WSlugSettingsRoute
+  ApiPlansIndexRoute: typeof ApiPlansIndexRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+      preLoaderRoute: typeof LoginRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/plans': {
-      id: '/api/plans'
-      path: '/api/plans'
-      fullPath: '/api/plans'
-      preLoaderRoute: typeof ApiPlansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/tokens': {
-      id: '/api/tokens'
-      path: '/api/tokens'
-      fullPath: '/api/tokens'
-      preLoaderRoute: typeof ApiTokensRouteImport
+    '/(home)/': {
+      id: '/(home)/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof homeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/tokens': {
       id: '/settings/tokens'
       path: '/settings/tokens'
       fullPath: '/settings/tokens'
-      preLoaderRoute: typeof SettingsTokensRouteImport
+      preLoaderRoute: typeof SettingsTokensRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -292,32 +253,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/dev/sign-in': {
-      id: '/api/dev/sign-in'
-      path: '/api/dev/sign-in'
-      fullPath: '/api/dev/sign-in'
-      preLoaderRoute: typeof ApiDevSignInRouteImport
+    '/api/plans/': {
+      id: '/api/plans/'
+      path: '/api/plans'
+      fullPath: '/api/plans/'
+      preLoaderRoute: typeof ApiPlansIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/plans/$id': {
       id: '/api/plans/$id'
-      path: '/$id'
+      path: '/api/plans/$id'
       fullPath: '/api/plans/$id'
-      preLoaderRoute: typeof ApiPlansIdRouteImport
-      parentRoute: typeof ApiPlansRoute
-    }
-    '/api/tokens/$id': {
-      id: '/api/tokens/$id'
-      path: '/$id'
-      fullPath: '/api/tokens/$id'
-      preLoaderRoute: typeof ApiTokensIdRouteImport
-      parentRoute: typeof ApiTokensRoute
+      preLoaderRoute: typeof ApiPlansIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/p/$workspaceSlug/$planSlug': {
       id: '/p/$workspaceSlug/$planSlug'
       path: '/p/$workspaceSlug/$planSlug'
       fullPath: '/p/$workspaceSlug/$planSlug'
-      preLoaderRoute: typeof PWorkspaceSlugPlanSlugRouteImport
+      preLoaderRoute: typeof PWorkspaceSlugPlanSlugRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/skills/write-plan/SKILL.md': {
@@ -338,14 +292,14 @@ declare module '@tanstack/react-router' {
       id: '/w/$slug/decisions'
       path: '/w/$slug/decisions'
       fullPath: '/w/$slug/decisions'
-      preLoaderRoute: typeof WSlugDecisionsRouteImport
+      preLoaderRoute: typeof WSlugDecisionsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/w/$slug/settings': {
       id: '/w/$slug/settings'
       path: '/w/$slug/settings'
       fullPath: '/w/$slug/settings'
-      preLoaderRoute: typeof WSlugSettingsRouteImport
+      preLoaderRoute: typeof WSlugSettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/plans/$id/comments': {
@@ -353,89 +307,75 @@ declare module '@tanstack/react-router' {
       path: '/comments'
       fullPath: '/api/plans/$id/comments'
       preLoaderRoute: typeof ApiPlansIdCommentsRouteImport
-      parentRoute: typeof ApiPlansIdRoute
+      parentRoute: typeof ApiPlansIdRouteRoute
     }
     '/api/plans/$id/versions': {
       id: '/api/plans/$id/versions'
       path: '/versions'
       fullPath: '/api/plans/$id/versions'
       preLoaderRoute: typeof ApiPlansIdVersionsRouteImport
-      parentRoute: typeof ApiPlansIdRoute
+      parentRoute: typeof ApiPlansIdRouteRoute
+    }
+    '/p/$workspaceSlug/$planSlug/': {
+      id: '/p/$workspaceSlug/$planSlug/'
+      path: '/'
+      fullPath: '/p/$workspaceSlug/$planSlug/'
+      preLoaderRoute: typeof PWorkspaceSlugPlanSlugIndexRouteImport
+      parentRoute: typeof PWorkspaceSlugPlanSlugRouteRoute
     }
     '/p/$workspaceSlug/$planSlug/v/$number': {
       id: '/p/$workspaceSlug/$planSlug/v/$number'
       path: '/v/$number'
       fullPath: '/p/$workspaceSlug/$planSlug/v/$number'
-      preLoaderRoute: typeof PWorkspaceSlugPlanSlugVNumberRouteImport
-      parentRoute: typeof PWorkspaceSlugPlanSlugRoute
+      preLoaderRoute: typeof PWorkspaceSlugPlanSlugVNumberRouteRouteImport
+      parentRoute: typeof PWorkspaceSlugPlanSlugRouteRoute
     }
   }
 }
 
-interface ApiPlansIdRouteChildren {
+interface ApiPlansIdRouteRouteChildren {
   ApiPlansIdCommentsRoute: typeof ApiPlansIdCommentsRoute
   ApiPlansIdVersionsRoute: typeof ApiPlansIdVersionsRoute
 }
 
-const ApiPlansIdRouteChildren: ApiPlansIdRouteChildren = {
+const ApiPlansIdRouteRouteChildren: ApiPlansIdRouteRouteChildren = {
   ApiPlansIdCommentsRoute: ApiPlansIdCommentsRoute,
   ApiPlansIdVersionsRoute: ApiPlansIdVersionsRoute,
 }
 
-const ApiPlansIdRouteWithChildren = ApiPlansIdRoute._addFileChildren(
-  ApiPlansIdRouteChildren,
+const ApiPlansIdRouteRouteWithChildren = ApiPlansIdRouteRoute._addFileChildren(
+  ApiPlansIdRouteRouteChildren,
 )
 
-interface ApiPlansRouteChildren {
-  ApiPlansIdRoute: typeof ApiPlansIdRouteWithChildren
+interface PWorkspaceSlugPlanSlugRouteRouteChildren {
+  PWorkspaceSlugPlanSlugIndexRoute: typeof PWorkspaceSlugPlanSlugIndexRoute
+  PWorkspaceSlugPlanSlugVNumberRouteRoute: typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 
-const ApiPlansRouteChildren: ApiPlansRouteChildren = {
-  ApiPlansIdRoute: ApiPlansIdRouteWithChildren,
-}
-
-const ApiPlansRouteWithChildren = ApiPlansRoute._addFileChildren(
-  ApiPlansRouteChildren,
-)
-
-interface ApiTokensRouteChildren {
-  ApiTokensIdRoute: typeof ApiTokensIdRoute
-}
-
-const ApiTokensRouteChildren: ApiTokensRouteChildren = {
-  ApiTokensIdRoute: ApiTokensIdRoute,
-}
-
-const ApiTokensRouteWithChildren = ApiTokensRoute._addFileChildren(
-  ApiTokensRouteChildren,
-)
-
-interface PWorkspaceSlugPlanSlugRouteChildren {
-  PWorkspaceSlugPlanSlugVNumberRoute: typeof PWorkspaceSlugPlanSlugVNumberRoute
-}
-
-const PWorkspaceSlugPlanSlugRouteChildren: PWorkspaceSlugPlanSlugRouteChildren =
+const PWorkspaceSlugPlanSlugRouteRouteChildren: PWorkspaceSlugPlanSlugRouteRouteChildren =
   {
-    PWorkspaceSlugPlanSlugVNumberRoute: PWorkspaceSlugPlanSlugVNumberRoute,
+    PWorkspaceSlugPlanSlugIndexRoute: PWorkspaceSlugPlanSlugIndexRoute,
+    PWorkspaceSlugPlanSlugVNumberRouteRoute:
+      PWorkspaceSlugPlanSlugVNumberRouteRoute,
   }
 
-const PWorkspaceSlugPlanSlugRouteWithChildren =
-  PWorkspaceSlugPlanSlugRoute._addFileChildren(
-    PWorkspaceSlugPlanSlugRouteChildren,
+const PWorkspaceSlugPlanSlugRouteRouteWithChildren =
+  PWorkspaceSlugPlanSlugRouteRoute._addFileChildren(
+    PWorkspaceSlugPlanSlugRouteRouteChildren,
   )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  LoginRoute: LoginRoute,
-  ApiPlansRoute: ApiPlansRouteWithChildren,
-  ApiTokensRoute: ApiTokensRouteWithChildren,
-  SettingsTokensRoute: SettingsTokensRoute,
+  LoginRouteRoute: LoginRouteRoute,
+  SettingsTokensRouteRoute: SettingsTokensRouteRoute,
+  homeIndexRoute: homeIndexRoute,
+  ApiPlansIdRouteRoute: ApiPlansIdRouteRouteWithChildren,
+  PWorkspaceSlugPlanSlugRouteRoute:
+    PWorkspaceSlugPlanSlugRouteRouteWithChildren,
+  WSlugDecisionsRouteRoute: WSlugDecisionsRouteRoute,
+  WSlugSettingsRouteRoute: WSlugSettingsRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiDevSignInRoute: ApiDevSignInRoute,
-  PWorkspaceSlugPlanSlugRoute: PWorkspaceSlugPlanSlugRouteWithChildren,
   SkillsWritePlanSKILLDotmdRoute: SkillsWritePlanSKILLDotmdRoute,
-  WSlugDecisionsRoute: WSlugDecisionsRoute,
-  WSlugSettingsRoute: WSlugSettingsRoute,
+  ApiPlansIndexRoute: ApiPlansIndexRoute,
   WSlugIndexRoute: WSlugIndexRoute,
 }
 export const routeTree = rootRouteImport

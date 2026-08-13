@@ -1,3 +1,5 @@
+import type { Root } from "mdast";
+
 export const COMPONENT_NAMES = [
 	"TLDR",
 	"Decision",
@@ -41,6 +43,13 @@ export type LintReport = {
 	readTimeMinutes: number;
 	canPublish: boolean;
 	findings: LintFinding[];
+};
+
+export type PlanAnalysis = {
+	blocks: Block[];
+	report: LintReport;
+	canPersist: boolean;
+	tree?: Root;
 };
 
 export type ChangeType = "added" | "removed" | "modified" | "moved";

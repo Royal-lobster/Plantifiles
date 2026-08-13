@@ -1,6 +1,6 @@
 import type { Node } from "unist";
 import { planEmojiFromSource } from "./emoji.js";
-import { normalize } from "./normalize.js";
+import { isValidExplicitId, normalizeParsedSource } from "./normalize.js";
 import {
 	booleanAttribute,
 	componentName,
@@ -12,7 +12,14 @@ import {
 	rootContent,
 	stringAttribute,
 } from "./syntax.js";
-import { type Block, COMPONENT_NAMES, type LintFinding, type LintReport, type LintSeverity } from "./types.js";
+import {
+	type Block,
+	COMPONENT_NAMES,
+	type LintFinding,
+	type LintReport,
+	type LintSeverity,
+	type PlanAnalysis,
+} from "./types.js";
 
 const COMPONENT_SET = new Set<string>(COMPONENT_NAMES);
 const VALID_RISK_SEVERITIES = new Set(["low", "med", "high"]);
@@ -35,12 +42,27 @@ function childNodes(node: Node): Node[] {
 	return node.children.filter((child): child is Node => Boolean(child) && typeof child === "object" && "type" in child);
 }
 
-function descendants(node: Node): Node[] {
-	const found: Node[] = [];
+type NodeEntry = {
+	node: Node;
+	parent?: Node;
+};
+
+function descendants(node: Node): NodeEntry[] {
+	const found: NodeEntry[] = [];
 	for (const child of childNodes(node)) {
-		found.push(child, ...descendants(child));
+		found.push({ node: child, parent: node }, ...descendants(child));
 	}
 	return found;
+}
+
+function attributeValue(node: Node, name: string): { value: unknown } | undefined {
+	if (!("attributes" in node) || !Array.isArray(node.attributes)) return undefined;
+	for (const attribute of node.attributes) {
+		if (attribute !== null && typeof attribute === "object" && "name" in attribute && attribute.name === name) {
+			return { value: "value" in attribute ? attribute.value : undefined };
+		}
+	}
+	return undefined;
 }
 
 function blockAtLine(blocks: Block[], line: number): string | undefined {
@@ -52,24 +74,28 @@ function blockAtLine(blocks: Block[], line: number): string | undefined {
 	return match?.key;
 }
 
-export function lint(source: string, options: { emoji?: string | undefined } = {}): LintReport {
+export function analyzePlan(source: string, options: { emoji?: string | undefined } = {}): PlanAnalysis {
 	let parsed: ParsedSource;
 	try {
 		parsed = parseSource(source);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "The document could not be parsed.";
 		return {
-			errors: 1,
-			warnings: 0,
-			score: 90,
-			readTimeMinutes: 0,
-			canPublish: false,
-			findings: [{ rule: "valid-mdx", severity: "error", message, line: 1 }],
+			canPersist: false,
+			blocks: [],
+			report: {
+				errors: 1,
+				warnings: 0,
+				score: 90,
+				readTimeMinutes: 0,
+				canPublish: false,
+				findings: [{ rule: "valid-mdx", severity: "error", message, line: 1 }],
+			},
 		};
 	}
 
 	const content = rootContent(parsed.tree);
-	const blocks = normalize(source);
+	const blocks = normalizeParsedSource(parsed);
 	const findings: LintFinding[] = [];
 	const add = (rule: string, severity: LintSeverity, message: string, node?: Node): void => {
 		const line = node ? lineOf(node) : 1;
@@ -77,9 +103,49 @@ export function lint(source: string, options: { emoji?: string | undefined } = {
 		findings.push({ rule, severity, message, line, ...(blockKey ? { blockKey } : {}) });
 	};
 
-	const allNodes = content.flatMap((node) => [node, ...descendants(node)]);
+	const nodeEntries = content.flatMap((node): NodeEntry[] => [{ node }, ...descendants(node)]);
+	const allNodes = nodeEntries.map(({ node }) => node);
 	const components = allNodes.filter((node) => componentName(node) !== undefined);
 	const tldrs = components.filter((node) => componentName(node) === "TLDR");
+
+	for (const { node, parent } of nodeEntries) {
+		const name = componentName(node);
+		if (!name || !COMPONENT_SET.has(name)) continue;
+		const parentName = parent ? componentName(parent) : undefined;
+		const validPlacement = name === "Option" ? parentName === "Tradeoff" : parent === undefined;
+		if (!validPlacement) {
+			add(
+				"component-placement",
+				"error",
+				name === "Option" ? "<Option> must be a direct child of <Tradeoff>." : `<${name}> must be a top-level block.`,
+				node,
+			);
+		}
+	}
+
+	const nodesByExplicitId = new Map<string, Node[]>();
+	for (const node of components) {
+		const attribute = attributeValue(node, "id");
+		if (!attribute) continue;
+		if (typeof attribute.value !== "string" || !isValidExplicitId(attribute.value)) {
+			add(
+				"component-id",
+				"error",
+				'Explicit id values must start with an ASCII letter and contain only letters, digits, "-" or "_".',
+				node,
+			);
+			continue;
+		}
+		const matchingNodes = nodesByExplicitId.get(attribute.value) ?? [];
+		matchingNodes.push(node);
+		nodesByExplicitId.set(attribute.value, matchingNodes);
+	}
+	for (const [id, nodes] of nodesByExplicitId) {
+		if (nodes.length < 2) continue;
+		for (const node of nodes) {
+			add("component-id", "error", `Explicit id "${id}" is duplicated; IDs must be unique.`, node);
+		}
+	}
 
 	if (tldrs.length !== 1) {
 		add("tldr-position", "error", `Expected exactly one <TLDR>; found ${tldrs.length}.`, tldrs[0]);
@@ -244,7 +310,7 @@ export function lint(source: string, options: { emoji?: string | undefined } = {
 	const errors = findings.filter((finding) => finding.severity === "error").length;
 	const warnings = findings.length - errors;
 	const score = Math.max(0, 100 - errors * 10 - warnings * 3);
-	return {
+	const report: LintReport = {
 		errors,
 		warnings,
 		score,
@@ -252,4 +318,12 @@ export function lint(source: string, options: { emoji?: string | undefined } = {
 		canPublish: errors === 0 && score >= 70,
 		findings,
 	};
+	const canPersist = !findings.some(
+		(finding) => finding.rule === "component-id" || finding.rule === "component-placement",
+	);
+	return { blocks, canPersist, report, tree: parsed.tree };
+}
+
+export function lint(source: string, options: { emoji?: string | undefined } = {}): LintReport {
+	return analyzePlan(source, options).report;
 }

@@ -1,25 +1,25 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "plantifiles",
-  "compatibility_date": "2026-08-04",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
-  "observability": { "enabled": true },
-  "vars": {
-    "PUBLIC_URL": "https://plantifiles.srujangs8.workers.dev"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "plantifiles",
-      "database_id": "cbabbf53-ec56-4b34-af06-ba0594cce926",
-      "migrations_dir": "../../packages/db/migrations"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "855047ac17334028881f4f703a37d0c6"
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "plantifiles",
+	"compatibility_date": "2026-08-04",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": { "enabled": true },
+	"vars": {
+		"PUBLIC_URL": "https://plantifiles.srujangs8.workers.dev"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "plantifiles",
+			"database_id": "cbabbf53-ec56-4b34-af06-ba0594cce926",
+			"migrations_dir": "../../packages/db/migrations"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "855047ac17334028881f4f703a37d0c6"
+		}
+	]
 }

@@ -1,20 +1,29 @@
 {
-  "extends": "../../tsconfig.json",
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "vitest.config.ts", "worker-configuration.d.ts"],
-  "compilerOptions": {
-    "target": "ES2022",
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "paths": {
-      "#/*": ["./src/*"]
-    },
-    "types": ["./worker-configuration.d.ts", "node", "vite/client"],
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  }
+	"extends": "../../tsconfig.json",
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"vite.config.ts",
+		"vitest.config.ts",
+		"worker-configuration.d.ts",
+		"config.generated.ts"
+	],
+	"compilerOptions": {
+		"target": "ES2022",
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"paths": {
+			"#/*": ["./src/*"],
+			"#vars": ["./config.generated.ts"]
+		},
+		"types": ["./worker-configuration.d.ts", "node", "vite/client"],
+		"noUnusedLocals": true,
+		// dotvars 1.0.6 generates an empty normalizeRaw parameter for schemas without structured values.
+		"noUnusedParameters": false,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedSideEffectImports": true
+	}
 }

@@ -11,7 +11,6 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="input-group"
-			role="group"
 			className={cn(
 				"group/input-group relative flex h-8 w-full min-w-0 items-center rounded-lg border border-input outline-none transition-colors has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot][aria-invalid=true]]:border-destructive in-data-[slot=combobox-content]:focus-within:border-inherit dark:bg-input/30 dark:has-disabled:bg-input/80 has-disabled:bg-input/50 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5 has-disabled:opacity-50 dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-destructive/20 in-data-[slot=combobox-content]:focus-within:ring-0",
 				className,
@@ -22,7 +21,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const inputGroupAddonVariants = cva(
-	"flex h-auto cursor-text select-none items-center justify-center gap-2 py-1.5 font-medium text-muted-foreground text-sm [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50",
+	"flex h-auto select-none items-center justify-center gap-2 py-1.5 font-medium text-muted-foreground text-sm [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50",
 	{
 		variants: {
 			align: {
@@ -46,16 +45,9 @@ function InputGroupAddon({
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
 	return (
 		<div
-			role="group"
 			data-slot="input-group-addon"
 			data-align={align}
 			className={cn(inputGroupAddonVariants({ align }), className)}
-			onClick={(e) => {
-				if ((e.target as HTMLElement).closest("button")) {
-					return;
-				}
-				e.currentTarget.parentElement?.querySelector("input")?.focus();
-			}}
 			{...props}
 		/>
 	);

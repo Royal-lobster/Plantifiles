@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "./lint.js";
-import { parseSource } from "./syntax.js";
+import { componentName, parseSource } from "./syntax.js";
 
 /**
  * The renderer parses with `remark-gfm`. Core must too, or the two disagree about
@@ -19,6 +19,21 @@ describe("gfm parity with the renderer", () => {
 		expect(list).toBeDefined();
 		if (list?.type !== "list") throw new Error("expected a list node");
 		expect(list.children.map((item) => item.checked)).toEqual([false, true]);
+	});
+
+	it("preserves task-list state when the list is nested inside a Phase", () => {
+		const { tree } = parseSource(
+			['<Phase n="1" title="Ship">', "- [ ] first", "- [x] second", "</Phase>", ""].join("\n"),
+		);
+		const phase = tree.children.find((node) => componentName(node) === "Phase");
+		if (!phase || !("children" in phase) || !Array.isArray(phase.children)) {
+			throw new Error("expected a Phase with children");
+		}
+		const list = phase.children.find(
+			(node): node is Extract<(typeof phase.children)[number], { type: "list" }> => node.type === "list",
+		);
+
+		expect(list?.children.map((item) => item.checked)).toEqual([false, true]);
 	});
 
 	it("does not blame paragraph length for a wide comparison table", () => {

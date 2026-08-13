@@ -1,13 +1,22 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createRootRoute, HeadContent, Link, Scripts } from "@tanstack/react-router";
+import { Button } from "@plantifiles/ui/components/button";
+import {
+	createRootRoute,
+	type ErrorComponentProps,
+	HeadContent,
+	Link,
+	Scripts,
+	useRouter,
+} from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { getNavigationData } from "#/lib/app-data";
 import appCss from "../styles.css?url";
-import { AppShell } from "./-components/app-shell";
-import { ThemeProvider } from "./-components/theme-provider";
+import { AppShell } from "./__root/-components/app-shell";
+import { ReaderPreferencesProvider } from "./__root/-components/reader-preferences";
+import { THEME_PREPAINT_SCRIPT } from "./__root/-components/theme-config";
+import { ThemeProvider } from "./__root/-components/theme-provider";
+import { getNavigationData } from "./__root/-data/navigation";
 
 export const Route = createRootRoute({
 	loader: () => getNavigationData(),
@@ -18,45 +27,69 @@ export const Route = createRootRoute({
 			{ title: "Plantifiles" },
 			{ name: "description", content: "Agent-native plans, reviewed in place." },
 		],
-		links: [{ rel: "stylesheet", href: appCss }],
+		links: [
+			{ rel: "stylesheet", href: appCss },
+			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+		],
 	}),
 	shellComponent: RootDocument,
+	errorComponent: AppError,
 	notFoundComponent: NotFound,
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
 	const navigation = Route.useLoaderData();
-	const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } }));
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
-				{/* Resolve the theme before first paint. Without this the server sends
-				    no palette class, the page paints in the default tokens, and
-				    hydration then repaints. Must stay in step with THEME_CLASSES. */}
 				<script
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: must run before paint, so it cannot be a module
-					dangerouslySetInnerHTML={{
-						__html:
-							"try{var m={cream:['theme-cream'],paper:['theme-paper'],solarized:['theme-solarized']," +
-							"light:[],dark:['dark'],nord:['theme-nord','dark'],dracula:['theme-dracula','dark']," +
-							"groove:['theme-groove','dark']};" +
-							"var t=localStorage.getItem('plantifiles-theme');if(!m[t])t='cream';" +
-							"var c=m[t],r=document.documentElement;" +
-							"if(c.length)r.classList.add.apply(r.classList,c);" +
-							"r.style.colorScheme=c.indexOf('dark')>-1?'dark':'light';}catch(e){}",
-					}}
+					dangerouslySetInnerHTML={{ __html: THEME_PREPAINT_SCRIPT }}
 				/>
 				<HeadContent />
 			</head>
 			<body>
-				<QueryClientProvider client={queryClient}>
+				<ReaderPreferencesProvider>
 					<ThemeProvider>
 						<AppShell navigation={navigation}>{children}</AppShell>
 					</ThemeProvider>
-				</QueryClientProvider>
+				</ReaderPreferencesProvider>
 				<Scripts />
 			</body>
 		</html>
+	);
+}
+
+function AppError({ reset }: ErrorComponentProps) {
+	const router = useRouter();
+	const [recovering, setRecovering] = useState(false);
+
+	async function recover() {
+		setRecovering(true);
+		try {
+			await router.invalidate();
+			reset();
+		} catch {
+			setRecovering(false);
+		}
+	}
+
+	return (
+		<div role="alert" className="mx-auto max-w-[68ch] py-16">
+			<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Application error</p>
+			<h1 className="mt-2 text-2xl font-semibold">Something went wrong</h1>
+			<p className="mt-3 leading-7 text-muted-foreground">
+				Plantifiles could not finish loading this page. Try again, or return home to continue elsewhere.
+			</p>
+			<div className="mt-6 flex flex-wrap gap-3">
+				<Button type="button" disabled={recovering} onClick={() => void recover()}>
+					{recovering ? "Trying again…" : "Try again"}
+				</Button>
+				<Button variant="outline" asChild>
+					<Link to="/">Go to home</Link>
+				</Button>
+			</div>
+		</div>
 	);
 }
 
@@ -66,10 +99,10 @@ function NotFound() {
 			<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">404</p>
 			<h1 className="mt-2 text-2xl font-semibold">Nothing here</h1>
 			<p className="mt-3 leading-7 text-muted-foreground">
-				This plan either does not exist, or it is not visible to you.
+				The page you requested could not be found or may no longer be available.
 			</p>
 			<Link to="/" className="mt-6 inline-block text-sm underline underline-offset-4">
-				Back to your workspace
+				Go to home
 			</Link>
 		</div>
 	);

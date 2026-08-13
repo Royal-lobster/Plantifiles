@@ -8,6 +8,7 @@
 			"!**/.turbo",
 			"!**/node_modules",
 			"!**/*.gen.ts",
+			"!**/*.generated.ts",
 			"!**/worker-configuration.d.ts",
 			"!pnpm-lock.yaml",
 			"!playwright-report",
