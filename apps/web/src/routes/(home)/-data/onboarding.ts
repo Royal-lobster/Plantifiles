@@ -10,7 +10,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
 		const identity = await requireIdentity(getRequest());
 		const id = crypto.randomUUID();
 		const runtime = getBindings();
-		await runtime.DB.batch([
+		const insert = [
 			runtime.DB.prepare("insert into workspace (id, slug, name, required_approvals) values (?, ?, ?, 1)").bind(
 				id,
 				data.slug,
@@ -21,6 +21,16 @@ export const createWorkspace = createServerFn({ method: "POST" })
 				identity.user.id,
 				id,
 			),
-		]);
+		];
+		try {
+			await runtime.DB.batch(insert);
+		} catch (error) {
+			// workspace.slug is unique, and the raw D1 constraint text is not an
+			// answer anyone can act on.
+			if (error instanceof Error && /unique constraint failed: workspace\.slug/i.test(error.message)) {
+				throw new Error(`The URL /w/${data.slug} is taken. Pick another one.`);
+			}
+			throw error;
+		}
 		return { slug: data.slug };
 	});
