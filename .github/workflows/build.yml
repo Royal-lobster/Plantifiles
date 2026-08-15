@@ -1,4 +1,4 @@
-name: Build
+name: Build and deploy
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    name: Build
+    name: Build and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -40,3 +40,30 @@ jobs:
 
       - name: Build workspace
         run: pnpm build
+
+      - name: Check Cloudflare deployment credentials
+        id: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare deployment skipped until repository secrets are configured."
+          fi
+
+      - name: Apply production database migrations
+        if: steps.cloudflare.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm db:migrate:remote
+
+      - name: Deploy Cloudflare Worker
+        if: steps.cloudflare.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --dir apps/web exec wrangler deploy
