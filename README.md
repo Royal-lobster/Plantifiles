@@ -74,7 +74,7 @@ Create a Slack app with:
 - OAuth redirect URL `${PUBLIC_URL}/api/slack/callback`
 - the hostname from `PUBLIC_URL` as an app unfurl domain
 
-Set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_SIGNING_SECRET` in `.dev.vars` locally or with `wrangler secret put` in production. An owner or admin can then connect a Slack team from workspace settings. Plantifiles stores the bot token encrypted and maps one Slack team to one Plantifiles workspace.
+Store `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_SIGNING_SECRET` in the `dev` and `prod` profiles of `apps/web/config.vars`. Private values stay encrypted; do not add them to `.dev.vars` or as individual Worker secrets. An owner or admin can then connect a Slack team from workspace settings. Plantifiles stores the bot token encrypted and maps one Slack team to one Plantifiles workspace.
 
 ## Verification
 
@@ -90,15 +90,24 @@ The Playwright smoke starts the local Worker, applies D1 migrations, signs in, m
 
 ## Production deployment
 
-Production currently reads its existing Cloudflare bindings when `VARS_KEY` and `VARS_ENV` are absent, so deployment remains compatible while the production dotvars profile is provisioned. Set the production `PUBLIC_URL` and production D1/KV IDs in `apps/web/wrangler.jsonc`, then provision the direct fallback secrets:
+Production uses the `prod` profile in `apps/web/config.vars`; `apps/web/wrangler.jsonc` sets `VARS_ENV="prod"`. Private values are committed only as ciphertext. The Worker stores one application configuration secret: `VARS_KEY`.
+
+To update production configuration:
+
 ```bash
 cd apps/web
-pnpm exec wrangler secret put BETTER_AUTH_SECRET
-pnpm exec wrangler secret put GITHUB_CLIENT_ID
-pnpm exec wrangler secret put GITHUB_CLIENT_SECRET
-pnpm exec wrangler secret put SLACK_CLIENT_ID
-pnpm exec wrangler secret put SLACK_CLIENT_SECRET
-pnpm exec wrangler secret put SLACK_SIGNING_SECRET
-pnpm exec wrangler d1 migrations apply plantifiles --remote
-pnpm deploy
+pnpm dlx dotvars@1.0.6 show config.vars
+# Edit the prod values in config.unlocked.vars.
+pnpm dlx dotvars@1.0.6 hide
+pnpm vars:gen
+pnpm exec wrangler secret put VARS_KEY
+```
+
+Commit both `config.vars` and `config.generated.ts`. GitHub Actions then builds, applies D1 migrations, and deploys on updates to `main`. The workflow requires the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; the API token needs Workers edit and D1 edit access.
+
+For a manual deployment:
+
+```bash
+pnpm db:migrate:remote
+pnpm --filter @plantifiles/web run deploy
 ```

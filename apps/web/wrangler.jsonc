@@ -6,7 +6,7 @@
 	"main": "@tanstack/react-start/server-entry",
 	"observability": { "enabled": true },
 	"vars": {
-		"PUBLIC_URL": "https://plantifiles.srujangs8.workers.dev"
+		"VARS_ENV": "prod"
 	},
 	"d1_databases": [
 		{
