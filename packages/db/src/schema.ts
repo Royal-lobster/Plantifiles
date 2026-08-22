@@ -7,6 +7,7 @@ const updatedAt = () => timestamp("updated_at").notNull().default(sql`(unixepoch
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
+	clerkUserId: text("clerk_user_id").unique(),
 	name: text("name").notNull(),
 	email: text("email").notNull().unique(),
 	emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
@@ -15,63 +16,11 @@ export const user = sqliteTable("user", {
 	updatedAt: updatedAt(),
 });
 
-export const session = sqliteTable(
-	"session",
-	{
-		id: text("id").primaryKey(),
-		expiresAt: timestamp("expires_at").notNull(),
-		token: text("token").notNull().unique(),
-		createdAt: createdAt(),
-		updatedAt: updatedAt(),
-		ipAddress: text("ip_address"),
-		userAgent: text("user_agent"),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-	},
-	(table) => [index("session_user_idx").on(table.userId)],
-);
-
-export const account = sqliteTable(
-	"account",
-	{
-		id: text("id").primaryKey(),
-		accountId: text("account_id").notNull(),
-		providerId: text("provider_id").notNull(),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		accessToken: text("access_token"),
-		refreshToken: text("refresh_token"),
-		idToken: text("id_token"),
-		accessTokenExpiresAt: timestamp("access_token_expires_at"),
-		refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-		scope: text("scope"),
-		password: text("password"),
-		createdAt: createdAt(),
-		updatedAt: updatedAt(),
-	},
-	(table) => [index("account_user_idx").on(table.userId)],
-);
-
-export const verification = sqliteTable(
-	"verification",
-	{
-		id: text("id").primaryKey(),
-		identifier: text("identifier").notNull(),
-		value: text("value").notNull(),
-		expiresAt: timestamp("expires_at").notNull(),
-		createdAt: createdAt(),
-		updatedAt: updatedAt(),
-	},
-	(table) => [index("verification_identifier_idx").on(table.identifier)],
-);
-
 export const workspace = sqliteTable("workspace", {
 	id: text("id").primaryKey(),
+	clerkOrganizationId: text("clerk_organization_id").unique(),
 	slug: text("slug").notNull().unique(),
 	name: text("name").notNull(),
-	requiredApprovals: integer("required_approvals").notNull().default(1),
 });
 
 export const plan = sqliteTable(
@@ -239,5 +188,37 @@ export const apiToken = sqliteTable("api_token", {
 		.references(() => user.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
 	tokenHash: text("token_hash").notNull().unique(),
+	// First characters of the plaintext, kept so the settings list can name the
+	// token you are about to revoke. Nullable only because tokens issued before
+	// this column existed cannot be recovered from their hash.
+	prefix: text("prefix"),
+	// Nullable for the same reason, and backfilled by the migration: every code
+	// path that mints a token now sets an expiry, so null means "pre-expiry row"
+	// rather than "never expires".
+	expiresAt: timestamp("expires_at"),
 	lastUsedAt: timestamp("last_used_at"),
 });
+
+/**
+ * One in-flight `plantifiles login`. The CLI holds the device code; the browser
+ * only ever sees the short user code, so the approving session cannot leak the
+ * credential by shoulder-surfing or by pasting a URL into a chat.
+ */
+export const cliAuthRequest = sqliteTable(
+	"cli_auth_request",
+	{
+		id: text("id").primaryKey(),
+		deviceCodeHash: text("device_code_hash").notNull().unique(),
+		userCode: text("user_code").notNull().unique(),
+		tokenName: text("token_name").notNull(),
+		expiresAt: timestamp("expires_at").notNull(),
+		// Both stay null until a signed-in browser approves. `issuedToken` holds
+		// the plaintext for the seconds between approval and the CLI's next poll,
+		// which deletes the row; nothing else can read it, because the reader must
+		// present the device code.
+		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+		issuedToken: text("issued_token"),
+		createdAt: createdAt(),
+	},
+	(table) => [index("cli_auth_request_expires_idx").on(table.expiresAt)],
+);

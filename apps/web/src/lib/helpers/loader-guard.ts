@@ -17,7 +17,7 @@ export async function guardLoader<T>(load: () => Promise<T>): Promise<T> {
 		return await load();
 	} catch (error) {
 		if (!(error instanceof Response)) throw error;
-		if (error.status === 401) throw redirect({ to: "/login" });
+		if (error.status === 401) throw redirect({ to: "/" });
 		if (error.status === 403 || error.status === 404) throw notFound();
 		throw error;
 	}

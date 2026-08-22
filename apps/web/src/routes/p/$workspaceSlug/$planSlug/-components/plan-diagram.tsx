@@ -1,15 +1,7 @@
-import { Button } from "@plantifiles/ui/components/button";
-import { ButtonGroup, ButtonGroupButton, ButtonGroupLabel } from "@plantifiles/ui/components/button-group";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@plantifiles/ui/components/dialog";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { Check, Copy, Maximize2, Minus, Plus, RotateCcw } from "lucide-react";
-import type {
-	ReactElement,
-	KeyboardEvent as ReactKeyboardEvent,
-	ReactNode,
-	PointerEvent as ReactPointerEvent,
-	WheelEvent as ReactWheelEvent,
-} from "react";
+import { Maximize2 } from "lucide-react";
+import type { ReactElement, ReactNode } from "react";
 import { isValidElement, useEffect, useId, useMemo, useRef, useState } from "react";
 import { usePlanRender } from "./plan-render-context";
 
@@ -143,13 +135,6 @@ function MermaidFigure({ chart, className }: { chart: string; className?: string
 	return <div ref={rootRef} className={cn("flex justify-center", className)} />;
 }
 
-const ZOOM_MIN = 0.4;
-const ZOOM_MAX = 6;
-const ZOOM_STEP = 1.25;
-
-type ZoomView = { scale: number; x: number; y: number };
-const ZOOM_RESET: ZoomView = { scale: 1, x: 0, y: 0 };
-
 function DiagramLightbox({
 	chart,
 	figure,
@@ -159,150 +144,18 @@ function DiagramLightbox({
 	figure: number | undefined;
 	lang: "mermaid" | "d2";
 }) {
-	const [view, setView] = useState<ZoomView>(ZOOM_RESET);
-	const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
-	const dragRef = useRef<{ pointer: number; x: number; y: number } | null>(null);
-	const copyAttemptRef = useRef(0);
-	const copyTimerRef = useRef<number | undefined>(undefined);
-
-	function zoomBy(factor: number) {
-		setView((current) => ({
-			...current,
-			scale: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current.scale * factor)),
-		}));
-	}
-
-	function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
-		dragRef.current = { pointer: event.pointerId, x: event.clientX - view.x, y: event.clientY - view.y };
-		event.currentTarget.setPointerCapture(event.pointerId);
-	}
-
-	function onPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
-		const drag = dragRef.current;
-		if (!drag || drag.pointer !== event.pointerId) return;
-		setView((current) => ({ ...current, x: event.clientX - drag.x, y: event.clientY - drag.y }));
-	}
-
-	function onPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
-		if (dragRef.current?.pointer === event.pointerId) dragRef.current = null;
-	}
-
-	function onWheel(event: ReactWheelEvent<HTMLButtonElement>) {
-		event.preventDefault();
-		zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
-	}
-
-	function onKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
-		const pan = 60;
-		if (event.key === "+" || event.key === "=") zoomBy(ZOOM_STEP);
-		else if (event.key === "-") zoomBy(1 / ZOOM_STEP);
-		else if (event.key === "0") setView(ZOOM_RESET);
-		else if (event.key === "ArrowLeft") setView((current) => ({ ...current, x: current.x + pan }));
-		else if (event.key === "ArrowRight") setView((current) => ({ ...current, x: current.x - pan }));
-		else if (event.key === "ArrowUp") setView((current) => ({ ...current, y: current.y + pan }));
-		else if (event.key === "ArrowDown") setView((current) => ({ ...current, y: current.y - pan }));
-		else return;
-		event.preventDefault();
-	}
-
-	async function copySource() {
-		const attempt = ++copyAttemptRef.current;
-		let resetDelay = 1500;
-		window.clearTimeout(copyTimerRef.current);
-		copyTimerRef.current = undefined;
-		setCopyStatus("idle");
-		try {
-			await navigator.clipboard.writeText(chart);
-			if (attempt !== copyAttemptRef.current) return;
-			setCopyStatus("success");
-		} catch {
-			if (attempt !== copyAttemptRef.current) return;
-			setCopyStatus("error");
-			resetDelay = 3000;
-		}
-		copyTimerRef.current = window.setTimeout(() => {
-			setCopyStatus("idle");
-			copyTimerRef.current = undefined;
-		}, resetDelay);
-	}
-
-	useEffect(
-		() => () => {
-			copyAttemptRef.current += 1;
-			window.clearTimeout(copyTimerRef.current);
-		},
-		[],
-	);
-
 	return (
-		<DialogContent
-			className="flex h-[88vh] w-[calc(100%-2rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0"
-			onOpenAutoFocus={() => {
-				setView(ZOOM_RESET);
-				copyAttemptRef.current += 1;
-				window.clearTimeout(copyTimerRef.current);
-				copyTimerRef.current = undefined;
-				setCopyStatus("idle");
-			}}
-		>
-			<div className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 pr-12">
-				<DialogTitle className="label-eyebrow text-foreground">
-					{figure === undefined ? "Diagram" : `Fig. ${figure}`}
-				</DialogTitle>
-				<ButtonGroup aria-label="Zoom" className="ml-auto">
-					<ButtonGroupButton onClick={() => zoomBy(1 / ZOOM_STEP)} aria-label="Zoom out">
-						<Minus />
-					</ButtonGroupButton>
-					<ButtonGroupLabel>{Math.round(view.scale * 100)}%</ButtonGroupLabel>
-					<ButtonGroupButton onClick={() => zoomBy(ZOOM_STEP)} aria-label="Zoom in">
-						<Plus />
-					</ButtonGroupButton>
-					<ButtonGroupButton onClick={() => setView(ZOOM_RESET)} aria-label="Reset view">
-						<RotateCcw />
-					</ButtonGroupButton>
-				</ButtonGroup>
-				<Button variant="outline" size="sm" onClick={() => void copySource()}>
-					{copyStatus === "success" ? <Check /> : <Copy />}
-					{copyStatus === "success" ? "Copied" : copyStatus === "error" ? "Copy failed" : "Copy source"}
-				</Button>
-				<output
-					className="sr-only"
-					role={copyStatus === "error" ? "alert" : "status"}
-					aria-live={copyStatus === "error" ? "assertive" : "polite"}
-				>
-					{copyStatus === "success"
-						? "Diagram source copied."
-						: copyStatus === "error"
-							? "Diagram source could not be copied."
-							: ""}
-				</output>
+		<DialogContent className="flex h-[88vh] w-[calc(100%-2rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0">
+			<DialogTitle className="border-b px-4 py-3 pr-12 label-eyebrow text-foreground">
+				{figure === undefined ? "Diagram" : `Fig. ${figure}`}
+			</DialogTitle>
+			<div className="flex-1 overflow-auto bg-muted/20 p-6">
+				{lang === "mermaid" ? (
+					<MermaidFigure chart={chart} className="[&_svg]:h-auto [&_svg]:min-w-[48rem]" />
+				) : (
+					<pre className="font-mono text-sm">{chart}</pre>
+				)}
 			</div>
-			<div className="relative flex-1 overflow-hidden bg-muted/20">
-				<div
-					className="flex h-full w-full items-center justify-center"
-					style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
-				>
-					{lang === "mermaid" ? (
-						<MermaidFigure chart={chart} className="[&_svg]:h-auto [&_svg]:w-[68rem] [&_svg]:max-w-none" />
-					) : (
-						<pre className="p-6 font-mono text-sm">{chart}</pre>
-					)}
-				</div>
-				<button
-					type="button"
-					aria-label="Drag to pan, scroll to zoom, arrow keys to move, plus and minus to zoom"
-					className="absolute inset-0 cursor-grab touch-none outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-					onPointerDown={onPointerDown}
-					onPointerMove={onPointerMove}
-					onPointerUp={onPointerUp}
-					onPointerCancel={onPointerUp}
-					onWheel={onWheel}
-					onKeyDown={onKeyDown}
-				/>
-			</div>
-			<p className="border-t px-4 py-2 font-mono text-[10px] text-muted-foreground">
-				scroll to zoom · drag to pan · esc to close
-			</p>
 		</DialogContent>
 	);
 }

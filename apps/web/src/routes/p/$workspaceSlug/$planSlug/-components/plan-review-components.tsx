@@ -28,7 +28,6 @@ const COMMENTABLE: Record<string, true> = {
 	Rejected: true,
 	CodeSketch: true,
 	Callout: true,
-	Prototype: true,
 };
 
 const EMPTY_COMMENTS: readonly ReaderComment[] = [];
@@ -352,11 +351,9 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 					{status}
 				</Badge>
 			</header>
-			<div className="px-5 py-4 [&>p]:text-[calc(var(--reader-font-size)+2px)] [&>p]:text-foreground [&>p]:leading-[1.55]">
-				{children}
-			</div>
+			<div className="px-5 py-4 [&>p]:text-lg [&>p]:text-foreground [&>p]:leading-[1.55]">{children}</div>
 			{record?.resolution && (
-				<footer className="flex gap-2.5 border-t bg-success/[0.06] px-5 py-3 text-[calc(var(--reader-font-size)-2px)]">
+				<footer className="flex gap-2.5 border-t bg-success/[0.06] px-5 py-3 text-sm">
 					<Check className="mt-0.5 size-4 shrink-0 text-success" />
 					<p className="leading-6">{record.resolution}</p>
 				</footer>

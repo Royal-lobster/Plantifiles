@@ -16,6 +16,7 @@
 	   chrome, the plans grid and the plan column all share one edge. This is the
 	   single knob for page width. */
 	--container-shell: 56rem;
+	--container-measure: 68ch;
 
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
@@ -62,237 +63,55 @@
 }
 
 :root {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.147 0.004 49.3);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.147 0.004 49.3);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.147 0.004 49.3);
-	--primary: oklch(0.555 0.163 48.998);
-	--primary-foreground: oklch(0.987 0.022 95.277);
-	--secondary: oklch(0.967 0.001 286.375);
-	--secondary-foreground: oklch(0.21 0.006 285.885);
-	--muted: oklch(0.96 0.002 17.2);
-	--muted-foreground: oklch(0.547 0.021 43.1);
-	--accent: oklch(0.96 0.002 17.2);
-	--accent-foreground: oklch(0.214 0.009 43.1);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0.005 34.3);
-	--input: oklch(0.922 0.005 34.3);
-	--ring: oklch(0.714 0.014 41.2);
-	--chart-1: oklch(0.879 0.169 91.605);
-	--chart-2: oklch(0.769 0.188 70.08);
-	--chart-3: oklch(0.666 0.179 58.318);
-	--chart-4: oklch(0.555 0.163 48.998);
-	--chart-5: oklch(0.473 0.137 46.201);
+	--background: oklch(0.968 0.026 130);
+	--foreground: oklch(0.27 0.038 145);
+	--card: oklch(0.984 0.016 130);
+	--card-foreground: oklch(0.27 0.038 145);
+	--popover: oklch(0.984 0.016 130);
+	--popover-foreground: oklch(0.27 0.038 145);
+	--primary: oklch(0.535 0.17 132);
+	--primary-foreground: oklch(0.985 0.012 130);
+	--secondary: oklch(0.928 0.038 130);
+	--secondary-foreground: oklch(0.3 0.038 145);
+	--muted: oklch(0.928 0.034 130);
+	--muted-foreground: oklch(0.487 0.042 140);
+	--accent: oklch(0.922 0.048 130);
+	--accent-foreground: oklch(0.27 0.038 145);
+	--destructive: oklch(0.55 0.2 25);
+	--border: oklch(0.882 0.042 130);
+	--input: oklch(0.882 0.042 130);
+	--ring: oklch(0.535 0.17 132);
+	--chart-1: oklch(0.897 0.196 126.665);
+	--chart-2: oklch(0.768 0.233 130.85);
+	--chart-3: oklch(0.648 0.2 131.684);
+	--chart-4: oklch(0.532 0.157 131.589);
+	--chart-5: oklch(0.453 0.124 130.933);
 	--radius: 0.625rem;
 }
 
-/* Keeps the Light option representative when the surrounding page uses a dark palette. */
-.theme-preview-light {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.147 0.004 49.3);
-	--primary: oklch(0.555 0.163 48.998);
-	--muted: oklch(0.96 0.002 17.2);
-	--border: oklch(0.922 0.005 34.3);
-}
-
 .dark {
-	--background: oklch(0.147 0.004 49.3);
-	--foreground: oklch(0.986 0.002 67.8);
-	--card: oklch(0.214 0.009 43.1);
-	--card-foreground: oklch(0.986 0.002 67.8);
-	--popover: oklch(0.214 0.009 43.1);
-	--popover-foreground: oklch(0.986 0.002 67.8);
-	--primary: oklch(0.473 0.137 46.201);
-	--primary-foreground: oklch(0.987 0.022 95.277);
-	--secondary: oklch(0.274 0.006 286.033);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.268 0.011 36.5);
-	--muted-foreground: oklch(0.714 0.014 41.2);
-	--accent: oklch(0.268 0.011 36.5);
-	--accent-foreground: oklch(0.986 0.002 67.8);
+	/* Neutrals carry a low-chroma cast of the identity hue instead of the warm
+	   stone they shipped with, so the whole surface reads green, not amber. */
+	--background: oklch(0.163 0.024 138);
+	--foreground: oklch(0.965 0.02 128);
+	--card: oklch(0.212 0.03 138);
+	--card-foreground: oklch(0.965 0.02 128);
+	--popover: oklch(0.212 0.03 138);
+	--popover-foreground: oklch(0.965 0.02 128);
+	/* Same fill as the light themes: dark enough to hold a white label, and it
+	   still separates from the surface at 4:1. Ink comes from --brand-ink. */
+	--primary: oklch(0.535 0.17 132);
+	--primary-foreground: oklch(0.985 0.012 130);
+	--secondary: oklch(0.272 0.034 138);
+	--secondary-foreground: oklch(0.965 0.02 128);
+	--muted: oklch(0.262 0.032 138);
+	--muted-foreground: oklch(0.735 0.045 132);
+	--accent: oklch(0.3 0.045 136);
+	--accent-foreground: oklch(0.965 0.02 128);
 	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.547 0.021 43.1);
-	--chart-1: oklch(0.879 0.169 91.605);
-	--chart-2: oklch(0.769 0.188 70.08);
-	--chart-3: oklch(0.666 0.179 58.318);
-	--chart-4: oklch(0.555 0.163 48.998);
-	--chart-5: oklch(0.473 0.137 46.201);
-}
-
-.theme-cream {
-	--background: oklch(0.96 0.03 85);
-	--foreground: oklch(0.28 0.04 65);
-	--card: oklch(0.98 0.02 85);
-	--card-foreground: oklch(0.28 0.04 65);
-	--popover: oklch(0.98 0.02 85);
-	--popover-foreground: oklch(0.28 0.04 65);
-	--primary: oklch(0.48 0.12 45);
-	--primary-foreground: oklch(0.98 0.02 85);
-	--secondary: oklch(0.92 0.04 80);
-	--secondary-foreground: oklch(0.3 0.04 65);
-	--muted: oklch(0.92 0.03 82);
-	--muted-foreground: oklch(0.48 0.04 60);
-	--accent: oklch(0.92 0.04 80);
-	--accent-foreground: oklch(0.28 0.04 65);
-	--destructive: oklch(0.55 0.2 25);
-	--border: oklch(0.88 0.03 75);
-	--input: oklch(0.88 0.03 75);
-	--ring: oklch(0.65 0.06 60);
-	--chart-1: oklch(0.65 0.14 60);
-	--chart-2: oklch(0.7 0.14 75);
-	--chart-3: oklch(0.6 0.16 40);
-	--chart-4: oklch(0.55 0.14 50);
-	--chart-5: oklch(0.5 0.12 55);
-}
-
-.theme-groove {
-	color-scheme: dark;
-	--background: oklch(0.22 0.02 65);
-	--foreground: oklch(0.85 0.06 85);
-	--card: oklch(0.26 0.02 65);
-	--card-foreground: oklch(0.85 0.06 85);
-	--popover: oklch(0.26 0.02 65);
-	--popover-foreground: oklch(0.85 0.06 85);
-	--primary: oklch(0.72 0.14 55);
-	--primary-foreground: oklch(0.22 0.02 65);
-	--secondary: oklch(0.3 0.02 65);
-	--secondary-foreground: oklch(0.85 0.06 85);
-	--muted: oklch(0.3 0.02 65);
-	--muted-foreground: oklch(0.7 0.05 75);
-	--accent: oklch(0.34 0.04 55);
-	--accent-foreground: oklch(0.85 0.06 85);
-	--destructive: oklch(0.64 0.2 25);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.58 0.08 60);
-	--chart-1: oklch(0.8 0.16 85);
-	--chart-2: oklch(0.7 0.18 60);
-	--chart-3: oklch(0.62 0.18 40);
-	--chart-4: oklch(0.55 0.16 50);
-	--chart-5: oklch(0.48 0.14 45);
-}
-
-/* Nord — Polar Night bg, Snow Storm fg, Frost accent */
-.theme-nord {
-	color-scheme: dark;
-	--background: oklch(0.32 0.02 260);
-	--foreground: oklch(0.89 0.02 250);
-	--card: oklch(0.36 0.02 260);
-	--card-foreground: oklch(0.89 0.02 250);
-	--popover: oklch(0.36 0.02 260);
-	--popover-foreground: oklch(0.89 0.02 250);
-	--primary: oklch(0.78 0.08 210);
-	--primary-foreground: oklch(0.25 0.02 260);
-	--secondary: oklch(0.4 0.02 260);
-	--secondary-foreground: oklch(0.89 0.02 250);
-	--muted: oklch(0.4 0.02 260);
-	--muted-foreground: oklch(0.72 0.03 250);
-	--accent: oklch(0.45 0.03 260);
-	--accent-foreground: oklch(0.89 0.02 250);
-	--destructive: oklch(0.62 0.14 25);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.62 0.08 240);
-	--chart-1: oklch(0.78 0.08 210);
-	--chart-2: oklch(0.72 0.1 150);
-	--chart-3: oklch(0.8 0.1 90);
-	--chart-4: oklch(0.68 0.12 330);
-	--chart-5: oklch(0.66 0.14 30);
-}
-
-/* Dracula — dark purple-gray bg, pink accent */
-.theme-dracula {
-	color-scheme: dark;
-	--background: oklch(0.28 0.03 285);
-	--foreground: oklch(0.97 0.01 95);
-	--card: oklch(0.32 0.03 285);
-	--card-foreground: oklch(0.97 0.01 95);
-	--popover: oklch(0.32 0.03 285);
-	--popover-foreground: oklch(0.97 0.01 95);
-	--primary: oklch(0.76 0.16 340);
-	--primary-foreground: oklch(0.22 0.03 285);
-	--secondary: oklch(0.36 0.03 285);
-	--secondary-foreground: oklch(0.97 0.01 95);
-	--muted: oklch(0.36 0.03 285);
-	--muted-foreground: oklch(0.74 0.04 285);
-	--accent: oklch(0.42 0.06 290);
-	--accent-foreground: oklch(0.97 0.01 95);
-	--destructive: oklch(0.66 0.22 20);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.62 0.12 310);
-	--chart-1: oklch(0.76 0.16 340);
-	--chart-2: oklch(0.8 0.17 200);
-	--chart-3: oklch(0.85 0.17 115);
-	--chart-4: oklch(0.74 0.16 290);
-	--chart-5: oklch(0.8 0.16 85);
-}
-
-/* Paper — GitHub Light, crisp white with blue accent */
-.theme-paper {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.27 0.015 260);
-	--card: oklch(0.97 0.003 250);
-	--card-foreground: oklch(0.27 0.015 260);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.27 0.015 260);
-	--primary: oklch(0.55 0.17 255);
-	--primary-foreground: oklch(1 0 0);
-	--secondary: oklch(0.97 0.003 250);
-	--secondary-foreground: oklch(0.27 0.015 260);
-	--muted: oklch(0.97 0.003 250);
-	--muted-foreground: oklch(0.48 0.015 250);
-	--accent: oklch(0.94 0.01 250);
-	--accent-foreground: oklch(0.27 0.015 260);
-	--destructive: oklch(0.55 0.22 25);
-	--border: oklch(0.86 0.01 250);
-	--input: oklch(0.86 0.01 250);
-	--ring: oklch(0.55 0.17 255);
-	--chart-1: oklch(0.55 0.17 255);
-	--chart-2: oklch(0.7 0.16 145);
-	--chart-3: oklch(0.65 0.18 30);
-	--chart-4: oklch(0.6 0.2 330);
-	--chart-5: oklch(0.8 0.16 85);
-}
-
-/* Solarized — warm cream with teal/yellow Solarized palette */
-.theme-solarized {
-	--background: oklch(0.96 0.03 95);
-	--foreground: oklch(0.48 0.02 215);
-	--card: oklch(0.91 0.03 90);
-	--card-foreground: oklch(0.48 0.02 215);
-	--popover: oklch(0.91 0.03 90);
-	--popover-foreground: oklch(0.48 0.02 215);
-	--primary: oklch(0.6 0.14 240);
-	--primary-foreground: oklch(0.96 0.03 95);
-	--secondary: oklch(0.91 0.03 90);
-	--secondary-foreground: oklch(0.48 0.02 215);
-	--muted: oklch(0.91 0.03 90);
-	--muted-foreground: oklch(0.55 0.02 215);
-	--accent: oklch(0.88 0.03 90);
-	--accent-foreground: oklch(0.48 0.02 215);
-	--destructive: oklch(0.55 0.2 25);
-	--border: oklch(0.85 0.03 85);
-	--input: oklch(0.85 0.03 85);
-	--ring: oklch(0.66 0.11 190);
-	--chart-1: oklch(0.6 0.14 240);
-	--chart-2: oklch(0.66 0.11 190);
-	--chart-3: oklch(0.72 0.14 95);
-	--chart-4: oklch(0.6 0.16 350);
-	--chart-5: oklch(0.63 0.18 40);
-}
-
-/* Cream ships a warm brown accent. The product's identity is green, so cream
-   keeps its paper and borrows the green ramp from the chosen shadcn preset.
-   Declared after .theme-cream, so it wins at equal specificity. */
-.theme-cream {
-	--primary: oklch(0.72 0.19 131);
-	--primary-foreground: oklch(0.99 0.02 120);
-	--ring: oklch(0.72 0.19 131);
+	--border: oklch(0.8 0.13 133 / 16%);
+	--input: oklch(0.8 0.13 133 / 20%);
+	--ring: oklch(0.768 0.233 130.85);
 	--chart-1: oklch(0.897 0.196 126.665);
 	--chart-2: oklch(0.768 0.233 130.85);
 	--chart-3: oklch(0.648 0.2 131.684);
@@ -300,13 +119,12 @@
 	--chart-5: oklch(0.453 0.124 130.933);
 }
 
-/* Plan-block semantics, derived once so all eight themes inherit them.
-   Hue-bearing roles follow the active theme; risk and success stay
-   semantic, because a cream product still needs red to read as danger. */
+/* Shared plan-block semantics. Risk and success stay semantic even though
+   green carries the product identity. */
 :root {
 	--brand-ink: var(--primary);
 	--decision: var(--chart-2);
-	--phase: var(--primary);
+	--phase: var(--brand-ink);
 	--risk-low: var(--muted-foreground);
 	--risk-med: oklch(0.7 0.13 70);
 	--risk-high: var(--destructive);
@@ -316,11 +134,14 @@
 	--diagram-edge: var(--border);
 }
 
-/* Dark themes all carry .dark, so one override lifts these for every one. */
+/* Lift semantic inks for the dark palette. */
 .dark {
 	--risk-med: oklch(0.8 0.13 75);
 	--success: oklch(0.74 0.14 155);
 	--warning: oklch(0.8 0.13 75);
+	/* The fill green is too dark to read as ink against a dark surface, so text
+	   and strokes take the bright chart stop instead. */
+	--brand-ink: var(--chart-2);
 }
 
 @layer base {

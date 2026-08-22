@@ -71,20 +71,17 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 	if (!baseURL) throw new Error("Playwright baseURL is required");
 	const agentRepo = await mkdtemp(`${tmpdir()}/plantifiles-playwright-`);
 	try {
-		await page.goto("/login");
-		await page.waitForLoadState("networkidle");
-		await page.getByRole("button", { name: "Sign in as Demo User" }).click();
+		await page.context().addCookies([
+			{
+				name: "pf_dev_user",
+				value: "user_demo",
+				url: baseURL,
+			},
+		]);
+		await page.goto("/");
 		await expect(page).toHaveURL(/\/w\/demo$/);
 
 		await page.goto("/settings/tokens");
-		const userMenu = page.getByRole("button", { name: "Open user menu" });
-		const writePlanSkill = page.getByRole("menuitem", { name: "Write-plan skill" });
-		await expect(async () => {
-			await userMenu.click();
-			await expect(writePlanSkill).toBeVisible({ timeout: 1_000 });
-		}).toPass();
-		await writePlanSkill.press("Escape");
-		await expect(writePlanSkill).toBeHidden();
 		const tokenName = `Playwright ${Date.now()}`;
 		const tokenNameInput = page.getByRole("textbox", { name: "Create a token" });
 		await tokenNameInput.pressSequentially(tokenName);
@@ -128,25 +125,12 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		await expect(page.getByRole("heading", { name: title })).toBeVisible();
 		await expect(page.getByRole("navigation", { name: "Workspace navigation" })).toBeVisible();
 		await expect(page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]')).toBeVisible();
-		await page.getByRole("button", { name: /^Change theme/ }).click();
-		await page.getByRole("menuitemradio", { name: "Dark" }).click();
+		const themeToggle = page.getByRole("button", { name: "Use dark theme" });
+		await themeToggle.click();
 		await expect(page.locator("html")).toHaveClass(/dark/);
-
-		const planArticle = page.locator("main > article");
-		const tldrParagraph = page.locator('[data-block-kind="TLDR"] p');
-		await page.getByRole("button", { name: "Reading settings" }).click();
-		await page.getByRole("menuitem", { name: "Literata" }).click();
-		await page.getByRole("button", { name: "Text size, step 5 of 5" }).click();
-		await page.getByRole("button", { name: "Line width, step 1 of 3" }).click();
-		await expect(planArticle).toHaveCSS("font-family", /Literata/);
-		await expect(planArticle).toHaveCSS("font-size", "20px");
-		await expect(planArticle).toHaveCSS("max-width", "640px");
-		await expect(tldrParagraph).toHaveCSS("font-family", /Literata/);
+		await expect(themeToggle).toHaveAccessibleName("Use light theme");
 		await page.reload();
-		await expect(planArticle).toHaveCSS("font-family", /Literata/);
-		await expect(planArticle).toHaveCSS("font-size", "20px");
-		await expect(planArticle).toHaveCSS("max-width", "640px");
-		await expect(tldrParagraph).toHaveCSS("font-family", /Literata/);
+		await expect(page.locator("html")).toHaveClass(/dark/);
 
 		const markdown = await page.request.get(planUrl, { headers: { Accept: "text/markdown" } });
 		expect(markdown.status()).toBe(200);

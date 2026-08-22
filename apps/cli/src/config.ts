@@ -5,6 +5,8 @@ import { dirname, join } from "node:path";
 export type CliConfig = {
 	token: string;
 	baseUrl: string;
+	/** Recorded at login only when the account has exactly one workspace. */
+	defaultWorkspace?: string;
 };
 
 export const CONFIG_PATH = join(homedir(), ".config", "plantifiles", "config.json");
@@ -31,5 +33,10 @@ export async function resolveConnection(): Promise<CliConfig> {
 	const baseUrl = process.env.PLANTIFILES_BASE_URL ?? saved?.baseUrl;
 	if (!token) throw new Error("No token configured. Run `plantifiles login` or set PLANTIFILES_TOKEN.");
 	if (!baseUrl) throw new Error("No service URL configured. Run `plantifiles login` or set PLANTIFILES_BASE_URL.");
-	return { token, baseUrl: baseUrl.replace(/\/$/, "") };
+	const defaultWorkspace = process.env.PLANTIFILES_WORKSPACE ?? saved?.defaultWorkspace;
+	return {
+		token,
+		baseUrl: baseUrl.replace(/\/$/, ""),
+		...(defaultWorkspace ? { defaultWorkspace } : {}),
+	};
 }

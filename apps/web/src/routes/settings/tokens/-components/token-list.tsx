@@ -84,8 +84,16 @@ export function TokenList({ tokens }: { tokens: TokenListItem[] }) {
 				<Fragment key={token.id}>
 					{index > 0 ? <SettingsRowDivider /> : null}
 					<SettingsRow
-						label={token.name}
-						hint={token.lastUsedAt ? `Last used ${formatUtcTimestamp(token.lastUsedAt)}` : "Never used"}
+						label={
+							<span className="flex min-w-0 items-baseline gap-2">
+								<span className="truncate">{token.name}</span>
+								{token.prefix ? <code className="font-mono text-muted-foreground text-xs">{token.prefix}…</code> : null}
+							</span>
+						}
+						hint={[
+							token.lastUsedAt ? `Last used ${formatUtcTimestamp(token.lastUsedAt)}` : "Never used",
+							token.expiresAt ? `expires ${formatUtcTimestamp(token.expiresAt)}` : "no expiry",
+						].join(" · ")}
 						control={
 							<AlertDialog>
 								<AlertDialogTrigger asChild>

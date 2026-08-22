@@ -1,17 +1,16 @@
 import { Button } from "@plantifiles/ui/components/button";
-import { Card, CardContent, CardFooter } from "@plantifiles/ui/components/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
+import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Check, Copy, ListFilter, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PlanStatus } from "#/lib/data/plan-types";
+import { PLAN_STATUSES, type PlanStatus } from "#/lib/data/plan-types";
+import { useClipboard } from "#/lib/helpers/use-clipboard";
 import type { DashboardPlan } from "../-data/dashboard";
 import { StatusChip } from "../../../../components/status-chip";
 
 const route = getRouteApi("/w/$slug/");
-
-const STATUS_ORDER: PlanStatus[] = ["draft", "in_review", "approved", "archived"];
 
 export function Dashboard() {
 	const { plans } = route.useLoaderData();
@@ -48,21 +47,14 @@ export function Dashboard() {
 			),
 		[plans, normalizedQuery, search.status],
 	);
-	const openDecisions = plans.reduce((total, item) => total + item.openDecisions, 0);
 
 	return (
 		<section>
-			<header className="border-b pb-6">
+			<header className="flex items-baseline gap-3 border-b pb-4">
 				<h1 className="font-medium text-2xl tracking-tight">Plans</h1>
-				<p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
-					<span>
-						{plans.length} {plans.length === 1 ? "plan" : "plans"}
-					</span>
-					<span className="text-border">·</span>
-					<span className={openDecisions > 0 ? "text-warning" : undefined}>{openDecisions} open decisions</span>
-					<span className="text-border">·</span>
-					<span>{plans.filter((item) => item.status === "in_review").length} in review</span>
-				</p>
+				<span className="font-mono text-muted-foreground text-xs">
+					{plans.length} {plans.length === 1 ? "plan" : "plans"}
+				</span>
 			</header>
 
 			{plans.length === 0 ? (
@@ -94,11 +86,11 @@ export function Dashboard() {
 						>
 							<SelectTrigger className="h-9 w-44 sm:ml-auto" aria-label="Filter by status">
 								<ListFilter className="size-3.5 text-muted-foreground" />
-								<SelectValue placeholder="All statuses" />
+								<SelectValue>{search.status ? search.status.replace("_", " ") : "All statuses"}</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="all">All statuses</SelectItem>
-								{STATUS_ORDER.map((status) => (
+								{PLAN_STATUSES.map((status) => (
 									<SelectItem key={status} value={status}>
 										{status.replace("_", " ")}
 									</SelectItem>
@@ -112,7 +104,7 @@ export function Dashboard() {
 							No plans match these filters.
 						</output>
 					) : (
-						<ul className="grid grid-cols-1 gap-3 py-2 sm:grid-cols-2 md:grid-cols-3">
+						<ul className="divide-y border-y">
 							{visiblePlans.map((plan) => (
 								<li key={plan.id}>
 									<PlanEntry plan={plan} workspaceSlug={slug} />
@@ -131,72 +123,36 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 		<Link
 			to="/p/$workspaceSlug/$planSlug"
 			params={{ workspaceSlug, planSlug: plan.slug }}
-			className="group block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			className="-mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-3 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto_5rem_3rem]"
 		>
-			<Card
-				size="sm"
-				className="h-full min-h-48 justify-between transition group-hover:-translate-y-0.5 group-hover:ring-brand-ink/30 motion-reduce:transform-none"
-			>
-				<CardContent className="flex items-start justify-between gap-2">
-					<span
-						aria-hidden="true"
-						className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/15 text-2xl ring-1 ring-primary/20 transition-transform group-hover:scale-105 motion-reduce:transform-none"
-					>
+			<div className="min-w-0">
+				<div className="flex min-w-0 items-center gap-2.5">
+					<span aria-hidden="true" className="shrink-0 text-lg">
 						{plan.emoji ?? "📝"}
 					</span>
-					<StatusChip status={plan.status} size="sm" />
-				</CardContent>
-				<CardContent>
-					<h2 className="line-clamp-2 font-medium text-base leading-snug tracking-tight transition-colors group-hover:text-brand-ink">
-						{plan.title}
-					</h2>
-				</CardContent>
-				<CardFooter className="gap-2 font-mono text-[11px] text-muted-foreground">
-					<span className={plan.openDecisions > 0 ? "text-warning" : undefined}>{plan.openDecisions} open</span>
-					<span className="text-border">·</span>
-					<span>v{plan.version}</span>
-				</CardFooter>
-			</Card>
+					<h2 className="truncate font-medium text-sm">{plan.title}</h2>
+				</div>
+				<p className="mt-1 pl-7 font-mono text-[11px] text-muted-foreground sm:hidden">
+					{plan.openDecisions} open · v{plan.version}
+				</p>
+			</div>
+			<StatusChip status={plan.status} size="sm" />
+			<span
+				className={cn(
+					"hidden font-mono text-xs sm:block",
+					plan.openDecisions > 0 ? "text-warning" : "text-muted-foreground",
+				)}
+			>
+				{plan.openDecisions > 0 ? `${plan.openDecisions} open` : "—"}
+			</span>
+			<span className="hidden font-mono text-muted-foreground text-xs sm:block">v{plan.version}</span>
 		</Link>
 	);
 }
 
 function EmptyState({ slug }: { slug: string }) {
-	const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
-	const resetTimerRef = useRef<number | undefined>(undefined);
-	const copyAttemptRef = useRef(0);
+	const clipboard = useClipboard();
 	const command = `plantifiles push plan.mdx --workspace ${slug}`;
-
-	useEffect(
-		() => () => {
-			copyAttemptRef.current += 1;
-			window.clearTimeout(resetTimerRef.current);
-		},
-		[],
-	);
-
-	const copyCommand = async () => {
-		const attempt = ++copyAttemptRef.current;
-		let resetDelay = 1500;
-		window.clearTimeout(resetTimerRef.current);
-		resetTimerRef.current = undefined;
-		setCopyStatus("idle");
-
-		try {
-			await navigator.clipboard.writeText(command);
-			if (attempt !== copyAttemptRef.current) return;
-			setCopyStatus("success");
-		} catch {
-			if (attempt !== copyAttemptRef.current) return;
-			setCopyStatus("error");
-			resetDelay = 3000;
-		}
-
-		resetTimerRef.current = window.setTimeout(() => {
-			setCopyStatus("idle");
-			resetTimerRef.current = undefined;
-		}, resetDelay);
-	};
 
 	return (
 		<div className="mt-10">
@@ -206,14 +162,19 @@ function EmptyState({ slug }: { slug: string }) {
 			</p>
 			<div className="mt-6 flex items-center gap-2 rounded-lg border bg-muted/40 p-2 pl-4">
 				<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">{command}</code>
-				<Button size="icon-sm" variant="quiet" aria-label="Copy push command" onClick={() => void copyCommand()}>
-					{copyStatus === "success" ? <Check /> : <Copy />}
+				<Button
+					size="icon-sm"
+					variant="quiet"
+					aria-label="Copy push command"
+					onClick={() => void clipboard.copy(command)}
+				>
+					{clipboard.status === "copied" ? <Check /> : <Copy />}
 				</Button>
 			</div>
 			<output aria-live="polite" className="mt-2 block min-h-5 text-muted-foreground text-xs">
-				{copyStatus === "success"
+				{clipboard.status === "copied"
 					? "Push command copied."
-					: copyStatus === "error"
+					: clipboard.status === "error"
 						? "Couldn't copy the push command. Select it and copy manually."
 						: ""}
 			</output>
@@ -224,17 +185,17 @@ function EmptyState({ slug }: { slug: string }) {
 export function DashboardSkeleton() {
 	return (
 		<output className="block" aria-label="Loading plans">
-			<div className="border-b pb-8">
-				<div className="h-3 w-20 animate-pulse rounded bg-muted" />
-				<div className="mt-4 h-11 w-64 animate-pulse rounded bg-muted" />
-				<div className="mt-4 h-4 w-96 animate-pulse rounded bg-muted" />
+			<div className="flex items-baseline gap-3 border-b pb-4">
+				<div className="h-7 w-20 animate-pulse rounded bg-muted" />
+				<div className="h-3 w-12 animate-pulse rounded bg-muted" />
 			</div>
-			<div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-				{[0, 1, 2, 3, 4, 5].map((card) => (
-					<div key={card} className="min-h-52 animate-pulse rounded-xl border bg-muted/40 p-4">
-						<div className="size-16 rounded-full bg-muted" />
-						<div className="mt-5 h-5 w-4/5 rounded bg-muted" />
-						<div className="mt-2 h-5 w-3/5 rounded bg-muted" />
+			<div className="mt-5 h-9 w-full max-w-xs animate-pulse rounded bg-muted" />
+			<div className="mt-5 divide-y border-y">
+				{[0, 1, 2, 3, 4, 5].map((row) => (
+					<div key={row} className="flex h-14 animate-pulse items-center gap-3 px-3">
+						<div className="size-5 rounded bg-muted" />
+						<div className="h-4 flex-1 rounded bg-muted" />
+						<div className="h-5 w-20 rounded bg-muted" />
 					</div>
 				))}
 			</div>

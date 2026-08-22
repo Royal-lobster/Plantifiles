@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { PLAN_STATUSES } from "#/lib/data/plan-types";
 import { errorResponse, readJson } from "#/lib/helpers/http";
 import { planEmojiSchema } from "#/lib/helpers/plan-emoji";
 import { listPlans } from "#/lib/data/plan-reader.server";
@@ -16,7 +17,7 @@ const publishPlanSchema = z.object({
 	force: z.boolean().optional(),
 });
 
-const planStatusSchema = z.enum(["draft", "in_review", "approved", "archived"]);
+const planStatusSchema = z.enum(PLAN_STATUSES);
 
 export const Route = createFileRoute("/api/plans/")({
 	server: {

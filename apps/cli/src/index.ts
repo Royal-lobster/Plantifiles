@@ -2,12 +2,21 @@
 
 import { spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
 import { basename, extname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import { setTimeout as sleep } from "node:timers/promises";
 import { Command } from "commander";
-import { ApiError, type PlanStatus, PlantifilesClient } from "@plantifiles/api-client";
+import {
+	ApiError,
+	type DeviceLoginPoll,
+	type PlanSummary,
+	PlantifilesClient,
+	pollDeviceLogin,
+	startDeviceLogin,
+} from "@plantifiles/api-client";
 import { lint } from "@plantifiles/core";
-import { CONFIG_PATH, resolveConnection, saveConfig } from "./config.js";
+import { CONFIG_PATH, type CliConfig, resolveConnection, saveConfig } from "./config.js";
 import { findRepositoryRoot, loadRepositoryState, saveRepositoryState, trackedPath } from "./repository-state.js";
 
 type PushOptions = {
@@ -36,19 +45,66 @@ function titleFromSource(source: string, file: string): string {
 		.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function login(): Promise<void> {
+/**
+ * OAuth 2.0 device authorization, the flow `gh` and `wrangler` use. The terminal
+ * never handles the credential a human can see: it prints a short code, the
+ * browser proves who you are, and the token arrives over the polling channel
+ * keyed by a device code that was never displayed.
+ */
+async function login(options: { baseUrl?: string }): Promise<void> {
+	const baseUrl = (options.baseUrl ?? process.env.PLANTIFILES_BASE_URL ?? (await askForBaseUrl()))
+		.trim()
+		.replace(/\/$/, "");
+	if (!baseUrl) throw new Error("Plantifiles URL is required.");
+
+	const started = await startDeviceLogin(baseUrl, `${hostname()} (${process.platform})`);
+	console.log(`\n  Your code: ${started.userCode}`);
+	console.log(`  Approve at: ${started.verificationUri}\n`);
+	openUrl(started.verificationUriComplete);
+	console.log("Waiting for approval… (Ctrl-C to cancel)");
+
+	const deadline = Date.now() + started.expiresIn * 1000;
+	while (Date.now() < deadline) {
+		await sleep(started.interval * 1000);
+		let result: DeviceLoginPoll;
+		try {
+			result = await pollDeviceLogin(baseUrl, started.deviceCode);
+		} catch (error) {
+			// 404 is the server's single answer for expired, denied, and unknown, so
+			// it ends the wait rather than looping until the deadline.
+			if (error instanceof ApiError && error.status === 404) throw new Error("Login was denied or expired.");
+			throw error;
+		}
+		if (result.status === "pending") continue;
+
+		const config: CliConfig = { token: result.token, baseUrl };
+		const workspaces = await new PlantifilesClient(config).listWorkspaces();
+		const defaultWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
+		if (defaultWorkspace) config.defaultWorkspace = defaultWorkspace.slug;
+		await saveConfig(config);
+		console.log(`\nSigned in. Credentials saved to ${CONFIG_PATH} with mode 0600.`);
+		if (defaultWorkspace) console.log(`Default workspace: ${defaultWorkspace.slug}`);
+		return;
+	}
+	throw new Error("Login timed out. Run `plantifiles login` again.");
+}
+
+async function askForBaseUrl(): Promise<string> {
 	const terminal = createInterface({ input: process.stdin, output: process.stdout });
 	try {
-		const configuredBaseUrl = process.env.PLANTIFILES_BASE_URL;
-		const baseUrl = configuredBaseUrl ?? (await terminal.question("Plantifiles URL: "));
-		if (!baseUrl.trim()) throw new Error("Plantifiles URL is required.");
-		console.log(`Create a token at ${baseUrl.replace(/\/$/, "")}/settings/tokens`);
-		const token = await terminal.question("Token: ");
-		if (!token.trim()) throw new Error("Token is required.");
-		await saveConfig({ token: token.trim(), baseUrl: baseUrl.trim().replace(/\/$/, "") });
-		console.log(`Saved credentials to ${CONFIG_PATH} with mode 0600.`);
+		return await terminal.question("Plantifiles URL: ");
 	} finally {
 		terminal.close();
+	}
+}
+
+async function listWorkspaces(): Promise<void> {
+	const connection = await resolveConnection();
+	const workspaces = await new PlantifilesClient(connection).listWorkspaces();
+	for (const item of workspaces) {
+		const tags = item.role;
+		const marker = item.slug === connection.defaultWorkspace ? "*" : " ";
+		console.log(`${marker} ${item.slug.padEnd(24)} ${item.name} (${tags})`);
 	}
 }
 
@@ -59,10 +115,15 @@ async function push(file: string, options: PushOptions): Promise<void> {
 	const state = await loadRepositoryState(root);
 	const key = trackedPath(root, absoluteFile);
 	const tracked = state[key];
-	const workspace = options.workspace ?? tracked?.workspace;
-	if (!workspace) throw new Error("A first push requires --workspace <slug>.");
+	const connection = await resolveConnection();
+	// Explicit flag, then where this file was published before, then the login
+	// default when the account had exactly one workspace.
+	const workspace = options.workspace ?? tracked?.workspace ?? connection.defaultWorkspace;
+	if (!workspace) {
+		throw new Error("No workspace to publish to. Pass --workspace <slug>.");
+	}
 
-	const client = new PlantifilesClient(await resolveConnection());
+	const client = new PlantifilesClient(connection);
 	const result = tracked
 		? await client.createVersion(tracked.planId, {
 				source,
@@ -119,7 +180,7 @@ async function openPlan(id: string): Promise<void> {
 	openUrl(`${config.baseUrl}/p/${encodeURIComponent(detail.workspace.slug)}/${encodeURIComponent(detail.plan.slug)}`);
 }
 
-function renderStatusTable(plans: PlanStatus[]): string {
+function renderStatusTable(plans: PlanSummary[]): string {
 	const rows = [
 		["TITLE", "STATUS", "VER", "DECISIONS", "APPROVALS", "READ", "AGENT"],
 		...plans.map((plan) => [
@@ -127,7 +188,7 @@ function renderStatusTable(plans: PlanStatus[]): string {
 			plan.status,
 			`v${plan.version}`,
 			String(plan.openDecisions),
-			`${plan.approvals}/${plan.requiredApprovals}`,
+			String(plan.approvals),
 			`${Math.max(1, Math.ceil(plan.readTimeMinutes))}m`,
 			plan.agentName ?? "hand edit",
 		]),
@@ -137,13 +198,10 @@ function renderStatusTable(plans: PlanStatus[]): string {
 }
 
 async function status(options: StatusOptions): Promise<void> {
-	let workspace = options.workspace;
-	if (!workspace) {
-		const root = findRepositoryRoot(process.cwd());
-		workspace = Object.values(await loadRepositoryState(root))[0]?.workspace;
-	}
-	if (!workspace) throw new Error("Use --workspace <slug> before a plan has been tracked in this repository.");
-	const plans = await new PlantifilesClient(await resolveConnection()).listPlans(workspace);
+	const connection = await resolveConnection();
+	const workspace = options.workspace ?? connection.defaultWorkspace;
+	if (!workspace) throw new Error("No workspace to list. Pass --workspace <slug>.");
+	const plans = await new PlantifilesClient(connection).listPlans(workspace);
 	console.log(plans.length > 0 ? renderStatusTable(plans) : `No plans in ${workspace}.`);
 }
 
@@ -154,13 +212,19 @@ async function main(): Promise<void> {
 		.showHelpAfterError();
 	program.action(() => program.outputHelp());
 
-	program.command("login").description("Save an API token").action(login);
+	program
+		.command("login")
+		.description("Authorize this machine through the browser")
+		.option("--base-url <url>", "Plantifiles service URL")
+		.action(login);
+
+	program.command("workspaces").description("List workspaces you belong to").action(listWorkspaces);
 
 	program
 		.command("push")
 		.description("Publish a plan or create its next version")
 		.argument("<file>", "plan file to publish")
-		.option("--workspace <slug>", "workspace for the first push")
+		.option("--workspace <slug>", "workspace to publish into")
 		.option("--title <title>", "plan title; defaults to frontmatter or filename")
 		.option("--agent <name>", "agent that authored the plan")
 		.option("--prompt <prompt>", "prompt used to author the plan")
@@ -190,7 +254,7 @@ async function main(): Promise<void> {
 	program
 		.command("status")
 		.description("List workspace plans")
-		.option("--workspace <slug>", "workspace to list; defaults to the tracked workspace")
+		.option("--workspace <slug>", "workspace to list")
 		.action(status);
 
 	await program.parseAsync(process.argv);

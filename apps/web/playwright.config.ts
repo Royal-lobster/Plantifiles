@@ -14,8 +14,9 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: "pnpm --dir ../.. db:migrate:local && pnpm dev",
-		url: `${origin}/login`,
+		command:
+			"pnpm --dir ../.. db:migrate:local && pnpm exec wrangler d1 execute plantifiles --local --file seed.sql && pnpm dev",
+		url: origin,
 		reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "true",
 		timeout: 120_000,
 	},

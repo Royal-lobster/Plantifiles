@@ -1,10 +1,11 @@
 import { approval, comment, decision, membership, plan, planBlock, workspace } from "@plantifiles/db/schema";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNotNull } from "drizzle-orm";
 import { requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
 
 type PlanStatus = typeof plan.$inferSelect.status;
 type MembershipRole = typeof membership.$inferSelect.role;
+const APPROVAL_THRESHOLD = 1;
 
 type ReviewAccess = {
 	identity: Awaited<ReturnType<typeof requireIdentity>>;
@@ -27,7 +28,7 @@ async function requireReviewAccess(request: Request, planId: string): Promise<Re
 		.from(plan)
 		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
 		.innerJoin(membership, and(eq(membership.workspaceId, workspace.id), eq(membership.userId, identity.user.id)))
-		.where(eq(plan.id, planId))
+		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
 		.limit(1);
 	const access = rows[0];
 	if (!access) throw new Response("Forbidden", { status: 403 });
@@ -41,7 +42,7 @@ function requireOwner(role: MembershipRole): void {
 async function approvalGate(target: typeof plan.$inferSelect): Promise<{ allowed: boolean; reason: string | null }> {
 	if (!target.currentVersionId) return { allowed: false, reason: "The plan has no current version." };
 	const db = getDb();
-	const [openRows, approvalRows, workspaceRows] = await Promise.all([
+	const [openRows, approvalRows] = await Promise.all([
 		db
 			.select({ count: count() })
 			.from(decision)
@@ -55,25 +56,19 @@ async function approvalGate(target: typeof plan.$inferSelect): Promise<{ allowed
 			)
 			.where(and(eq(decision.planId, target.id), eq(decision.status, "open"))),
 		db.select({ count: count() }).from(approval).where(eq(approval.versionId, target.currentVersionId)),
-		db
-			.select({ requiredApprovals: workspace.requiredApprovals })
-			.from(workspace)
-			.where(eq(workspace.id, target.workspaceId))
-			.limit(1),
 	]);
 	const openDecisions = openRows[0]?.count ?? 0;
 	const approvals = approvalRows[0]?.count ?? 0;
-	const requiredApprovals = workspaceRows[0]?.requiredApprovals ?? 1;
 	if (openDecisions > 0) {
 		return {
 			allowed: false,
 			reason: `${openDecisions} open ${openDecisions === 1 ? "decision blocks" : "decisions block"} approval.`,
 		};
 	}
-	if (approvals < requiredApprovals) {
+	if (approvals < APPROVAL_THRESHOLD) {
 		return {
 			allowed: false,
-			reason: `${requiredApprovals - approvals} more ${requiredApprovals - approvals === 1 ? "approval is" : "approvals are"} required on the current version.`,
+			reason: "1 more approval is required on the current version.",
 		};
 	}
 	return { allowed: true, reason: null };

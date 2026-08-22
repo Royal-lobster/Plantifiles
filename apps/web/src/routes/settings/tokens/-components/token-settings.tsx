@@ -14,14 +14,16 @@ export function TokenSettings() {
 			<header>
 				<h1 className="font-medium text-2xl tracking-tight">Agent tokens</h1>
 				<p className="mt-1 text-muted-foreground text-sm">
-					Tokens authenticate the CLI and MCP server. A plaintext token is shown once.
+					Run <code className="font-mono">plantifiles login</code> to connect a terminal — it approves in the browser
+					and no secret is ever pasted. Create a token by hand only where no browser exists, such as CI. Every token
+					expires after 90 days.
 				</p>
 			</header>
 
 			<SettingsSection
 				icon={KeyRound}
 				title="Tokens"
-				description="Create and revoke credentials for agents and command-line tools."
+				description="Credentials issued to command-line tools and agents, however they were created."
 			>
 				<CreateTokenForm />
 				<SettingsRowDivider />

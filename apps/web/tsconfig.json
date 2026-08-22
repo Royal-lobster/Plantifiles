@@ -21,7 +21,6 @@
 		},
 		"types": ["./worker-configuration.d.ts", "node", "vite/client"],
 		"noUnusedLocals": true,
-		// dotvars 1.0.6 generates an empty normalizeRaw parameter for schemas without structured values.
 		"noUnusedParameters": false,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true

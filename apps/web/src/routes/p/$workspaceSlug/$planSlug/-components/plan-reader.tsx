@@ -2,11 +2,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { History } from "lucide-react";
-import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { StatusChip } from "#/components/status-chip";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
-import { useReaderPreferences } from "#/routes/__root/-components/reader-preferences";
 import { renderPlan } from "#/routes/p/$workspaceSlug/$planSlug/-components/plan-render";
 import type { PlanReaderData } from "#/routes/p/$workspaceSlug/$planSlug/-data/plan-reader";
 import { PlanActionsMenu } from "./plan-actions-menu";
@@ -26,13 +24,6 @@ function PlanReader({ data }: PlanReaderProps) {
 	const rendered = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
-	const { fontSize, fontStack, maxWidth } = useReaderPreferences();
-	const readerStyle = {
-		maxWidth,
-		fontFamily: fontStack,
-		fontSize,
-		"--reader-font-size": fontSize,
-	} as CSSProperties;
 
 	async function selectVersion(value: string) {
 		const number = Number(value);
@@ -46,13 +37,11 @@ function PlanReader({ data }: PlanReaderProps) {
 		});
 	}
 
-	// Reader preferences own the plan's measure and typography without changing
-	// the surrounding workspace chrome.
 	return (
-		<article aria-label={data.plan.title} className="mx-auto w-full" style={readerStyle}>
+		<article aria-label={data.plan.title} className="mx-auto w-full max-w-measure">
 			<header className="border-b pb-7">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
-				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-[calc(var(--reader-font-size)+14px)] leading-[1.15] tracking-tight md:text-[calc(var(--reader-font-size)+20px)]">
+				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
 					{data.plan.emoji && (
 						<span aria-hidden className="shrink-0 leading-none">
 							{data.plan.emoji}

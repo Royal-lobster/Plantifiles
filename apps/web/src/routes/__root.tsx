@@ -1,5 +1,6 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
+import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { Button } from "@plantifiles/ui/components/button";
 import {
 	createRootRoute,
@@ -13,13 +14,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import appCss from "../styles.css?url";
 import { AppShell } from "./__root/-components/app-shell";
-import { ReaderPreferencesProvider } from "./__root/-components/reader-preferences";
 import { THEME_PREPAINT_SCRIPT } from "./__root/-components/theme-config";
 import { ThemeProvider } from "./__root/-components/theme-provider";
-import { getNavigationData } from "./__root/-data/navigation";
 
 export const Route = createRootRoute({
-	loader: () => getNavigationData(),
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
@@ -38,7 +36,6 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
-	const navigation = Route.useLoaderData();
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
@@ -49,11 +46,17 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				<ReaderPreferencesProvider>
+				{import.meta.env.DEV ? (
 					<ThemeProvider>
-						<AppShell navigation={navigation}>{children}</AppShell>
+						<AppShell localDev>{children}</AppShell>
 					</ThemeProvider>
-				</ReaderPreferencesProvider>
+				) : (
+					<ClerkProvider>
+						<ThemeProvider>
+							<AppShell>{children}</AppShell>
+						</ThemeProvider>
+					</ClerkProvider>
+				)}
 				<Scripts />
 			</body>
 		</html>

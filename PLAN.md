@@ -26,15 +26,15 @@ Settled, and the pins below are deliberate. Do not substitute, and do not float 
   - `@tanstack/react-start` `1.168.42`, `@tanstack/react-router` `1.170.25`, `@vitejs/plugin-react` `^6.0.1`, `vite` `8.2.1`.
   - `@cloudflare/vite-plugin` **`1.51.2`** and `wrangler` **`4.120.1`**. Do not upgrade either one: `1.51.3` and `4.121.0` both pin an unpublished `miniflare@5.20260804.1-alpha`, and install dies with `ETARGET`.
 - **Cloudflare** — Workers with the static-assets binding, not Pages. D1 for data and KV for caches. No R2 in v1.
-- **packages/db** — Drizzle ORM `0.45.2` with drizzle-kit `0.31.10` against D1. Not `drizzle-orm@rc`, whose `1.0.0-rc.4` breaks the better-auth adapter's peer range.
-- **Auth** — better-auth `1.6.27` with `@better-auth/drizzle-adapter` `1.6.27` and the GitHub social provider. It is the only option with first-party TanStack Start support (`better-auth/tanstack-start`, `tanstackStartCookies`) *and* a Drizzle adapter, so sessions live in the same schema and the same migration pipeline.
+- **packages/db** — Drizzle ORM `0.45.2` with drizzle-kit `0.31.10` against D1.
+- **Auth** — Clerk with Organizations. Clerk is authoritative; D1 keeps stable-ID user, workspace, and membership projections for application data and joins.
 - **packages/core** — framework-free: MDX vocabulary, parse/normalize, lint, block keys, structural diff, skim projection. No React, no DB, no network.
 - **packages/ui** — the shared shadcn/ui workspace with its own `components.json`, per `recalio`.
 - **apps/cli** — `plantifiles` binary, Node. **apps/mcp** — stdio MCP server, Node.
 - **Tailwind v4**, CSS-first with `@theme`. There is no `tailwind.config.js`.
 - `zod` for validation, **TanStack Query v5** for client server-state, **Vitest 4** for `packages/core`, **Playwright** for one end-to-end smoke.
 
-`wrangler.jsonc` must carry `"compatibility_flags": ["nodejs_compat"]`. Without it the Worker refuses to boot (`No such module "node:stream/web"`), and better-auth needs AsyncLocalStorage regardless. The public origin comes from a `PUBLIC_URL` var; no domain is hardcoded anywhere.
+`wrangler.jsonc` must carry `"compatibility_flags": ["nodejs_compat"]` for the Worker runtime and Node-compatible dependencies. The public origin comes from a `PUBLIC_URL` var; no domain is hardcoded anywhere.
 
 **`RESEARCH.md` carries the verified API shapes, exact config file contents, and the gotchas behind every choice above.** It was produced by running real code on workerd. Read the relevant section before writing code in each phase — it documents at least four failure modes that are silent rather than loud.
 
@@ -204,7 +204,7 @@ Facts that decide whether this works:
 
 ## Drizzle schema
 
-better-auth owns the `user`, `session`, `account`, and `verification` tables — generate them with its CLI into the same Drizzle schema file and let application tables reference `user.id`.
+Clerk owns identities, sessions, Organizations, roles, and invitations. The application `user`, `workspace`, and `membership` tables are stable-ID projections linked by nullable unique Clerk IDs; only linked workspaces authorize production access.
 
 D1 is SQLite, which changes how three things are expressed. `text({ enum: [...] })` is a TypeScript union that creates **no** database constraint, so pair every one with a `check()`. JSON is `text(..., { mode: 'json' })` with a `$type<...>()`. Timestamps are `integer(..., { mode: 'timestamp' })`, which stores Unix **seconds** — never mix that with `timestamp_ms` anywhere in the schema, because the failure mode is silently landing in 1970.
 
@@ -217,7 +217,6 @@ export const workspace = sqliteTable('workspace', {
   id: text('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
-  requiredApprovals: integer('required_approvals').notNull().default(1),
 })
 
 export const plan = sqliteTable('plan', {
@@ -265,7 +264,7 @@ Every endpoint is a file in `src/routes/` whose `createFileRoute` carries a `ser
 - `api.plans.$id.comments.ts` — `POST { blockKey?, parentId?, body, agentAssisted? }`.
 - `api.tokens.ts` — `POST`, session-authed only, returns the plaintext token exactly once.
 
-Token auth is `Authorization: Bearer <token>`, sha256-hashed and compared against `apiToken.tokenHash`. Browser requests use the better-auth session.
+Token auth is `Authorization: Bearer <token>`, sha256-hashed and compared against `apiToken.tokenHash`. Browser requests use Clerk sessions and synchronously project the active Organization membership.
 
 Note that a route defining only `POST` answers a `GET` with 200 and SSR HTML rather than 405. Where method rejection matters, add an explicit `ANY` handler returning 405.
 
@@ -366,21 +365,19 @@ Status chips are defined once and reused by the dashboard, the reader header, an
 
 ## The shell
 
-Persistent left sidebar: workspace switcher, Plans, Decisions, Settings. Topbar breadcrumb `workspace / plan`. Command palette on `cmd+k` searching plan titles and open decisions. User menu with theme toggle. The plan reader renders in the same content region as every other page, reached by client navigation.
+The application shell is one compact row: Plantifiles, Clerk Organization switcher, agent tokens, theme, and account controls. The plan reader and dashboard use the same content region.
 
-Routes, with the TanStack Start file that owns each. Shell chrome lives in `src/routes/-components/`, following `recalio`'s dash-prefixed colocation convention:
+Routes, with the TanStack Start file that owns each. Shell chrome lives in `src/routes/__root/-components/`, following the dash-prefixed colocation convention:
 
-- `/` — `index.tsx`. Redirect to the user's last workspace, or onboarding when they have none.
-- `/w/:slug` — `w.$slug.index.tsx`. Dashboard.
-- `/w/:slug/decisions` — `w.$slug.decisions.tsx`. Every open decision across all plans, grouped by plan, with owner and the plan's status. The team's "what is blocking planning" view, nearly free given the schema.
-- `/w/:slug/settings` — `w.$slug.settings.tsx`. Name, `requiredApprovals`, members and roles.
-- `/settings/tokens` — `settings.tokens.tsx`. Create a named token, reveal the plaintext exactly once, list tokens with `lastUsedAt`, revoke. This is the page `plantifiles login` sends people to.
-- `/p/:workspaceSlug/:planSlug` — `p.$workspaceSlug.$planSlug.tsx`. The reader, and the negotiated route from Phase 2.
-- `/login` — `login.tsx`. GitHub only.
+- `/` — redirect signed-out users to hosted Clerk sign-in, signed-in users without an Organization to Clerk Organization creation, and members to their first linked workspace.
+- `/w/:slug` — workspace dashboard.
+- `/settings/tokens` — create a named token, reveal the plaintext exactly once, list tokens with `lastUsedAt`, and revoke.
+- `/cli` — approve or deny a CLI device login from a signed-in browser.
+- `/p/:workspaceSlug/:planSlug` — reader and content-negotiated Markdown route.
 
 ## The dashboard
 
-A plan table, not a card grid. Columns in order: **Title** (`font-medium`, truncated, `w-[40%]`), **Status** chip, **Version** as `v{n}`, **Author** (avatar plus `agentName` as `text-xs text-muted-foreground` on a second line, or "hand edit" when null), **Decisions** (`{n} open` tinted `--warning` when above zero, otherwise a muted dash), **Approvals** as `{n}/{required}`, **Read time**, **Updated** as relative time. Rows are `h-14` with `border-b` separators and `hover:bg-muted/50`, no zebra striping, whole row navigates. Filter by status, sort by updated, text filter on title.
+A plan table, not a card grid. Columns in order: **Title** (`font-medium`, truncated, `w-[40%]`), **Status** chip, **Version** as `v{n}`, **Author** (avatar plus `agentName` as `text-xs text-muted-foreground` on a second line, or "hand edit" when null), **Decisions** (`{n} open` tinted `--warning` when above zero, otherwise a muted dash), **Approvals** as the current-version count against the fixed one-approval gate, **Read time**, **Updated** as relative time. Rows are `h-14` with `border-b` separators and `hover:bg-muted/50`, no zebra striping, whole row navigates. Filter by status, sort by updated, text filter on title.
 
 The empty state shows the literal `plantifiles push` command with the user's workspace slug already filled in, because first run is CLI-first and the browser's job there is to teach the command.
 
@@ -483,7 +480,7 @@ The thing that makes a plan more than a wiki page.
 - **Comments anchored to blocks.** Hovering a block reveals a comment affordance; threads are one level deep — a comment and its replies. Comments carry `agentAssisted` and render a small marker when set. Comments whose `blockKey` no longer exists in the current version render in a collapsed "from an earlier version" group linking to the version they were written against.
 - **Decisions.** Every `<Decision>` block in the source gets a resolution control in the reader: the owner (or any admin) records a resolution, which sets `Decision.status = RESOLVED`. Resolved decisions collect into a **Decision log** at the bottom of the plan, question and resolution paired. That log is an ADR trail the team gets for free.
 - **Approvals.** Any member approves the *current version*. Approving a plan then pushing a new version invalidates nothing retroactively but the gate re-evaluates against the new version, because approving v3 says nothing about v4.
-- **Lifecycle.** `DRAFT → IN_REVIEW → APPROVED → BUILDING → SHIPPED → ARCHIVED`, advanced manually except for one hard gate: `APPROVED` requires `Workspace.requiredApprovals` approvals on the current version **and** zero `OPEN` decisions. Any state may move to `ARCHIVED`. Show the blocking reason inline when the gate fails.
+- **Lifecycle.** `DRAFT → IN_REVIEW → APPROVED → BUILDING → SHIPPED → ARCHIVED`, advanced manually except for one hard gate: `APPROVED` requires exactly one approval on the current version **and** zero `OPEN` decisions. Any state may move to `ARCHIVED`. Show the blocking reason inline when the gate fails.
 
 **Phase 6 done when:** a comment on a block survives a version bump that leaves the block intact and gets flagged when the block is deleted; resolving all decisions plus one approval flips a plan to `APPROVED`; attempting `APPROVED` with an open decision fails with a stated reason.
 

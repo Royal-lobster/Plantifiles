@@ -3,6 +3,7 @@ export { planEmojiFromSource } from "./emoji.js";
 export { EXAMPLE_PLAN } from "./example.js";
 export { analyzePlan, lint } from "./lint.js";
 export { normalize } from "./normalize.js";
+export { COMPONENT_NAMES } from "./types.js";
 export type {
 	Block,
 	BlockChange,
@@ -14,4 +15,3 @@ export type {
 	PlanAnalysis,
 	StructuralDiff,
 } from "./types.js";
-export { COMPONENT_NAMES } from "./types.js";

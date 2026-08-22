@@ -11,3 +11,8 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# vars
+.varskey
+*.unlocked.vars
+*.local.vars

@@ -1,7 +1,8 @@
-import { comment, membership, plan, planBlock } from "@plantifiles/db/schema";
+import { comment, plan, planBlock } from "@plantifiles/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
+import { assertWorkspaceAccess } from "./plan-access.server";
 
 export type CreateCommentInput = {
 	blockKey?: string | undefined;
@@ -16,12 +17,7 @@ export async function createComment(request: Request, planId: string, input: Cre
 	const plans = await db.select().from(plan).where(eq(plan.id, planId)).limit(1);
 	const target = plans[0];
 	if (!target?.currentVersionId) throw new Response("Plan not found", { status: 404 });
-	const memberships = await db
-		.select({ id: membership.id })
-		.from(membership)
-		.where(and(eq(membership.workspaceId, target.workspaceId), eq(membership.userId, identity.user.id)))
-		.limit(1);
-	if (!memberships[0]) throw new Response("Forbidden", { status: 403 });
+	await assertWorkspaceAccess(target.workspaceId, identity.user.id);
 
 	if (input.blockKey) {
 		const blocks = await db

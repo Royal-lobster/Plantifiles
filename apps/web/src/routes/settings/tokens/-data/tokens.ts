@@ -6,12 +6,18 @@ import { createApiToken, listApiTokens, revokeApiToken } from "#/lib/data/tokens
 export type TokenListItem = {
 	id: string;
 	name: string;
+	prefix: string | null;
+	expiresAt: string | null;
 	lastUsedAt: string | null;
 };
 
 export const getTokensForPage = createServerFn({ method: "GET" }).handler(async (): Promise<TokenListItem[]> => {
 	const tokens = await listApiTokens(getRequest());
-	return tokens.map((token) => ({ ...token, lastUsedAt: token.lastUsedAt?.toISOString() ?? null }));
+	return tokens.map((token) => ({
+		...token,
+		expiresAt: token.expiresAt?.toISOString() ?? null,
+		lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
+	}));
 });
 
 export const createTokenForPage = createServerFn({ method: "POST" })

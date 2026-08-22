@@ -1,6 +1,6 @@
 import { type Block, normalize } from "@plantifiles/core";
 import { approval, comment, decision, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
 import type { PlanStatus } from "./plan-types";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
@@ -30,7 +30,6 @@ const workspaceSelection = {
 	id: workspace.id,
 	slug: workspace.slug,
 	name: workspace.name,
-	requiredApprovals: workspace.requiredApprovals,
 };
 
 const planVersionSelection = {
@@ -54,7 +53,7 @@ type PlanComment = typeof comment.$inferSelect & {
 
 export type PlanDocument = {
 	plan: typeof plan.$inferSelect;
-	workspace: typeof workspace.$inferSelect;
+	workspace: { id: string; slug: string; name: string };
 	version: typeof planVersion.$inferSelect;
 	author: { id: string; name: string; image: string | null };
 	blocks: Block[];
@@ -77,7 +76,7 @@ export async function getPlanById(request: Request, planId: string) {
 		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
 		.innerJoin(user, eq(planVersion.authorId, user.id))
-		.where(eq(plan.id, planId))
+		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
 		.limit(1);
 	const result = rows[0];
 	if (!result) throw new Response("Plan not found", { status: 404 });
@@ -96,7 +95,6 @@ export type PlanListItem = {
 	agentName: string | null;
 	openDecisions: number;
 	approvals: number;
-	requiredApprovals: number;
 	readTimeMinutes: number;
 	authorName: string;
 };
@@ -108,7 +106,11 @@ export async function listPlans(
 ): Promise<PlanListItem[]> {
 	const identity = await requireIdentity(request);
 	const db = getDb();
-	const workspaceRows = await db.select().from(workspace).where(eq(workspace.slug, workspaceSlug)).limit(1);
+	const workspaceRows = await db
+		.select()
+		.from(workspace)
+		.where(and(eq(workspace.slug, workspaceSlug), isNotNull(workspace.clerkOrganizationId)))
+		.limit(1);
 	const targetWorkspace = workspaceRows[0];
 	if (!targetWorkspace) throw new Response("Workspace not found", { status: 404 });
 	await assertWorkspaceAccess(targetWorkspace.id, identity.user.id);
@@ -131,7 +133,6 @@ export async function listPlans(
 				select count(*) from approval a
 				where a.version_id = ${planVersion.id}
 			)`,
-			requiredApprovals: sql<number>`${targetWorkspace.requiredApprovals}`,
 			readTimeMinutes: sql<number>`coalesce(json_extract(${planVersion.lintReport}, '$.readTimeMinutes'), 0)`,
 			authorName: user.name,
 		})
@@ -159,7 +160,11 @@ export async function loadPlanDocument(
 		.from(plan)
 		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
 		.where(
-			and(eq(workspace.slug, workspaceSlug), sql`(${plan.slug} = ${planSlug} or ${plan.publicSlug} = ${planSlug})`),
+			and(
+				eq(workspace.slug, workspaceSlug),
+				isNotNull(workspace.clerkOrganizationId),
+				sql`(${plan.slug} = ${planSlug} or ${plan.publicSlug} = ${planSlug})`,
+			),
 		)
 		.limit(1);
 	const target = baseRows[0];
@@ -290,8 +295,13 @@ export async function renderPlanMarkdown(document: PlanDocument): Promise<string
 export async function getVersionHistory(request: Request, planId: string) {
 	const identity = await requireIdentity(request);
 	const db = getDb();
-	const planRows = await db.select().from(plan).where(eq(plan.id, planId)).limit(1);
-	const target = planRows[0];
+	const planRows = await db
+		.select({ plan })
+		.from(plan)
+		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
+		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
+		.limit(1);
+	const target = planRows[0]?.plan;
 	if (!target) throw new Response("Plan not found", { status: 404 });
 	await assertWorkspaceAccess(target.workspaceId, identity.user.id);
 	return db

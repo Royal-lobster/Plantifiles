@@ -35,7 +35,7 @@ function blockKind(node: RootContent): string {
 
 function blockTitle(node: RootContent): string | undefined {
 	const component = componentName(node);
-	if (component === "Phase" || component === "Prototype") return stringAttribute(node, "title");
+	if (component === "Phase") return stringAttribute(node, "title");
 	if (component === "Option") return stringAttribute(node, "name");
 	if (component === "Rejected") return stringAttribute(node, "what");
 	if (node.type === "heading") return nodeText(node).trim();

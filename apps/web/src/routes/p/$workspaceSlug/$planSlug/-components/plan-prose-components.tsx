@@ -8,32 +8,17 @@ import { usePlanRender } from "./plan-render-context";
 type RiskSeverity = "low" | "med" | "high";
 
 function PlanParagraph({ node: _node, className, ...props }: ComponentProps<"p"> & { node?: unknown }) {
-	return (
-		<p className={cn("text-[calc(var(--reader-font-size)-1px)] text-foreground/90 leading-7", className)} {...props} />
-	);
+	return <p className={cn("text-base text-foreground/90 leading-7", className)} {...props} />;
 }
 
 /* A rule above the section, the way a manuscript opens one, rather than an
    underline that makes every heading look like a table header. */
 function PlanHeading2({ node: _node, className, ...props }: ComponentProps<"h2"> & { node?: unknown }) {
-	return (
-		<h2
-			className={cn(
-				"mt-7 border-t pt-6 font-medium text-[calc(var(--reader-font-size)+12px)] tracking-tight",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <h2 className={cn("mt-7 border-t pt-6 font-medium text-2xl tracking-tight", className)} {...props} />;
 }
 
 function PlanHeading3({ node: _node, className, ...props }: ComponentProps<"h3"> & { node?: unknown }) {
-	return (
-		<h3
-			className={cn("mt-6 font-medium text-[calc(var(--reader-font-size)+4px)] tracking-tight", className)}
-			{...props}
-		/>
-	);
+	return <h3 className={cn("mt-6 font-medium text-xl tracking-tight", className)} {...props} />;
 }
 
 function PlanList({ node: _node, className, ...props }: ComponentProps<"ul"> & { node?: unknown }) {
@@ -45,19 +30,14 @@ function PlanOrderedList({ node: _node, className, ...props }: ComponentProps<"o
 }
 
 function PlanListItem({ node: _node, className, ...props }: ComponentProps<"li"> & { node?: unknown }) {
-	return (
-		<li
-			className={cn("pl-1 text-[calc(var(--reader-font-size)-2px)] leading-6 marker:text-muted-foreground", className)}
-			{...props}
-		/>
-	);
+	return <li className={cn("pl-1 text-sm leading-6 marker:text-muted-foreground", className)} {...props} />;
 }
 
 function PlanPre({ node: _node, className, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
 	return (
 		<pre
 			className={cn(
-				"my-4 overflow-x-auto rounded-lg border p-4 font-mono text-[calc(var(--reader-font-size)-2px)] leading-6 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]",
+				"my-4 overflow-x-auto rounded-lg border p-4 font-mono text-sm leading-6 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]",
 				className,
 			)}
 			{...props}
@@ -90,11 +70,7 @@ function PlanInput({ node: _node, checked, ...props }: ComponentProps<"input"> &
 /* The standfirst. A plan's first paragraph is the only thing most readers
    finish, so it is set at a larger reading size, not as a card. */
 function TLDR({ children }: { children?: ReactNode }) {
-	return (
-		<div className="text-[calc(var(--reader-font-size)+4px)] text-foreground leading-[1.7] tracking-tight sm:text-[calc(var(--reader-font-size)+6px)]">
-			{children}
-		</div>
-	);
+	return <div className="text-lg text-foreground leading-[1.7] tracking-tight sm:text-xl">{children}</div>;
 }
 
 /* A tradeoff is a weighing, so it is drawn as one: options share a beam and the
@@ -127,7 +103,7 @@ function Option({ name, recommended, children }: { name: string; recommended?: b
 					</Badge>
 				)}
 			</header>
-			<div className="space-y-2 text-[calc(var(--reader-font-size)-2px)] leading-6">{children}</div>
+			<div className="space-y-2 text-sm leading-6">{children}</div>
 		</section>
 	);
 }
@@ -135,13 +111,13 @@ function Option({ name, recommended, children }: { name: string; recommended?: b
 function Rejected({ what, children }: { what: string; children?: ReactNode }) {
 	return (
 		<details className="group/rejected border-y py-2.5">
-			<summary className="flex cursor-pointer list-none items-center gap-2 text-[calc(var(--reader-font-size)-2px)] text-muted-foreground">
+			<summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground">
 				<ChevronRight className="size-3.5 transition-transform group-open/rejected:rotate-90" />
 				<X className="size-3.5 text-destructive/70" />
 				<span className="label-eyebrow">Rejected</span>
 				<span className="text-foreground/70 line-through decoration-destructive/40">{what}</span>
 			</summary>
-			<div className="mt-2.5 pl-7 text-[calc(var(--reader-font-size)-2px)] leading-6">{children}</div>
+			<div className="mt-2.5 pl-7 text-sm leading-6">{children}</div>
 		</details>
 	);
 }
@@ -170,7 +146,7 @@ function Phase({
 			<span className="absolute top-0 left-0 flex size-8 items-center justify-center rounded-full border-2 border-phase/40 bg-background font-mono font-semibold text-phase text-xs">
 				{n}
 			</span>
-			<h3 className="pt-1 font-medium text-[calc(var(--reader-font-size)+4px)] tracking-tight">{title}</h3>
+			<h3 className="pt-1 font-medium text-xl tracking-tight">{title}</h3>
 			<div className="mt-3 [&_li]:flex [&_li]:items-start [&_li]:gap-2.5 [&_li]:pl-0 [&_ul]:space-y-2.5 [&_ul]:pl-0">
 				{children}
 			</div>
@@ -225,7 +201,7 @@ function Risk({ severity, children }: { severity: RiskSeverity; children?: React
 					))}
 				</span>
 			</header>
-			<div className="text-[calc(var(--reader-font-size)-1px)] leading-7">{children}</div>
+			<div className="text-base leading-7">{children}</div>
 		</section>
 	);
 }
@@ -244,6 +220,17 @@ function CodeSketch({ lang: _lang, file, children }: { lang: string; file?: stri
 	);
 }
 
+function LegacyPrototype({ title, children }: { title: string; children?: ReactNode }) {
+	return (
+		<figure className="overflow-hidden rounded-lg border bg-card">
+			<figcaption className="border-b bg-muted/60 px-4 py-2 font-mono text-[11px] text-muted-foreground">
+				{title} · archived prototype source
+			</figcaption>
+			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0">{children}</div>
+		</figure>
+	);
+}
+
 function Callout({ kind, children }: { kind: "note" | "warning"; children?: ReactNode }) {
 	const warning = kind === "warning";
 	const Icon = warning ? AlertTriangle : Info;
@@ -251,7 +238,7 @@ function Callout({ kind, children }: { kind: "note" | "warning"; children?: Reac
 		<aside
 			aria-label={warning ? "Warning" : "Note"}
 			className={cn(
-				"flex gap-3 border-l-2 py-1 pl-4 text-[calc(var(--reader-font-size)-2px)] leading-6",
+				"flex gap-3 border-l-2 py-1 pl-4 text-sm leading-6",
 				warning ? "border-warning bg-warning/[0.06] py-3 pr-4" : "border-brand-ink/50",
 			)}
 		>
@@ -266,12 +253,7 @@ function PlanStrong({ node: _node, className, ...props }: ComponentProps<"strong
 }
 
 function PlanBlockquote({ node: _node, className, ...props }: ComponentProps<"blockquote"> & { node?: unknown }) {
-	return (
-		<blockquote
-			className={cn("border-l-2 pl-4 text-[calc(var(--reader-font-size)+2px)] text-muted-foreground italic", className)}
-			{...props}
-		/>
-	);
+	return <blockquote className={cn("border-l-2 pl-4 text-lg text-muted-foreground italic", className)} {...props} />;
 }
 
 /**
@@ -283,10 +265,7 @@ function PlanBlockquote({ node: _node, className, ...props }: ComponentProps<"bl
 function PlanTable({ node: _node, className, ...props }: ComponentProps<"table"> & { node?: unknown }) {
 	return (
 		<div className="-mx-1 my-5 overflow-x-auto rounded-lg border bg-card px-1">
-			<table
-				className={cn("w-full border-collapse text-left text-[calc(var(--reader-font-size)-2px)]", className)}
-				{...props}
-			/>
+			<table className={cn("w-full border-collapse text-left text-sm", className)} {...props} />
 		</div>
 	);
 }
@@ -318,6 +297,7 @@ function PlanTd({ node: _node, className, ...props }: ComponentProps<"td"> & { n
 export {
 	Callout,
 	CodeSketch,
+	LegacyPrototype,
 	Option,
 	Phase,
 	PlanBlockquote,

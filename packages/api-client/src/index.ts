@@ -38,7 +38,7 @@ export type PlanDetail = {
 	version: { number: number; source: string };
 };
 
-export type PlanStatus = {
+export type PlanSummary = {
 	id: string;
 	slug: string;
 	emoji: string | null;
@@ -48,25 +48,82 @@ export type PlanStatus = {
 	agentName: string | null;
 	openDecisions: number;
 	approvals: number;
-	requiredApprovals: number;
 	readTimeMinutes: number;
 	updatedAt: string;
 };
+
+export type WorkspaceSummary = {
+	id: string;
+	slug: string;
+	name: string;
+	role: "owner" | "member";
+};
+
+export type DeviceLoginStart = {
+	deviceCode: string;
+	userCode: string;
+	verificationUri: string;
+	verificationUriComplete: string;
+	expiresIn: number;
+	interval: number;
+};
+
+export type DeviceLoginPoll = { status: "pending" } | { status: "issued"; token: string; baseUrl: string };
 
 export class ApiError extends Error {
 	readonly status: number;
 	readonly body: unknown;
 
 	constructor(status: number, body: unknown) {
-		super(
+		// Route handlers answer with JSON `{ message }` for validation failures and
+		// with a bare `Response` body for auth failures. Both carry the sentence
+		// worth showing; only an empty body falls back to the status code.
+		const detail =
 			typeof body === "object" && body && "message" in body
 				? String(body.message)
-				: `Plantifiles API returned ${status}.`,
-		);
+				: typeof body === "string" && body.trim()
+					? body.trim()
+					: `Plantifiles API returned ${status}.`;
+		super(detail);
 		this.name = "ApiError";
 		this.status = status;
 		this.body = body;
 	}
+}
+
+async function postToService(baseUrl: string, path: string, body: unknown): Promise<Response> {
+	const response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	if (response.ok) return response;
+	const text = await response.text();
+	let parsed: unknown = text;
+	try {
+		parsed = JSON.parse(text);
+	} catch {
+		// Preserve readable plain-text API errors.
+	}
+	throw new ApiError(response.status, parsed);
+}
+
+/**
+ * Both device-grant calls live outside `PlantifilesClient` because the whole
+ * point of the flow is that the caller has no token yet.
+ */
+export function startDeviceLogin(baseUrl: string, tokenName: string): Promise<DeviceLoginStart> {
+	return postToService(baseUrl, "/api/cli/device", { tokenName }).then(
+		(response) => response.json() as Promise<DeviceLoginStart>,
+	);
+}
+
+export async function pollDeviceLogin(baseUrl: string, deviceCode: string): Promise<DeviceLoginPoll> {
+	const response = await postToService(baseUrl, "/api/cli/device/token", { deviceCode });
+	// 202 is "nobody has approved yet", which is the expected answer most of the
+	// time and must not read as an error to the caller.
+	if (response.status === 202) return { status: "pending" };
+	return response.json() as Promise<DeviceLoginPoll>;
 }
 
 export class PlantifilesClient {
@@ -98,6 +155,10 @@ export class PlantifilesClient {
 		return response.json() as Promise<T>;
 	}
 
+	listWorkspaces(): Promise<WorkspaceSummary[]> {
+		return this.#json("/api/workspaces");
+	}
+
 	createPlan(input: PublishPlanInput): Promise<PublishedPlan> {
 		return this.#json("/api/plans", { method: "POST", body: JSON.stringify(input) });
 	}
@@ -113,7 +174,7 @@ export class PlantifilesClient {
 		return this.#json(`/api/plans/${encodeURIComponent(planId)}`);
 	}
 
-	listPlans(workspaceSlug: string, status?: string): Promise<PlanStatus[]> {
+	listPlans(workspaceSlug: string, status?: string): Promise<PlanSummary[]> {
 		const query = new URLSearchParams({ workspace: workspaceSlug });
 		if (status) query.set("status", status);
 		return this.#json(`/api/plans?${query}`);

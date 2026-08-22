@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createDb } from "@plantifiles/db";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -45,9 +45,9 @@ vi.mock("#/lib/integrations/runtime.server", () => ({
 		return createDb(runtime.bindings.DB);
 	},
 	getRuntimeConfig: async () => ({
-		BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",
-		GITHUB_CLIENT_ID: undefined,
-		GITHUB_CLIENT_SECRET: undefined,
+		CLERK_PUBLISHABLE_KEY: "pk_test_contract",
+		CLERK_SECRET_KEY: "sk_test_contract",
+		CLERK_WEBHOOK_SIGNING_SECRET: "whsec_contract",
 		LOCAL_DEV: "false",
 		PUBLIC_URL: "https://plans.example",
 	}),
@@ -71,14 +71,15 @@ type ContractHarness = {
 
 let miniflare: Miniflare | null = null;
 
+const MIGRATIONS_DIRECTORY = resolve(process.cwd(), "../../packages/db/migrations");
+
 async function applyMigrations(db: D1Database): Promise<void> {
-	for (const name of [
-		"0000_messy_jasper_sitwell.sql",
-		"0001_slimy_red_ghost.sql",
-		"0002_concerned_runaways.sql",
-		"0003_concerned_corsair.sql",
-	]) {
-		const source = await readFile(resolve(process.cwd(), "../../packages/db/migrations", name), "utf8");
+	// Read the directory rather than a hardcoded list: a migration added without
+	// touching this file used to leave the harness on an older schema, and the
+	// failure surfaced as an unrelated "no such column" deep inside a query.
+	const names = (await readdir(MIGRATIONS_DIRECTORY)).filter((name) => name.endsWith(".sql")).sort();
+	for (const name of names) {
+		const source = await readFile(resolve(MIGRATIONS_DIRECTORY, name), "utf8");
 		for (const statement of source
 			.split("--> statement-breakpoint")
 			.map((part) => part.trim())
@@ -139,7 +140,7 @@ beforeEach(async (context: TestContext & { harness?: ContractHarness }) => {
 	};
 	await harness.seedUser("user-owner", "Owner");
 	await harness.run(
-		"insert into workspace (id, slug, name, required_approvals) values ('workspace-demo', 'demo', 'Demo', 1)",
+		"insert into workspace (id, clerk_organization_id, slug, name) values ('workspace-demo', 'org_local_demo', 'demo', 'Demo')",
 	);
 	await harness.seedMembership("user-owner", "owner");
 	context.harness = harness;
@@ -229,7 +230,7 @@ describe("publication and review contracts", () => {
 		expect(await harness.all<{ count: number }>("select count(*) as count from plan_version")).toEqual([{ count: 0 }]);
 	});
 
-	it("blocks approval on open decisions and requires current-version approvals", async (context) => {
+	it("blocks approval on open decisions and requires one current-version approval", async (context) => {
 		const harness = (context as TestContext & { harness: ContractHarness }).harness;
 		const published = await createPlan(harness.request, {
 			workspaceSlug: "demo",
@@ -260,23 +261,18 @@ describe("publication and review contracts", () => {
 		});
 	});
 
-	it("enforces multiple approvals, owner transitions, and archived finality", async (context) => {
+	it("enforces owner transitions and archived finality", async (context) => {
 		const harness = (context as TestContext & { harness: ContractHarness }).harness;
-		await harness.run("update workspace set required_approvals = 2 where id = 'workspace-demo'");
 		await harness.seedUser("user-member", "Member");
 		await harness.seedMembership("user-member", "member");
 		const published = await createPlan(harness.request, {
 			workspaceSlug: "demo",
-			title: "Threshold contract",
+			title: "Role contract",
 			source: VALID_PLAN,
 			force: true,
 		});
 		await resolveDecision(harness.request, published.id, "contract-decision", "Resolved.");
 		await advancePlanStatus(harness.request, published.id);
-		expect(await approveCurrentVersion(harness.request, published.id)).toMatchObject({
-			status: "in_review",
-			reason: expect.stringContaining("1 more approval"),
-		});
 
 		harness.setIdentity("user-member");
 		await expect(advancePlanStatus(harness.request, published.id)).rejects.toMatchObject({ status: 403 });

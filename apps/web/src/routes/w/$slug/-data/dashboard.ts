@@ -15,7 +15,6 @@ export type DashboardPlan = {
 	agentName: string | null;
 	openDecisions: number;
 	approvals: number;
-	requiredApprovals: number;
 	readTimeMinutes: number;
 	authorName: string;
 };
@@ -28,5 +27,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
 	.validator(z.object({ slug: z.string().min(1) }))
 	.handler(async ({ data }): Promise<DashboardData> => {
 		const plans = await listPlans(getRequest(), data.slug);
-		return { plans: plans.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })) };
+		return {
+			plans: plans.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })),
+		};
 	});

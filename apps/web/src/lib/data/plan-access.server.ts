@@ -1,12 +1,19 @@
-import { membership } from "@plantifiles/db/schema";
-import { and, eq } from "drizzle-orm";
+import { membership, workspace } from "@plantifiles/db/schema";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { getDb, getRuntimeConfig } from "#/lib/integrations/runtime.server";
 
 async function assertWorkspaceAccess(workspaceId: string, userId: string): Promise<void> {
 	const rows = await getDb()
 		.select({ id: membership.id })
 		.from(membership)
-		.where(and(eq(membership.workspaceId, workspaceId), eq(membership.userId, userId)))
+		.innerJoin(workspace, eq(membership.workspaceId, workspace.id))
+		.where(
+			and(
+				eq(membership.workspaceId, workspaceId),
+				eq(membership.userId, userId),
+				isNotNull(workspace.clerkOrganizationId),
+			),
+		)
 		.limit(1);
 	if (!rows[0]) throw new Response("Forbidden", { status: 403 });
 }

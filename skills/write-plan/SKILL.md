@@ -61,11 +61,13 @@ Fix every reported error and warning, then repeat until there are no findings. T
 
 ### 6. Publish with provenance
 
-On the first push, `--workspace` is required. Publish the linted source with the same emoji and the originating prompt:
+Publish the linted source with the same emoji and the originating prompt:
 
 ```sh
 plantifiles push <file> --workspace <slug> --emoji <emoji> --agent <agent-name> --prompt "<request or planning prompt>"
 ```
+
+At login, the CLI records a default workspace only when the author belongs to exactly one. Otherwise the first push requires `--workspace <slug>`; `plantifiles workspaces` lists available slugs. Later pushes of the same file reuse its tracked workspace.
 
 Done means the command returns a URL, that URL opens the published plan, and the published version records the intended source, emoji, agent, and prompt.
 
@@ -85,9 +87,9 @@ All maxima are inclusive:
 - Keep estimated read time at or below 12 minutes; the linter estimates 200 words per minute.
 - Include a top-level `<Rejected>` naming an alternative and explaining why it lost.
 - Put every block component's children on lines between its opening and closing tags.
-- Use Markdown, not raw HTML or executable MDX. Put custom product-screen HTML only inside a fenced `html` block owned by `<Prototype>`.
+- Use Markdown, not raw HTML or executable MDX.
 
-Placement is strict. Place `<TLDR>`, `<Decision>`, `<Tradeoff>`, `<Rejected>`, `<Phase>`, `<Risk>`, `<Diagram>`, `<CodeSketch>`, `<Callout>`, and `<Prototype>` directly at the document root. The sole component nesting relationship is `<Option>` as a direct child of `<Tradeoff>`; `<Option>` is invalid anywhere else.
+Placement is strict. Place `<TLDR>`, `<Decision>`, `<Tradeoff>`, `<Rejected>`, `<Phase>`, `<Risk>`, `<Diagram>`, `<CodeSketch>`, and `<Callout>` directly at the document root. The sole component nesting relationship is `<Option>` as a direct child of `<Tradeoff>`; `<Option>` is invalid anywhere else.
 
 Every top-level component may have an optional explicit `id`. Use IDs for blocks whose identity must survive content edits or movement so structural diffs remain deterministic. An ID must be unique across the document and match `^[A-Za-z][A-Za-z0-9_-]*$`: an ASCII letter first, followed only by ASCII letters, digits, `_`, or `-`. Keep an established ID unchanged when editing or moving its block.
 
@@ -107,25 +109,9 @@ Use only these custom components and prop shapes:
 | `<Diagram>` | `lang="mermaid|d2"` | Exactly one fenced diagram source block |
 | `<CodeSketch>` | `lang`; optional `file` | Exactly one fenced code block |
 | `<Callout>` | `kind="note|warning"` | Supporting context |
-| `<Prototype>` | `title`; optional `viewport="responsive|mobile|tablet|desktop"` | Exactly one fenced `html` block containing a product screen or flow |
 
 An optional `id` follows the identity rule above. A `<Diagram>` fence should match its `lang`. Use `flowchart` or `graph` for data and control flow, `sequenceDiagram` for cross-actor ordering and failures, `stateDiagram-v2` for lifecycles, and `erDiagram` for stored relationships. Use `<CodeSketch>` only when a minimal type, payload, table row, or function signature makes an interface invariant precise.
 
-Use `<Prototype>` when a product or interaction decision is easier to review as a realistic screen than as prose. Write static HTML with `class` attributes and Tailwind CSS v4 utilities; custom inline CSS is also supported. The preview is isolated from Plantifiles: scripts, event-handler attributes, embedded documents, form submission, and non-fragment links are removed or blocked. HTTPS and data images are allowed. Use fragment links such as `href="#confirmation"` for declarative movement within a multi-screen prototype, and split substantially different alternatives into separate prototype blocks so reviewers can comment on each one.
-
-````mdx
-<Prototype id="checkout-mobile" title="Mobile checkout" viewport="mobile">
-```html
-<main class="min-h-screen bg-slate-950 p-6 text-white">
-  <p class="text-sm text-slate-400">Order total</p>
-  <h1 class="mt-2 text-3xl font-semibold">$84.00</h1>
-  <a href="#confirmation" class="mt-8 block rounded-xl bg-indigo-500 px-4 py-3 text-center font-medium">
-    Confirm order
-  </a>
-</main>
-```
-</Prototype>
-````
 
 ## Complete template
 

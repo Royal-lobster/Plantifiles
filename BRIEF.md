@@ -35,9 +35,9 @@ The monorepo is `apps/web`, `apps/cli`, `apps/mcp`, `packages/core`, `packages/d
 
 ## Local environment
 
-`wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, then `drizzle-kit generate` and `wrangler d1 migrations apply plantifiles --local`. Secrets go in `.dev.vars` for local dev — note that `.dev.vars` and `.env` are mutually exclusive, and if `.dev.vars` exists then `.env` is ignored entirely. Write a `.dev.vars.example` covering `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `PUBLIC_URL`, and the optional `ANTHROPIC_API_KEY`.
+`wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, then `drizzle-kit generate` and `wrangler d1 migrations apply plantifiles --local`. Vite development deterministically uses `PUBLIC_URL=http://localhost:3000` and `LOCAL_DEV=true` without `.dev.vars`. Production uses direct Worker bindings for `PUBLIC_URL`, `LOCAL_DEV`, `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_WEBHOOK_SIGNING_SECRET`.
 
-GitHub OAuth credentials are not provisioned for you. GitHub stays the real provider per the spec, and to keep the smoke test runnable you may add a dev-only sign-in that is unreachable when the Worker is not in local dev. Note it in `DECISIONS.md`.
+Clerk is the production identity and Organization provider. Keep the deterministic `LOCAL_DEV` cookie smoke limited to the seeded user and fake linked Clerk Organization; do not add custom sign-in, invitation, or workspace-creation flows.
 
 ## Verification
 

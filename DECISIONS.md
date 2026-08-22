@@ -9,7 +9,7 @@
 - 2026-08-12 — Use one production D1 database and one KV namespace with the same binding names locally and remotely so Worker code has no environment-specific branches.
 - 2026-08-12 — Execute plan, version, block, and decision writes as one raw D1 batch so atomicity is explicit and every block insert stays below the 100-parameter limit.
 - 2026-08-12 — Replace author frontmatter in negotiated Markdown with canonical product metadata while preserving the byte-exact source on the JSON API for CLI pulls.
-- 2026-08-12 — Commit a deterministic local seed identity and token so integration and smoke runs do not depend on GitHub OAuth credentials.
+- 2026-08-12 — Commit a deterministic local seed identity, linked fake Clerk Organization, and token so integration and smoke runs do not depend on hosted authentication.
 - 2026-08-12 — Store the service base URL beside the CLI token instead of hardcoding a production origin; environment variables override both values.
 - 2026-08-12 — Resolve plan URLs through authenticated list and detail APIs so `pull` returns the stored source byte-for-byte rather than transport frontmatter.
 - 2026-08-12 — Key `.plantifiles.json` by git-root-relative file path, falling back to the working directory only outside a repository.
@@ -17,7 +17,7 @@
 - 2026-08-12 — Compile MDX to serializable HAST in the route loader so SSR and hydration share one strict registry without shipping the Node-only normalizer to browsers.
 - 2026-08-12 — Export the structural diff as a browser-safe core subpath because the core barrel also exports the `node:crypto`-based normalizer.
 - 2026-08-12 — Convert CSS token colors through a one-pixel canvas before passing them to Mermaid because Mermaid rejects the design system's OKLCH values.
-- 2026-08-12 — Promote an in-review plan automatically once its last open decision is resolved and its current-version approval count meets the workspace gate.
+- 2026-08-12 — Promote an in-review plan automatically once its last open decision is resolved and its current version has one approval.
 - 2026-08-12 — Use the stable MCP TypeScript SDK v2 split server package and require both token and service URL so the stdio adapter stays a thin HTTP client.
 - 2026-08-12 - Keep one canonical write-plan skill at `skills/write-plan/SKILL.md` and bundle that exact source into the Worker download route rather than maintaining a public-file copy.
 - 2026-08-12 - Render persisted timestamps in an explicit UTC format so Worker SSR and browser hydration produce identical text in every locale.
@@ -46,3 +46,9 @@
 - 2026-08-12 — Map `--font-heading` to `--font-sans` so ported recalio components style correctly instead of silently no-opping on an undefined utility.
 - 2026-08-13 — Add a top-level `<Prototype>` plan block containing one fenced HTML document and compile its static class attributes with Tailwind v4 at read time, keeping realistic product iteration inside the same immutable, diffable, commentable plan model instead of creating a separate artifact type.
 - 2026-08-13 — Render prototype HTML only in an opaque-origin sandboxed iframe after removing executable tags, event handlers, embedded documents, form destinations, and unsafe URLs; generated documents deny scripts, connections, forms, and child frames through CSP while allowing inline styles plus HTTPS/data media.
+- 2026-08-15 — Carry the green identity through the neutrals, not just the accent: light surfaces cast the identity hue at low chroma (hue 130) and the dark theme replaces the shadcn warm-stone ramp with hue-138 tinted surfaces, because a warm-grey chrome read as an amber product with a green button bolted on.
+- 2026-08-15 — Give `--primary` dark green ink (`--primary-foreground: oklch(0.24-0.26 …)`) in every theme that uses the bright chartreuse fill, since near-white on an L≈0.72 lime failed contrast on buttons and chips.
+- 2026-08-15 — Rename the default theme `cream` to `sprout` (`.theme-sprout`) once its paper turned green, so the picker label still describes what it paints; stored `cream` preferences fall back to the default.
+- 2026-08-21 — Stop accepting new `<Prototype>` blocks and render immutable historical ones as inert source, removing iframe hosting, HTML sanitization, runtime Tailwind compilation, and their security surface.
+- 2026-08-21 — Keep one Sprout palette plus dark mode and one fixed 68ch reading measure; theme galleries, downloadable reader fonts, and typography steppers added preferences without strengthening plan review.
+- 2026-08-21 — Use compact dashboard rows instead of elevated cards so title, status, decisions, and version remain scannable without decorative height or motion.

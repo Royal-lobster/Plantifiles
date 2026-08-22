@@ -16,10 +16,27 @@
 			"migrations_dir": "../../packages/db/migrations"
 		}
 	],
-	"kv_namespaces": [
-		{
-			"binding": "CACHE",
-			"id": "855047ac17334028881f4f703a37d0c6"
+	"env": {
+		"dev": {
+			"workers_dev": false,
+			"preview_urls": true,
+			"vars": {
+				"VARS_ENV": "dev"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "plantifiles-dev",
+					"database_id": "5c47cb2b-01dd-4dcb-8b86-7d5ca68994a2",
+					"migrations_dir": "../../packages/db/migrations"
+				}
+			],
+			"routes": [
+				{
+					"pattern": "dev.plantifiles.com",
+					"custom_domain": true
+				}
+			]
 		}
-	]
+	}
 }

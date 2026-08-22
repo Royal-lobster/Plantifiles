@@ -32,7 +32,11 @@ describe("PlantifilesClient", () => {
 			status: 403,
 			body: { message: "No access", code: "forbidden" },
 		} satisfies Partial<ApiError>);
-		await expect(client.getPlan("plan-1")).rejects.toMatchObject({ status: 503, body: "Unavailable" });
+		await expect(client.getPlan("plan-1")).rejects.toMatchObject({
+			message: "Unavailable",
+			status: 503,
+			body: "Unavailable",
+		});
 	});
 
 	it("resolves configured plan URLs and rejects foreign services", async () => {

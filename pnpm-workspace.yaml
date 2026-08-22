@@ -3,18 +3,16 @@ packages:
   - packages/*
 
 allowBuilds:
+  argon2: true
   esbuild: true
+  keytar: true
   workerd: true
 
 minimumReleaseAgeExclude:
-  - '@better-auth/core@1.6.27'
-  - '@better-auth/drizzle-adapter@1.6.27'
-  - '@better-auth/kysely-adapter@1.6.27'
-  - '@better-auth/memory-adapter@1.6.27'
-  - '@better-auth/mongo-adapter@1.6.27'
-  - '@better-auth/prisma-adapter@1.6.27'
-  - '@better-auth/telemetry@1.6.27'
-  - better-auth@1.6.27
+  - '@clerk/backend@3.16.10'
+  - '@clerk/tanstack-react-start@1.5.6'
+  - '@clerk/react@6.14.5'
+  - '@clerk/shared@4.29.3'
 
 onlyBuiltDependencies:
   - esbuild

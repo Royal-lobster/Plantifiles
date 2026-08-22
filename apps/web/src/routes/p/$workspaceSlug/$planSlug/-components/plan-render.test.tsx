@@ -50,11 +50,9 @@ export const answer = 42;
 This is a note.
 </Callout>
 
-<Prototype title="Checkout preview" viewport="mobile">
+<Prototype title="Historical checkout preview" viewport="mobile">
 \`\`\`html
-<main class="min-h-screen bg-indigo-950 p-8 text-white">
-  <h1 class="text-3xl font-bold">Confirm order</h1>
-</main>
+<main class="bg-indigo-950 text-white">Confirm order</main>
 \`\`\`
 </Prototype>`;
 
@@ -86,10 +84,9 @@ describe("runtime plan renderer", () => {
 		expect(html).toContain("View source");
 		expect(html).toContain("src/example.ts");
 		expect(html).toContain('data-block-kind="Phase"');
-		expect(html).toContain('data-block-kind="Prototype"');
-		expect(html).toContain("Checkout preview");
-		expect(html).toContain('title="Checkout preview prototype"');
-		expect(html).toContain('sandbox=""');
+		expect(html).toContain("Historical checkout preview · archived prototype source");
+		expect(html).toContain("Confirm order");
+		expect(html).not.toContain("<iframe");
 	});
 
 	it("throws for an unknown capitalized component", async () => {

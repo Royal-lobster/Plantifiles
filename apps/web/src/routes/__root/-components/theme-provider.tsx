@@ -1,14 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import {
-	ALL_THEME_CLASSES,
-	DEFAULT_THEME,
-	getNextTheme,
-	getThemeMetadata,
-	isTheme,
-	isThemeCycleShortcut,
-	THEME_STORAGE_KEY,
-	type Theme,
-} from "./theme-config";
+import { createContext, useContext, useEffect, useState } from "react";
+import { DEFAULT_THEME, isTheme, THEME_STORAGE_KEY, type Theme } from "./theme-config";
 
 type ThemeContextValue = {
 	theme: Theme;
@@ -22,23 +13,20 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const [ready, setReady] = useState(false);
 
 	useEffect(() => {
-		let stored: string | null = null;
 		try {
-			stored = localStorage.getItem(THEME_STORAGE_KEY);
+			const stored = localStorage.getItem(THEME_STORAGE_KEY);
+			setTheme(isTheme(stored) ? stored : DEFAULT_THEME);
 		} catch {
-			// Storage can be unavailable in privacy-restricted browser contexts.
+			// The default remains usable when storage is unavailable.
 		}
-		setTheme(isTheme(stored) ? stored : DEFAULT_THEME);
 		setReady(true);
 	}, []);
 
 	useEffect(() => {
 		if (!ready) return;
-		const root = document.documentElement;
-		const { rootClasses } = getThemeMetadata(theme);
-		root.classList.remove(...ALL_THEME_CLASSES);
-		root.classList.add(...rootClasses);
-		root.style.colorScheme = rootClasses.includes("dark") ? "dark" : "light";
+		const dark = theme === "dark";
+		document.documentElement.classList.toggle("dark", dark);
+		document.documentElement.style.colorScheme = dark ? "dark" : "light";
 		try {
 			localStorage.setItem(THEME_STORAGE_KEY, theme);
 		} catch {
@@ -46,25 +34,7 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, [ready, theme]);
 
-	useEffect(() => {
-		if (!ready) return;
-
-		function cycleTheme(event: KeyboardEvent) {
-			const target = event.target;
-			const isEditable =
-				target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"));
-			if (isEditable || !isThemeCycleShortcut(event)) return;
-
-			event.preventDefault();
-			setTheme((current) => getNextTheme(current));
-		}
-
-		window.addEventListener("keydown", cycleTheme);
-		return () => window.removeEventListener("keydown", cycleTheme);
-	}, [ready]);
-
-	const value = useMemo(() => ({ theme, setTheme }), [theme]);
-	return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+	return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }
 
 function useTheme(): ThemeContextValue {

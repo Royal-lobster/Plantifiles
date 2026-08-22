@@ -22,58 +22,44 @@ class Redacted<T> {
 }
 
 const schema = z.object({
-  BETTER_AUTH_SECRET: z.string(),
-  GITHUB_CLIENT_ID: z.string(),
-  GITHUB_CLIENT_SECRET: z.string(),
   PUBLIC_URL: z.string(),
   LOCAL_DEV: z.string(),
-  SLACK_CLIENT_ID: z.string(),
-  SLACK_CLIENT_SECRET: z.string(),
-  SLACK_SIGNING_SECRET: z.string(),
-  SLACK_API_URL: z.string(),
+  CLERK_PUBLISHABLE_KEY: z.string(),
+  CLERK_SECRET_KEY: z.string(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string(),
 });
 
 export type Vars = {
-  BETTER_AUTH_SECRET: Redacted<string>;
-  GITHUB_CLIENT_ID: Redacted<string>;
-  GITHUB_CLIENT_SECRET: Redacted<string>;
   PUBLIC_URL: string;
   LOCAL_DEV: string;
-  SLACK_CLIENT_ID: Redacted<string>;
-  SLACK_CLIENT_SECRET: Redacted<string>;
-  SLACK_SIGNING_SECRET: Redacted<string>;
-  SLACK_API_URL: Redacted<string>;
+  CLERK_PUBLISHABLE_KEY: string;
+  CLERK_SECRET_KEY: Redacted<string>;
+  CLERK_WEBHOOK_SIGNING_SECRET: Redacted<string>;
 };
 
 const PUBLIC_VARS = {
   PUBLIC_URL: {
     "dev": "http://localhost:3000",
-    "prod": "https://plantifiles.srujangs8.workers.dev",
+    "prod": "https://plantifiles.com",
   },
   LOCAL_DEV: {
     "dev": "true",
     "prod": "false",
   },
+  CLERK_PUBLISHABLE_KEY: {
+    "dev": "pk_test_ZmFuY3ktbWFtbW90aC04ODE3LmNsZXJrLmFjY291bnRzLmRldiQ",
+    "prod": "pk_live_Y2xlcmsucGxhbnRpZmlsZXMuY29tJA",
+  },
 } as const;
 
 const CIPHERTEXTS = {
   "dev": {
-    BETTER_AUTH_SECRET: "enc:v2:aes256gcm-det:gnRS9J+MCLDeX04m:Edhv6lUQCTLVmtxEy1x2cRuRrRFWSeeUep5LFRB5x36aXtZOFWw+WTfzHBolzflqxA==:zbXkdgSzi0Nk7H9uTog2tw==",
-    GITHUB_CLIENT_ID: "enc:v2:aes256gcm-det:gdKW1EnVYIbKzeZR::vZw1PVYgsC4+BiGjz0kpEA==",
-    GITHUB_CLIENT_SECRET: "enc:v2:aes256gcm-det:I+MVw3221s/H3iOK::LzoabsekXRu0ydbH6xz2qQ==",
-    SLACK_CLIENT_ID: "enc:v2:aes256gcm-det:zRmKl9SWlYpVlh+1:SzGubxck872XIFVFcuneHtGfvejAF7b+p/3OFGUY:lNQTMGgd8fbkD+kkcZr5Xw==",
-    SLACK_CLIENT_SECRET: "enc:v2:aes256gcm-det:kKPnO2aCkov+pVTB:eYsiBJXBaYHXATXFvLDylUTKf7SKmpf/0HYmT1NG:/mVDCUphs5ExXCwm09om2A==",
-    SLACK_SIGNING_SECRET: "enc:v2:aes256gcm-det:cOiWRSjYqpuAAGVL:3bRiRhlBz4cFwJFhQNSJzj5SElHVUATGi6o1eq5cn18=:zek29FucgzkPHW3Da0nNDg==",
-    SLACK_API_URL: "enc:v2:aes256gcm-det:HoZUM1kRSmA2k4Q4:UTdnHHbOuAvyl7sf/kl/HnhVS+dc:SD9klahhJmFycz31NylmYg==",
+    CLERK_SECRET_KEY: "enc:v2:aes256gcm-det:mFjuuLY4S099ERIc:nQjGGKjNxxY4ZIHnbdFdZBpc63BwZ9Uq/KF8NG8cL9gPRwm4t0KQQ2tyCJGUj/0pKM4=:IVxKbJ8XvcSSQuhYaFLMvA==",
+    CLERK_WEBHOOK_SIGNING_SECRET: "enc:v2:aes256gcm-det:TSJQsl1WGk6/76A+:XnkNGVudLxkkEZBHRAR6nnM15GaKc637Xll3If/Qf70087DWRD4=:233c+OpHmjb3fn3b03b2sA==",
   },
   "prod": {
-    BETTER_AUTH_SECRET: "enc:v2:aes256gcm-det:gnRS9J+MCLDeX04m:Edhv6lUQCTLVmtxEy1x2cRuRrRFWSeeUep5LFRB5x36aXtZOFWw+WTfzHBolzflqxA==:zbXkdgSzi0Nk7H9uTog2tw==",
-    GITHUB_CLIENT_ID: "enc:v2:aes256gcm-det:cY/yFNH0083mu0qf:NBOcIjOeMS70/ecGZIfbFvz4TCM=:UvBK+QgPC6/nTkfeyAhf1Q==",
-    GITHUB_CLIENT_SECRET: "enc:v2:aes256gcm-det:/DAWqPgg9PiGR/SK:j9ZazyepWbOwsyW3Otcz64WrSf1vd5Rf6krQBIcJ9pHGIUCzDguENA==:S9hkP02A9OcBwKUQsRj3IA==",
-    SLACK_CLIENT_ID: "enc:v2:aes256gcm-det:zRmKl9SWlYpVlh+1:SzGubxck872XIFVFcuneHtGfvejAF7b+p/3OFGUY:lNQTMGgd8fbkD+kkcZr5Xw==",
-    SLACK_CLIENT_SECRET: "enc:v2:aes256gcm-det:kKPnO2aCkov+pVTB:eYsiBJXBaYHXATXFvLDylUTKf7SKmpf/0HYmT1NG:/mVDCUphs5ExXCwm09om2A==",
-    SLACK_SIGNING_SECRET: "enc:v2:aes256gcm-det:cOiWRSjYqpuAAGVL:3bRiRhlBz4cFwJFhQNSJzj5SElHVUATGi6o1eq5cn18=:zek29FucgzkPHW3Da0nNDg==",
-    SLACK_API_URL: "enc:v2:aes256gcm-det:HoZUM1kRSmA2k4Q4:UTdnHHbOuAvyl7sf/kl/HnhVS+dc:SD9klahhJmFycz31NylmYg==",
+    CLERK_SECRET_KEY: "enc:v2:aes256gcm-det:PHF641+O2Y41r5Pm:hawT/wwzNnMFYXamcsfDBBXyhx5ef+s15rQgu8TSKwh99MDWvVahPPqxSoGnvWxrrRw=:c+nAAtpSnZrtZjTGeAYzsQ==",
+    CLERK_WEBHOOK_SIGNING_SECRET: "enc:v2:aes256gcm-det:I6YH1dL5ooNSqYnV:BAmmUjGQKoOM22hqu07P4Wni3zeP7SUX5vHNU1ds00qujUQINuU=:+YRu7BDHxBhZPtfPcBhvGw==",
   },
 } as const;
 
@@ -149,18 +135,12 @@ function selectPublicValue(value: unknown, targetEnv: string): unknown {
 
 function wrapRedacted(parsed: Record<string, unknown>): Vars {
   return {
-    BETTER_AUTH_SECRET: new Redacted(parsed["BETTER_AUTH_SECRET"] as string),
-    GITHUB_CLIENT_ID: new Redacted(parsed["GITHUB_CLIENT_ID"] as string),
-    GITHUB_CLIENT_SECRET: new Redacted(parsed["GITHUB_CLIENT_SECRET"] as string),
-    PUBLIC_URL: parsed["PUBLIC_URL"] as string,
-    LOCAL_DEV: parsed["LOCAL_DEV"] as string,
-    SLACK_CLIENT_ID: new Redacted(parsed["SLACK_CLIENT_ID"] as string),
-    SLACK_CLIENT_SECRET: new Redacted(parsed["SLACK_CLIENT_SECRET"] as string),
-    SLACK_SIGNING_SECRET: new Redacted(parsed["SLACK_SIGNING_SECRET"] as string),
-    SLACK_API_URL: new Redacted(parsed["SLACK_API_URL"] as string),
+    PUBLIC_URL: parsed.PUBLIC_URL as string,
+    LOCAL_DEV: parsed.LOCAL_DEV as string,
+    CLERK_PUBLISHABLE_KEY: parsed.CLERK_PUBLISHABLE_KEY as string,
+    CLERK_SECRET_KEY: new Redacted(parsed.CLERK_SECRET_KEY as string),
+    CLERK_WEBHOOK_SIGNING_SECRET: new Redacted(parsed.CLERK_WEBHOOK_SIGNING_SECRET as string),
   };
-}
-function normalizeRaw(raw: Record<string, unknown>): void {
 }
 
 const cache = new Map<string, Promise<Vars>>();
@@ -194,7 +174,6 @@ export async function getVars(
         raw[name] = sub;
       }
     }
-		normalizeRaw(raw);
     const parsed = schema.parse(raw);
     return wrapRedacted(parsed);
   })();

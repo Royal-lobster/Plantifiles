@@ -1,6 +1,6 @@
 import { analyzePlan, type Block, diff, normalize, type PlanAnalysis } from "@plantifiles/core";
 import { plan, planVersion, workspace } from "@plantifiles/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
 import { resolvePlanEmoji } from "#/lib/helpers/plan-emoji";
 import { requireIdentity } from "#/lib/integrations/request-auth.server";
@@ -72,7 +72,11 @@ function decisionStatements(blocks: Block[], planId: string): D1PreparedStatemen
 export async function createPlan(request: Request, input: PublishPlanInput) {
 	const identity = await requireIdentity(request);
 	const db = getDb();
-	const workspaceRow = await db.select().from(workspace).where(eq(workspace.slug, input.workspaceSlug)).limit(1);
+	const workspaceRow = await db
+		.select()
+		.from(workspace)
+		.where(and(eq(workspace.slug, input.workspaceSlug), isNotNull(workspace.clerkOrganizationId)))
+		.limit(1);
 	const targetWorkspace = workspaceRow[0];
 	if (!targetWorkspace) throw new Response("Workspace not found", { status: 404 });
 	await assertWorkspaceAccess(targetWorkspace.id, identity.user.id);
@@ -130,7 +134,7 @@ export async function createPlanVersion(request: Request, planId: string, input:
 		.from(plan)
 		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
-		.where(eq(plan.id, planId))
+		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
 		.limit(1);
 	const current = rows[0];
 	if (!current) throw new Response("Plan not found", { status: 404 });
