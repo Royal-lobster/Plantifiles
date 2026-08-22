@@ -9,7 +9,7 @@
 	},
 	"scripts": {
 		"vars:gen": "vars gen config.vars --platform serverless",
-		"dev": "vars run --env dev -- vite dev --port 3000",
+		"dev": "CLOUDFLARE_ENV=dev vite dev --port 3000",
 		"generate-routes": "tsr generate",
 		"build": "vite build && tsc --noEmit",
 		"build:dev": "CLOUDFLARE_ENV=dev vite build && tsc --noEmit",
@@ -20,15 +20,15 @@
 		"migrate:dev": "wrangler d1 migrations apply plantifiles-dev --env dev --remote",
 		"cf-typegen": "wrangler types",
 		"test": "vitest run",
-		"test:e2e": "LOCAL_DEV=true playwright test",
+		"test:e2e": "playwright test",
 		"typecheck": "tsc --noEmit",
 		"lint": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@clerk/backend": "3.16.10",
 		"@clerk/tanstack-react-start": "1.5.6",
-		"@fontsource-variable/geist": "^5.3.0",
 		"@fontsource-variable/geist-mono": "^5.3.0",
+		"@fontsource-variable/inter": "^5.3.0",
 		"@plantifiles/core": "workspace:*",
 		"@plantifiles/db": "workspace:*",
 		"@plantifiles/ui": "workspace:*",
@@ -56,6 +56,7 @@
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
+		"@clerk/testing": "2.2.28",
 		"@cloudflare/vite-plugin": "1.51.2",
 		"@playwright/test": "1.62.1",
 		"@tailwindcss/vite": "^4.1.14",
@@ -67,6 +68,7 @@
 		"@vitejs/plugin-react": "^6.0.1",
 		"dotvars": "1.0.5",
 		"miniflare": "5.20260804.0-alpha",
+		"shadcn": "^4.18.0",
 		"typescript": "^6.0.2",
 		"vite": "8.2.1",
 		"vitest": "^4.1.10",

@@ -1,7 +1,6 @@
-import "@fontsource-variable/geist";
-import "@fontsource-variable/geist-mono";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { Button } from "@plantifiles/ui/components/button";
+import { TooltipProvider } from "@plantifiles/ui/components/tooltip";
 import {
 	createRootRoute,
 	type ErrorComponentProps,
@@ -32,8 +31,7 @@ const CLERK_APPEARANCE = {
 		fontFamily: "var(--font-sans)",
 		fontFamilyButtons: "var(--font-sans)",
 		fontFamilyMono: "var(--font-mono)",
-		spacing: "1rem",
-		borderRadius: "0.375rem",
+		borderRadius: "1rem",
 	},
 } satisfies NonNullable<ComponentProps<typeof ClerkProvider>["appearance"]>;
 
@@ -66,17 +64,13 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{import.meta.env.DEV ? (
-					<ThemeProvider>
-						<AppShell localDev>{children}</AppShell>
-					</ThemeProvider>
-				) : (
+				<TooltipProvider>
 					<ClerkProvider appearance={CLERK_APPEARANCE}>
 						<ThemeProvider>
 							<AppShell>{children}</AppShell>
 						</ThemeProvider>
 					</ClerkProvider>
-				)}
+				</TooltipProvider>
 				<Scripts />
 			</body>
 		</html>
@@ -98,13 +92,13 @@ function AppError({ reset }: ErrorComponentProps) {
 	}
 
 	return (
-		<div role="alert" className="mx-auto max-w-[68ch] py-16">
-			<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Application error</p>
-			<h1 className="mt-2 text-2xl font-semibold">Something went wrong</h1>
-			<p className="mt-3 leading-7 text-muted-foreground">
+		<div role="alert" className="mx-auto max-w-measure py-20">
+			<p className="label-eyebrow">Application error</p>
+			<h1 className="mt-3 font-semibold text-2xl tracking-tight">Something went wrong</h1>
+			<p className="mt-4 text-muted-foreground leading-7">
 				Plantifiles could not finish loading this page. Try again, or return home to continue elsewhere.
 			</p>
-			<div className="mt-6 flex flex-wrap gap-3">
+			<div className="mt-8 flex flex-wrap gap-3">
 				<Button type="button" disabled={recovering} onClick={() => void recover()}>
 					{recovering ? "Trying again…" : "Try again"}
 				</Button>
@@ -118,13 +112,13 @@ function AppError({ reset }: ErrorComponentProps) {
 
 function NotFound() {
 	return (
-		<div className="mx-auto max-w-[68ch] py-16">
-			<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">404</p>
-			<h1 className="mt-2 text-2xl font-semibold">Nothing here</h1>
-			<p className="mt-3 leading-7 text-muted-foreground">
+		<div className="mx-auto max-w-measure py-20">
+			<p className="label-eyebrow">404</p>
+			<h1 className="mt-3 font-semibold text-2xl tracking-tight">Nothing here</h1>
+			<p className="mt-4 text-muted-foreground leading-7">
 				The page you requested could not be found or may no longer be available.
 			</p>
-			<Link to="/" className="mt-6 inline-block text-sm underline underline-offset-4">
+			<Link to="/" className="mt-8 inline-block text-sm underline underline-offset-4">
 				Go to home
 			</Link>
 		</div>

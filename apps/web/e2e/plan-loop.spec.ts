@@ -2,7 +2,20 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { clerk } from "@clerk/testing/playwright";
+import { expect, type Page, test } from "@playwright/test";
+import { e2eWorkspaceSlug, E2E_EMAIL as email } from "./clerk-fixture";
+
+/* SSR ships interactive markup before the client bundle attaches, and Playwright's
+   actionability checks cannot see hydration: typing into a pre-hydration input
+   updates the DOM but never reaches React state, so the form submits an empty
+   value. Every navigation that precedes an interaction waits for the attach. */
+async function waitForHydration(page: Page) {
+	await page.waitForFunction(() => {
+		const main = document.querySelector("main");
+		return Boolean(main && Object.keys(main).some((key) => key.startsWith("__reactFiber")));
+	});
+}
 
 const cli = resolve(process.cwd(), "../cli/dist/index.js");
 
@@ -60,28 +73,40 @@ A stale approval could release different source. Bind every approval to the immu
 }
 
 function runCli(args: string[], cwd: string, token: string, baseUrl: string): string {
+	/* The fixture puts CLERK_SECRET_KEY on this process for Clerk's testing
+	   helpers. The CLI has no use for it, so the child gets an explicit
+	   environment rather than an inherited one. */
 	return execFileSync(process.execPath, [cli, ...args], {
 		cwd,
 		encoding: "utf8",
-		env: { ...process.env, PLANTIFILES_TOKEN: token, PLANTIFILES_BASE_URL: baseUrl },
+		env: {
+			PATH: process.env.PATH ?? "",
+			HOME: process.env.HOME ?? cwd,
+			PLANTIFILES_TOKEN: token,
+			PLANTIFILES_BASE_URL: baseUrl,
+		},
 	});
 }
 
 test("agent publish, browser review, approval, and version diff", async ({ page, baseURL }) => {
 	if (!baseURL) throw new Error("Playwright baseURL is required");
+	const workspaceSlug = e2eWorkspaceSlug();
 	const agentRepo = await mkdtemp(`${tmpdir()}/plantifiles-playwright-`);
 	try {
-		await page.context().addCookies([
-			{
-				name: "pf_dev_user",
-				value: "user_demo",
-				url: baseURL,
-			},
-		]);
-		await page.goto("/");
-		await expect(page).toHaveURL(/\/w\/demo$/);
+		/* Real Clerk session. `clerk.signIn` mints a backend sign-in ticket for the
+		   fixture reviewer, so it needs a page that has loaded the Clerk client and
+		   will not navigate away: every real route either redirects a signed-out
+		   visitor to Clerk or 307s, so the not-found page is the only stable host.
+		   Navigating to the workspace URL afterwards lets the app's
+		   organizationSyncOptions activate the Organization, which is what projects
+		   the local workspace and membership. */
+		await page.goto("/e2e-clerk-bootstrap");
+		await clerk.signIn({ page, emailAddress: email });
+		await page.goto(`/w/${workspaceSlug}`);
+		await expect(page).toHaveURL(new RegExp(`/w/${workspaceSlug}$`));
 
 		await page.goto("/settings/tokens");
+		await waitForHydration(page);
 		const tokenName = `Playwright ${Date.now()}`;
 		const tokenNameInput = page.getByRole("textbox", { name: "Create a token" });
 		await tokenNameInput.pressSequentially(tokenName);
@@ -101,7 +126,7 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 				"push",
 				planFile,
 				"--workspace",
-				"demo",
+				workspaceSlug,
 				"--agent",
 				"claude-code",
 				"--prompt",
@@ -115,22 +140,27 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		if (!planUrl) throw new Error("CLI push returned no plan URL");
 		const parsedPlanUrl = new URL(planUrl);
 		expect(parsedPlanUrl.origin).toBe(baseURL);
-		expect(parsedPlanUrl.pathname).toMatch(/^\/p\/demo\//);
-		await page.goto("/w/demo");
+		expect(parsedPlanUrl.pathname).toMatch(new RegExp(`^/p/${workspaceSlug}/`));
+		await page.goto(`/w/${workspaceSlug}`);
+		await waitForHydration(page);
 		const dashboardRow = page.getByRole("link", { name: new RegExp(title) });
 		await expect(dashboardRow).toContainText("draft");
 		await expect(dashboardRow).toContainText("v1");
 		await dashboardRow.click();
 
 		await expect(page.getByRole("heading", { name: title })).toBeVisible();
-		await expect(page.getByRole("navigation", { name: "Workspace navigation" })).toBeVisible();
+		await expect(page.getByRole("banner").getByRole("link", { name: "Plantifiles home" })).toBeVisible();
 		await expect(page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]')).toBeVisible();
-		const themeToggle = page.getByRole("button", { name: "Use dark theme" });
+		/* The toggle's accessible name is the control's state, so the locator has to
+		   match either name or it stops resolving the moment the theme flips. */
+		const themeToggle = page.getByRole("banner").getByRole("button", { name: /Use (dark|light) theme/ });
+		await expect(themeToggle).toHaveAccessibleName("Use dark theme");
 		await themeToggle.click();
 		await expect(page.locator("html")).toHaveClass(/dark/);
 		await expect(themeToggle).toHaveAccessibleName("Use light theme");
 		await page.reload();
 		await expect(page.locator("html")).toHaveClass(/dark/);
+		await waitForHydration(page);
 
 		const markdown = await page.request.get(planUrl, { headers: { Accept: "text/markdown" } });
 		expect(markdown.status()).toBe(200);

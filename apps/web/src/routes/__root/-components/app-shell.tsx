@@ -5,6 +5,15 @@ import { KeyRound, Moon, Sun } from "lucide-react";
 import { LogoMark } from "../../../components/brand";
 import { useTheme } from "./theme-provider";
 
+/* The chrome carries the same language as the primitives: one soft hairline at
+   the viewport edge, everything inside it a pill, and the reclaimed height
+   spent on air rather than on rules. */
+const HEADER = "sticky top-0 z-40 border-b border-foreground/[0.06] bg-background/70 backdrop-blur-xl";
+const HEADER_BAR = "mx-auto flex h-16 w-full max-w-shell items-center gap-3 px-5 sm:px-8";
+const MAIN = "mx-auto w-full max-w-shell px-5 py-12 sm:px-8";
+const WORDMARK =
+	"flex shrink-0 items-center gap-2.5 rounded-full font-semibold text-base tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
+
 function ThemeToggle() {
 	const { theme, setTheme } = useTheme();
 	const dark = theme === "dark";
@@ -20,51 +29,16 @@ function ThemeToggle() {
 	);
 }
 
-function LocalDevShell({ children }: { children: React.ReactNode }) {
-	return (
-		<div className="min-h-screen">
-			<header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
-				<div className="mx-auto flex h-14 w-full max-w-shell items-center gap-2 px-4 sm:px-6">
-					<Link
-						to="/"
-						className="flex shrink-0 items-center gap-1.5 font-semibold text-base tracking-tight"
-						aria-label="Plantifiles home"
-					>
-						<LogoMark />
-						<span className="hidden sm:inline">Plantifiles</span>
-					</Link>
-					<span className="truncate text-muted-foreground text-sm">Demo</span>
-					<div className="ml-auto flex shrink-0 items-center gap-1">
-						<Button variant="ghost" size="sm" asChild>
-							<Link to="/settings/tokens" aria-label="Agent tokens">
-								<KeyRound className="size-4" />
-								<span className="hidden sm:inline">Agent tokens</span>
-							</Link>
-						</Button>
-						<ThemeToggle />
-					</div>
-				</div>
-			</header>
-			<main className="mx-auto w-full max-w-shell px-4 py-8 sm:px-6">{children}</main>
-		</div>
-	);
-}
-
-function AppShell({ children, localDev = false }: { children: React.ReactNode; localDev?: boolean }) {
+function AppShell({ children }: { children: React.ReactNode }) {
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
 
 	if (pathname === "/cli") return children;
-	if (localDev) return <LocalDevShell>{children}</LocalDevShell>;
 
 	return (
 		<div className="min-h-screen">
-			<header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
-				<div className="mx-auto flex h-14 w-full max-w-shell items-center gap-2 px-4 sm:px-6">
-					<Link
-						to="/"
-						className="flex shrink-0 items-center gap-1.5 font-semibold text-base tracking-tight"
-						aria-label="Plantifiles home"
-					>
+			<header className={HEADER}>
+				<div className={HEADER_BAR}>
+					<Link to="/" className={WORDMARK} aria-label="Plantifiles home">
 						<LogoMark />
 						<span className="hidden sm:inline">Plantifiles</span>
 					</Link>
@@ -79,33 +53,15 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 							appearance={{
 								elements: {
 									rootBox: "min-w-0",
-									organizationSwitcherTrigger: {
-										minWidth: 0,
-										maxWidth: "min(16rem, 45vw)",
-										height: "2rem",
-										minHeight: "2rem",
-										maxHeight: "2rem",
-										padding: "0 0.75rem",
-									},
+									organizationSwitcherTrigger: "min-w-0 max-w-44 rounded-full sm:max-w-64",
 									organizationPreviewMainIdentifier: "truncate",
 									organizationSwitcherPopoverCard: { width: "20rem" },
-									organizationSwitcherPopoverActionButton: {
-										minHeight: "2.25rem",
-										padding: "0.5rem 0.75rem",
-									},
-								},
-							}}
-							organizationProfileProps={{
-								appearance: {
-									elements: {
-										card: { gridTemplateColumns: "11rem minmax(0, 1fr)" },
-									},
 								},
 							}}
 						/>
 					</Show>
 
-					<div className="ml-auto flex shrink-0 items-center gap-1">
+					<div className="ml-auto flex shrink-0 items-center gap-2">
 						<Show when="signed-in">
 							<Button variant="ghost" size="sm" asChild>
 								<Link to="/settings/tokens" aria-label="Agent tokens">
@@ -117,11 +73,6 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 								appearance={{
 									elements: {
 										userButtonPopoverCard: { width: "20rem" },
-										userPreview: { padding: "0.75rem 1rem" },
-										userButtonPopoverActionButton: {
-											minHeight: "2.25rem",
-											padding: "0.5rem 0.75rem",
-										},
 									},
 								}}
 							/>
@@ -135,7 +86,7 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 					</div>
 				</div>
 			</header>
-			<main className="mx-auto w-full max-w-shell px-4 py-8 sm:px-6">{children}</main>
+			<main className={MAIN}>{children}</main>
 		</div>
 	);
 }
