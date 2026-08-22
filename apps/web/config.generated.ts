@@ -27,6 +27,7 @@ const schema = z.object({
   CLERK_PUBLISHABLE_KEY: z.string(),
   CLERK_SECRET_KEY: z.string(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string(),
+  CLERK_OAUTH_CLIENT_ID: z.string(),
 });
 
 export type Vars = {
@@ -35,6 +36,7 @@ export type Vars = {
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_SECRET_KEY: Redacted<string>;
   CLERK_WEBHOOK_SIGNING_SECRET: Redacted<string>;
+  CLERK_OAUTH_CLIENT_ID: Redacted<string>;
 };
 
 const PUBLIC_VARS = {
@@ -56,10 +58,12 @@ const CIPHERTEXTS = {
   "dev": {
     CLERK_SECRET_KEY: "enc:v2:aes256gcm-det:mFjuuLY4S099ERIc:nQjGGKjNxxY4ZIHnbdFdZBpc63BwZ9Uq/KF8NG8cL9gPRwm4t0KQQ2tyCJGUj/0pKM4=:IVxKbJ8XvcSSQuhYaFLMvA==",
     CLERK_WEBHOOK_SIGNING_SECRET: "enc:v2:aes256gcm-det:TSJQsl1WGk6/76A+:XnkNGVudLxkkEZBHRAR6nnM15GaKc637Xll3If/Qf70087DWRD4=:233c+OpHmjb3fn3b03b2sA==",
+    CLERK_OAUTH_CLIENT_ID: "enc:v2:aes256gcm-det:hoyHS4yaTASsL9RJ:Wgw5r9Y7CPuqM55i6nxfDw==:llTDnZvJl3u9IF8yJTbg4w==",
   },
   "prod": {
     CLERK_SECRET_KEY: "enc:v2:aes256gcm-det:PHF641+O2Y41r5Pm:hawT/wwzNnMFYXamcsfDBBXyhx5ef+s15rQgu8TSKwh99MDWvVahPPqxSoGnvWxrrRw=:c+nAAtpSnZrtZjTGeAYzsQ==",
     CLERK_WEBHOOK_SIGNING_SECRET: "enc:v2:aes256gcm-det:I6YH1dL5ooNSqYnV:BAmmUjGQKoOM22hqu07P4Wni3zeP7SUX5vHNU1ds00qujUQINuU=:+YRu7BDHxBhZPtfPcBhvGw==",
+    CLERK_OAUTH_CLIENT_ID: "enc:v2:aes256gcm-det:rytbbMrzPWqf6+Bf:00EHAt2CpT/stqScNxXOJg==:B7v6ml8CsHtp0OR45/xD6Q==",
   },
 } as const;
 
@@ -140,6 +144,7 @@ function wrapRedacted(parsed: Record<string, unknown>): Vars {
     CLERK_PUBLISHABLE_KEY: parsed.CLERK_PUBLISHABLE_KEY as string,
     CLERK_SECRET_KEY: new Redacted(parsed.CLERK_SECRET_KEY as string),
     CLERK_WEBHOOK_SIGNING_SECRET: new Redacted(parsed.CLERK_WEBHOOK_SIGNING_SECRET as string),
+    CLERK_OAUTH_CLIENT_ID: new Redacted(parsed.CLERK_OAUTH_CLIENT_ID as string),
   };
 }
 
