@@ -106,7 +106,8 @@ export function ApiKeyList({ apiKeys }: { apiKeys: ApiKeyListItem[] }) {
 									<AlertDialogHeader>
 										<AlertDialogTitle>Revoke {apiKey.name}?</AlertDialogTitle>
 										<AlertDialogDescription>
-											Anything using this key loses access immediately. This action cannot be undone.
+											Anything using this key loses access within about a minute, once Clerk's verification cache
+											expires. This action cannot be undone.
 										</AlertDialogDescription>
 									</AlertDialogHeader>
 									<AlertDialogFooter>

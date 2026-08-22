@@ -14,7 +14,10 @@ export const Route = createFileRoute("/api/auth/cli")({
 						issuer: runtime.CLERK_OAUTH_ISSUER,
 						clientId: runtime.CLERK_OAUTH_CLIENT_ID,
 						redirectUri: `${runtime.PUBLIC_URL.replace(/\/$/, "")}/cli/callback`,
-						scopes: ["openid", "profile", "offline_access", "plantifiles:read", "plantifiles:write"],
+						/* Clerk rejects `openid` unless the OAuth application declares it, and the
+						   CLI consumes no `id_token`: it reads `sub` from `/oauth/userinfo` with the
+						   access token. `email` is what makes the login line name a person. */
+						scopes: ["profile", "email", "offline_access", "plantifiles:read", "plantifiles:write"],
 					},
 					{ headers: { "cache-control": "no-store" } },
 				);

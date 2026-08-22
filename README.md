@@ -131,8 +131,10 @@ Clerk keys are managed inside the vars bundle and must not be added as separate 
 The CLI's OAuth client ID lives in the vars bundle alongside the Clerk keys, so no additional
 Worker secret is required. Each environment needs one public Clerk OAuth application with PKCE
 required, opaque access tokens, a `${PUBLIC_URL}/cli/callback` redirect URI, and the scopes
-`openid profile offline_access plantifiles:read plantifiles:write`. Clerk user API keys must be
-enabled on the instance for `/settings/api-keys` to issue credentials.
+`profile email offline_access plantifiles:read plantifiles:write`. Clerk rejects an authorization
+request for any scope the application does not declare, and it defers that check until after
+sign-in, so a missing scope surfaces as a failed callback rather than a rejected URL. Clerk user
+API keys must be enabled on the instance for `/settings/api-keys` to issue credentials.
 
 GitHub Actions builds, applies D1 migrations, and deploys on updates to `main`. The workflow requires the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; the API token needs Workers edit and D1 edit access.
 

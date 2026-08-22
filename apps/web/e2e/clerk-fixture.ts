@@ -62,10 +62,18 @@ export default async function setupClerkFixture(): Promise<void> {
 }
 
 /**
- * Delete what setup created. The development Clerk instance also backs the
- * public hosted dev Worker, and a `+clerk_test` address accepts the universal
- * development verification code, so leaving the reviewer behind would leave a
- * standing Organization admin anyone reading this file could sign in as.
+ * Delete the Organization and revoke every key the run minted; keep the
+ * reviewer. Privilege lives in the Organization: with it gone the reviewer is a
+ * bare account on a development instance where anyone may sign up anyway, so
+ * leaving it costs nothing.
+ *
+ * Deleting the reviewer costs a great deal. Clerk unlinks a local author row
+ * when `user.deleted` arrives, and webhooks cannot reach a Worker on
+ * `localhost`. A deleted reviewer therefore leaves `user.clerk_user_id`
+ * pointing at an identity that no longer exists, and the next run's new Clerk
+ * user cannot claim that email -- `resolveClerkUser` refuses, correctly, and
+ * every authenticated route 500s until the local database is wiped by hand.
+ * A stable reviewer keeps the projection consistent across runs.
  */
 export async function teardownClerkFixture(): Promise<void> {
 	const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
@@ -77,9 +85,16 @@ export async function teardownClerkFixture(): Promise<void> {
 	for (const organization of organizations.data.filter((entry) => entry.name === E2E_ORGANIZATION_NAME)) {
 		await clerk.organizations.deleteOrganization(organization.id);
 	}
+
+	/* The plan loop mints a key per run to authenticate the headless CLI, and
+	   Clerk keys live 90 days, so leaving them accumulates real credentials on a
+	   reviewer that now survives teardown. */
 	const users = await clerk.users.getUserList({ emailAddress: [E2E_EMAIL], limit: 10 });
-	for (const user of users.data) {
-		await clerk.users.deleteUser(user.id);
+	for (const reviewer of users.data) {
+		const keys = await clerk.apiKeys.list({ subject: reviewer.id, limit: 100 });
+		for (const key of keys.data.filter((entry) => !entry.revoked)) {
+			await clerk.apiKeys.revoke({ apiKeyId: key.id, revocationReason: "Playwright teardown" });
+		}
 	}
 }
 

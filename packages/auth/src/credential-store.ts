@@ -7,6 +7,12 @@ export interface CredentialStore {
 	get(key: string): Promise<string | null>;
 	set(key: string, value: string): Promise<void>;
 	delete(key: string): Promise<void>;
+	/**
+	 * Where the credential written by the last `set` actually lives, for the CLI
+	 * to report. The keychain store degrades silently to a file, so a caller that
+	 * hardcodes "the system keychain" tells the user something untrue.
+	 */
+	location(): string;
 }
 
 export type CredentialStoreOptions = {
@@ -29,6 +35,10 @@ export class MemoryCredentialStore implements CredentialStore {
 
 	async delete(key: string): Promise<void> {
 		this.#values.delete(key);
+	}
+
+	location(): string {
+		return "memory";
 	}
 }
 
@@ -84,12 +94,17 @@ class FileCredentialStore implements CredentialStore {
 			await this.#writeAll(values);
 		});
 	}
+
+	location(): string {
+		return this.filePath;
+	}
 }
 
 type KeyringModule = { Entry: typeof KeyringEntry };
 
 class KeychainCredentialStore implements CredentialStore {
 	#keyring: Promise<KeyringModule | null> | undefined;
+	#degraded = false;
 
 	constructor(
 		private readonly service: string,
@@ -124,11 +139,16 @@ class KeychainCredentialStore implements CredentialStore {
 	async set(key: string, value: string): Promise<void> {
 		try {
 			const keyring = await this.#loadKeyring();
-			if (!keyring) return this.fallback.set(key, value);
+			if (!keyring) {
+				this.#degraded = true;
+				return this.fallback.set(key, value);
+			}
 			new keyring.Entry(this.service, this.#account(key)).setPassword(value);
 			await this.fallback.delete(key);
+			this.#degraded = false;
 		} catch (error) {
 			this.warn(`System keychain write failed; using the credential file. ${message(error)}`);
+			this.#degraded = true;
 			await this.fallback.set(key, value);
 		}
 	}
@@ -141,6 +161,10 @@ class KeychainCredentialStore implements CredentialStore {
 			this.warn(`System keychain delete failed. ${message(error)}`);
 		}
 		await this.fallback.delete(key);
+	}
+
+	location(): string {
+		return this.#degraded ? this.fallback.location() : "the system keychain";
 	}
 }
 

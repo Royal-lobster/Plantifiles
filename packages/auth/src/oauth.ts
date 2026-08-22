@@ -98,6 +98,11 @@ export class PlantifilesAuth {
 		return user;
 	}
 
+	/** Where `login` actually stored the credential; the keychain may degrade to a file. */
+	credentialLocation(): string {
+		return this.#store.location();
+	}
+
 	async getAccessToken(): Promise<string | null> {
 		if (this.#apiKey) return this.#apiKey;
 		const session = await this.#readSession();

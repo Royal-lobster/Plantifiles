@@ -6,7 +6,7 @@ const serviceConfig = {
 	issuer: "https://clerk.example",
 	clientId: "client_plantifiles",
 	redirectUri: "https://plans.example/cli/callback",
-	scopes: ["openid", "profile", "offline_access", "plantifiles:read", "plantifiles:write"],
+	scopes: ["profile", "email", "offline_access", "plantifiles:read", "plantifiles:write"],
 };
 
 describe("PlantifilesAuth", () => {

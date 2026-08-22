@@ -67,7 +67,7 @@ async function login(options: { baseUrl?: string }): Promise<void> {
 			...(defaultWorkspace ? { defaultWorkspace: defaultWorkspace.slug } : {}),
 		});
 		console.log(`\nSigned in${user.email ? ` as ${user.email}` : ""}.`);
-		console.log(`Service configuration saved to ${CONFIG_PATH}; credentials are in the system keychain.`);
+		console.log(`Service configuration saved to ${CONFIG_PATH}; credentials are in ${auth.credentialLocation()}.`);
 		if (defaultWorkspace) console.log(`Default workspace: ${defaultWorkspace.slug}`);
 	} finally {
 		terminal.close();
