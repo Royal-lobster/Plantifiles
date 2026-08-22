@@ -158,7 +158,18 @@ async function findWorkspaceByClerkId(db: Database, clerkOrganizationId: string)
 	return rows[0] ?? null;
 }
 
-/** Claim a transition-era workspace by its immutable Clerk Organization slug. */
+/**
+ * Project a Clerk Organization onto a workspace row, keyed on the immutable
+ * Clerk Organization ID. The slug is not immutable: organization slugs are
+ * enabled on both instances, so a member may rename one. The linked path
+ * therefore overwrites `slug` from Clerk on every authenticated request, and a
+ * renamed Organization moves its `/w/:slug` URL with nothing redirecting the
+ * old one.
+ *
+ * The slug lookup exists only to claim a workspace row that predates its Clerk
+ * Organization (`clerk_organization_id IS NULL`). A slug already held by a
+ * different Organization is refused rather than stolen.
+ */
 export async function resolveClerkOrganization(
 	input: ClerkOrganizationProjection,
 	db: Database = getDb(),
