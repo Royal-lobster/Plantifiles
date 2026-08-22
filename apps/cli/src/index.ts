@@ -40,10 +40,9 @@ function titleFromSource(source: string, file: string): string {
 }
 
 async function login(options: { baseUrl?: string }): Promise<void> {
-	const baseUrl = (options.baseUrl ?? process.env.PLANTIFILES_BASE_URL ?? (await askForBaseUrl()))
-		.trim()
-		.replace(/\/$/, "");
+	const baseUrl = (options.baseUrl ?? process.env.PLANTIFILES_BASE_URL ?? DEFAULT_BASE_URL).trim().replace(/\/$/, "");
 	if (!baseUrl) throw new Error("Plantifiles URL is required.");
+	console.log(`Signing in to ${baseUrl}`);
 
 	const terminal = createInterface({ input: process.stdin, output: process.stdout });
 	const auth = createAuth(baseUrl);
@@ -85,16 +84,6 @@ async function logout(): Promise<void> {
 	console.log("Signed out of Plantifiles on this machine.");
 	if (process.env.PLANTIFILES_TOKEN) {
 		console.log("PLANTIFILES_TOKEN remains active because environment credentials are not managed by the CLI.");
-	}
-}
-
-async function askForBaseUrl(): Promise<string> {
-	const terminal = createInterface({ input: process.stdin, output: process.stdout });
-	try {
-		const answer = await terminal.question(`Plantifiles URL [${DEFAULT_BASE_URL}]: `);
-		return answer.trim() || DEFAULT_BASE_URL;
-	} finally {
-		terminal.close();
 	}
 }
 
