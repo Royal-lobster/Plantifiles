@@ -79,8 +79,27 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 							appearance={{
 								elements: {
 									rootBox: "min-w-0",
-									organizationSwitcherTrigger: "min-w-0 max-w-44 sm:max-w-64",
+									organizationSwitcherTrigger: {
+										minWidth: 0,
+										maxWidth: "min(16rem, 45vw)",
+										height: "2rem",
+										minHeight: "2rem",
+										maxHeight: "2rem",
+										padding: "0 0.75rem",
+									},
 									organizationPreviewMainIdentifier: "truncate",
+									organizationSwitcherPopoverCard: { width: "20rem" },
+									organizationSwitcherPopoverActionButton: {
+										minHeight: "2.25rem",
+										padding: "0.5rem 0.75rem",
+									},
+								},
+							}}
+							organizationProfileProps={{
+								appearance: {
+									elements: {
+										card: { gridTemplateColumns: "11rem minmax(0, 1fr)" },
+									},
 								},
 							}}
 						/>
@@ -94,7 +113,18 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 									<span className="hidden sm:inline">Agent tokens</span>
 								</Link>
 							</Button>
-							<UserButton />
+							<UserButton
+								appearance={{
+									elements: {
+										userButtonPopoverCard: { width: "20rem" },
+										userPreview: { padding: "0.75rem 1rem" },
+										userButtonPopoverActionButton: {
+											minHeight: "2.25rem",
+											padding: "0.5rem 0.75rem",
+										},
+									},
+								}}
+							/>
 						</Show>
 						<Show when="signed-out">
 							<SignInButton mode="redirect">

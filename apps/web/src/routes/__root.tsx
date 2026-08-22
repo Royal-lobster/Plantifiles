@@ -10,12 +10,32 @@ import {
 	Scripts,
 	useRouter,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
 import appCss from "../styles.css?url";
 import { AppShell } from "./__root/-components/app-shell";
 import { THEME_PREPAINT_SCRIPT } from "./__root/-components/theme-config";
 import { ThemeProvider } from "./__root/-components/theme-provider";
+
+const CLERK_APPEARANCE = {
+	variables: {
+		colorPrimary: "var(--brand-ink)",
+		colorPrimaryForeground: "var(--background)",
+		colorBackground: "var(--popover)",
+		colorForeground: "var(--popover-foreground)",
+		colorMutedForeground: "var(--muted-foreground)",
+		colorInput: "var(--background)",
+		colorInputForeground: "var(--foreground)",
+		colorBorder: "var(--border)",
+		colorRing: "var(--brand-ink)",
+		colorDanger: "var(--destructive)",
+		fontFamily: "var(--font-sans)",
+		fontFamilyButtons: "var(--font-sans)",
+		fontFamilyMono: "var(--font-mono)",
+		spacing: "1rem",
+		borderRadius: "0.375rem",
+	},
+} satisfies NonNullable<ComponentProps<typeof ClerkProvider>["appearance"]>;
 
 export const Route = createRootRoute({
 	head: () => ({
@@ -51,7 +71,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 						<AppShell localDev>{children}</AppShell>
 					</ThemeProvider>
 				) : (
-					<ClerkProvider>
+					<ClerkProvider appearance={CLERK_APPEARANCE}>
 						<ThemeProvider>
 							<AppShell>{children}</AppShell>
 						</ThemeProvider>

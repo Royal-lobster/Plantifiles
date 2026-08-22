@@ -4,8 +4,10 @@ packages:
 
 allowBuilds:
   argon2: true
+  bufferutil: false
   esbuild: true
   keytar: true
+  utf-8-validate: false
   workerd: true
 
 minimumReleaseAgeExclude:
