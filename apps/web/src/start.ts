@@ -29,6 +29,5 @@ const callbackHeaders = createMiddleware().server(async ({ pathname, next }) => 
 });
 
 export const startInstance = createStart(() => ({
-	requestMiddleware:
-		import.meta.env.VITE_LOCAL_DEV === "true" ? [callbackHeaders] : [callbackHeaders, clerkMiddleware(clerkOptions)],
+	requestMiddleware: [callbackHeaders, clerkMiddleware(clerkOptions)],
 }));

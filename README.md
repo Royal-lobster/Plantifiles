@@ -22,13 +22,33 @@ Copy the D1 database ID into `apps/web/wrangler.jsonc`, then apply migrations:
 ```bash
 pnpm db:generate
 pnpm db:migrate:local
-pnpm --dir apps/web exec wrangler d1 execute plantifiles --local --file seed.sql
+printf 'VARS_KEY=%s\n' "$(pnpm --dir apps/web exec vars key export)" > apps/web/.dev.vars
+chmod 600 apps/web/.dev.vars
 pnpm dev
 ```
 
-Vite development runs the `dev` vars profile through `vars run`, forwarding `VARS_ENV` and `VARS_KEY` to the local Worker. The profile's decrypted `PUBLIC_URL` and `LOCAL_DEV` values drive the local URL and deterministic seeded-user shell behavior.
+`pnpm dev` runs the `dev` Cloudflare environment (`CLOUDFLARE_ENV=dev`), so local dev and
+`dev.plantifiles.com` resolve the same `wrangler.jsonc` block: the same `VARS_ENV=dev` vars
+profile and the same `plantifiles-dev` D1 binding, one locally and one remote. Nothing about
+the environment is configured twice.
 
-Open <http://localhost:3000> to use the seeded local demo.
+`.dev.vars` carries the single secret and is gitignored; hosted environments get the same
+value from `wrangler secret put VARS_KEY`. It is required because SSR runs inside workerd
+under `@cloudflare/vite-plugin`, whose environment is assembled from `wrangler.jsonc` plus
+`.dev.vars` — a parent process's variables are not inherited, so wrapping the dev command in
+`vars run` leaves `getVars` in `apps/web/src/start.ts` with no `VARS_KEY` and every route 500s.
+
+`vars` uses one master key for every environment, so the value in `.dev.vars` decrypts the
+production ciphertexts in the same bundle, not just the `dev` block. Treat that file as a
+production credential: keep it mode 600, never copy it off the machine, and rotate
+`vars rotate` plus the Clerk secrets if it leaks. Per-environment keys would remove the
+overlap and are the real fix.
+
+Open <http://localhost:3000> and sign in through Clerk. Local runs use the Clerk development
+instance and the real session, Organization, and workspace-projection path that production
+uses; there is no seeded identity and no local-only authentication branch. The local database
+starts empty, and the first signed-in request projects your Clerk user, Organization, and
+membership into it.
 
 ## Demo loop
 
@@ -36,13 +56,13 @@ Build the command-line client and authorize this machine. `login` opens Clerk in
 
 ```bash
 pnpm --filter @plantifiles/cli build
-node apps/cli/dist/index.js login --base-url https://dev.plantifiles.com
+node apps/cli/dist/index.js login --base-url http://localhost:3000
 ```
 
 OAuth access and refresh tokens are stored in the system keychain, with a mode-0600 credential-file fallback when no keychain is available. `plantifiles logout` revokes the refresh token. CI and other headless environments use a user-scoped Clerk API key created at `/settings/api-keys`:
 
 ```bash
-export PLANTIFILES_BASE_URL=https://dev.plantifiles.com
+export PLANTIFILES_BASE_URL=http://localhost:3000
 export PLANTIFILES_TOKEN=ak_replace_with_your_clerk_api_key
 ```
 
@@ -108,12 +128,11 @@ pnpm --dir apps/web exec wrangler secret put VARS_KEY --env dev
 
 Clerk keys are managed inside the vars bundle and must not be added as separate Worker or GitHub Actions secrets. Wrangler preserves installed Worker secrets across deploys.
 
-Create one public Clerk OAuth application per environment with PKCE required, opaque access tokens, callback `${PUBLIC_URL}/cli/callback`, and scopes `openid profile offline_access plantifiles:read plantifiles:write`. Install its client ID on each Worker:
-
-```bash
-pnpm --dir apps/web exec wrangler secret put CLERK_OAUTH_CLIENT_ID
-pnpm --dir apps/web exec wrangler secret put CLERK_OAUTH_CLIENT_ID --env dev
-```
+The CLI's OAuth client ID lives in the vars bundle alongside the Clerk keys, so no additional
+Worker secret is required. Each environment needs one public Clerk OAuth application with PKCE
+required, opaque access tokens, a `${PUBLIC_URL}/cli/callback` redirect URI, and the scopes
+`openid profile offline_access plantifiles:read plantifiles:write`. Clerk user API keys must be
+enabled on the instance for `/settings/api-keys` to issue credentials.
 
 GitHub Actions builds, applies D1 migrations, and deploys on updates to `main`. The workflow requires the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; the API token needs Workers edit and D1 edit access.
 

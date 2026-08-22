@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as CliCallbackRouteImport } from './routes/cli/callback'
-import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
+import { Route as SettingsApiKeysRouteRouteImport } from './routes/settings/api-keys/route'
 import { Route as ApiAuthCliRouteImport } from './routes/api/auth/cli'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk/webhook'
 import { Route as ApiPlansIndexRouteImport } from './routes/api/plans/index'
@@ -35,7 +35,7 @@ const CliCallbackRoute = CliCallbackRouteImport.update({
   path: '/cli/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
+const SettingsApiKeysRouteRoute = SettingsApiKeysRouteRouteImport.update({
   id: '/settings/api-keys',
   path: '/settings/api-keys',
   getParentRoute: () => rootRouteImport,
@@ -106,8 +106,8 @@ const PWorkspaceSlugPlanSlugVNumberRouteRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/settings/api-keys': typeof SettingsApiKeysRouteRoute
   '/cli/callback': typeof CliCallbackRoute
-  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
@@ -123,8 +123,8 @@ export interface FileRoutesByFullPath {
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRoutesByTo {
+  '/settings/api-keys': typeof SettingsApiKeysRouteRoute
   '/cli/callback': typeof CliCallbackRoute
-  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
   '/api/auth/cli': typeof ApiAuthCliRoute
@@ -140,8 +140,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/settings/api-keys': typeof SettingsApiKeysRouteRoute
   '/cli/callback': typeof CliCallbackRoute
-  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/(home)/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
@@ -159,8 +159,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/cli/callback'
     | '/settings/api-keys'
+    | '/cli/callback'
     | '/'
     | '/api/plans/$id'
     | '/p/$workspaceSlug/$planSlug'
@@ -176,8 +176,8 @@ export interface FileRouteTypes {
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/cli/callback'
     | '/settings/api-keys'
+    | '/cli/callback'
     | '/'
     | '/api/plans/$id'
     | '/api/auth/cli'
@@ -192,8 +192,8 @@ export interface FileRouteTypes {
     | '/p/$workspaceSlug/$planSlug/v/$number'
   id:
     | '__root__'
-    | '/cli/callback'
     | '/settings/api-keys'
+    | '/cli/callback'
     | '/(home)/'
     | '/api/plans/$id'
     | '/p/$workspaceSlug/$planSlug'
@@ -210,8 +210,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  SettingsApiKeysRouteRoute: typeof SettingsApiKeysRouteRoute
   CliCallbackRoute: typeof CliCallbackRoute
-  SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   homeIndexRoute: typeof homeIndexRoute
   ApiPlansIdRouteRoute: typeof ApiPlansIdRouteRouteWithChildren
   PWorkspaceSlugPlanSlugRouteRoute: typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
@@ -243,7 +243,7 @@ declare module '@tanstack/react-router' {
       id: '/settings/api-keys'
       path: '/settings/api-keys'
       fullPath: '/settings/api-keys'
-      preLoaderRoute: typeof SettingsApiKeysRouteImport
+      preLoaderRoute: typeof SettingsApiKeysRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/cli': {
@@ -365,8 +365,8 @@ const PWorkspaceSlugPlanSlugRouteRouteWithChildren =
   )
 
 const rootRouteChildren: RootRouteChildren = {
+  SettingsApiKeysRouteRoute: SettingsApiKeysRouteRoute,
   CliCallbackRoute: CliCallbackRoute,
-  SettingsApiKeysRoute: SettingsApiKeysRoute,
   homeIndexRoute: homeIndexRoute,
   ApiPlansIdRouteRoute: ApiPlansIdRouteRouteWithChildren,
   PWorkspaceSlugPlanSlugRouteRoute:

@@ -1,11 +1,10 @@
-import { getVars } from "#vars";
-import { createDb } from "@plantifiles/db";
 import { env } from "cloudflare:workers";
+import { createDb } from "@plantifiles/db";
+import { getVars } from "#vars";
 
 type RuntimeBindings = Cloudflare.Env &
 	Record<string, unknown> & {
 		VARS_ENV?: string | undefined;
-		CLERK_OAUTH_CLIENT_ID?: string | undefined;
 		VARS_KEY?: string | undefined;
 	};
 type VarsBindings = Parameters<typeof getVars>[0];
@@ -16,7 +15,6 @@ export type RuntimeConfig = {
 	CLERK_OAUTH_ISSUER: string;
 	CLERK_SECRET_KEY: string;
 	CLERK_WEBHOOK_SIGNING_SECRET: string;
-	LOCAL_DEV: string;
 	PUBLIC_URL: string;
 };
 
@@ -24,40 +22,36 @@ export function getBindings(): RuntimeBindings {
 	return env as RuntimeBindings;
 }
 
+/**
+ * A Clerk publishable key carries its own Frontend API host: `pk_test_`/`pk_live_`
+ * followed by base64 of `<host>$`. Deriving the OAuth issuer from it means the
+ * issuer and the key can never name different Clerk instances, and the CLI
+ * discovery endpoint needs no configuration of its own.
+ */
+function oauthIssuer(publishableKey: string): string {
+	const encoded = publishableKey.replace(/^pk_(test|live)_/, "");
+	const host = atob(encoded).replace(/\$$/, "");
+	if (!host) throw new Error("Clerk publishable key does not encode a Frontend API host.");
+	return `https://${host}`;
+}
+
 export async function getRuntimeConfig(): Promise<RuntimeConfig> {
-	if (import.meta.env.VITE_LOCAL_DEV === "true") {
-		return {
-			CLERK_PUBLISHABLE_KEY: "",
-			CLERK_OAUTH_CLIENT_ID: "",
-			CLERK_OAUTH_ISSUER: "http://localhost",
-			CLERK_SECRET_KEY: "",
-			CLERK_WEBHOOK_SIGNING_SECRET: "",
-			LOCAL_DEV: "true",
-			PUBLIC_URL: import.meta.env.VITE_PUBLIC_URL ?? "http://localhost:3000",
-		};
-	}
 	const vars = await getVars(getVarsBindings());
-	const bindings = getBindings();
 	return {
 		CLERK_PUBLISHABLE_KEY: vars.CLERK_PUBLISHABLE_KEY,
-		CLERK_OAUTH_CLIENT_ID: String(
-			bindings.CLERK_OAUTH_CLIENT_ID ?? (import.meta.env.DEV ? process.env.CLERK_OAUTH_CLIENT_ID : "") ?? "",
-		),
-		CLERK_OAUTH_ISSUER: vars.CLERK_OAUTH_ISSUER,
+		CLERK_OAUTH_CLIENT_ID: vars.CLERK_OAUTH_CLIENT_ID.unwrap(),
+		CLERK_OAUTH_ISSUER: oauthIssuer(vars.CLERK_PUBLISHABLE_KEY),
 		CLERK_SECRET_KEY: vars.CLERK_SECRET_KEY.unwrap(),
 		CLERK_WEBHOOK_SIGNING_SECRET: vars.CLERK_WEBHOOK_SIGNING_SECRET.unwrap(),
-		LOCAL_DEV: String(vars.LOCAL_DEV),
 		PUBLIC_URL: vars.PUBLIC_URL,
 	};
 }
 
 function getVarsBindings(): VarsBindings {
 	const bindings = getBindings();
-	const varsEnv = bindings.VARS_ENV ?? (import.meta.env.DEV ? process.env.VARS_ENV : undefined);
-	const varsKey = bindings.VARS_KEY ?? (import.meta.env.DEV ? process.env.VARS_KEY : undefined);
 	return {
-		...(varsEnv ? { VARS_ENV: varsEnv } : {}),
-		...(varsKey ? { VARS_KEY: varsKey } : {}),
+		...(bindings.VARS_ENV ? { VARS_ENV: bindings.VARS_ENV } : {}),
+		...(bindings.VARS_KEY ? { VARS_KEY: bindings.VARS_KEY } : {}),
 	};
 }
 

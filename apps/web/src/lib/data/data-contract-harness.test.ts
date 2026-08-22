@@ -51,7 +51,6 @@ vi.mock("#/lib/integrations/runtime.server", () => ({
 		CLERK_OAUTH_CLIENT_ID: "client_contract",
 		CLERK_OAUTH_ISSUER: "https://clerk.example",
 		CLERK_WEBHOOK_SIGNING_SECRET: "whsec_contract",
-		LOCAL_DEV: "false",
 		PUBLIC_URL: "https://plans.example",
 	}),
 }));

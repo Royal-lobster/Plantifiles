@@ -7,8 +7,8 @@ import { Check, Copy, ListFilter, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAN_STATUSES, type PlanStatus } from "#/lib/data/plan-types";
 import { useClipboard } from "#/lib/helpers/use-clipboard";
+import { PLAN_STATUS_PRESENTATION, StatusChip } from "../../../../components/status-chip";
 import type { DashboardPlan } from "../-data/dashboard";
-import { StatusChip } from "../../../../components/status-chip";
 
 const route = getRouteApi("/w/$slug/");
 
@@ -50,7 +50,7 @@ export function Dashboard() {
 
 	return (
 		<section>
-			<header className="flex items-baseline gap-3 border-b pb-4">
+			<header className="flex items-baseline gap-3 border-b border-foreground/[0.08] pb-4">
 				<h1 className="font-medium text-2xl tracking-tight">Plans</h1>
 				<span className="font-mono text-muted-foreground text-xs">
 					{plans.length} {plans.length === 1 ? "plan" : "plans"}
@@ -61,7 +61,7 @@ export function Dashboard() {
 				<EmptyState slug={slug} />
 			) : (
 				<>
-					<div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center">
+					<div className="flex flex-col gap-3 py-6 sm:flex-row sm:items-center">
 						<InputGroup className="h-9 flex-1 sm:max-w-xs">
 							<InputGroupAddon>
 								<Search />
@@ -89,12 +89,19 @@ export function Dashboard() {
 								<SelectValue>{search.status ? search.status.replace("_", " ") : "All statuses"}</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="all">All statuses</SelectItem>
-								{PLAN_STATUSES.map((status) => (
-									<SelectItem key={status} value={status}>
-										{status.replace("_", " ")}
-									</SelectItem>
-								))}
+								<SelectItem value="all">
+									<ListFilter className="size-3.5 text-muted-foreground" />
+									All statuses
+								</SelectItem>
+								{PLAN_STATUSES.map((status) => {
+									const { icon: Icon, ink } = PLAN_STATUS_PRESENTATION[status];
+									return (
+										<SelectItem key={status} value={status}>
+											<Icon className={cn("size-3.5", ink)} />
+											{status.replace("_", " ")}
+										</SelectItem>
+									);
+								})}
 							</SelectContent>
 						</Select>
 					</div>
@@ -104,7 +111,7 @@ export function Dashboard() {
 							No plans match these filters.
 						</output>
 					) : (
-						<ul className="divide-y border-y">
+						<ul className="space-y-1">
 							{visiblePlans.map((plan) => (
 								<li key={plan.id}>
 									<PlanEntry plan={plan} workspaceSlug={slug} />
@@ -123,7 +130,7 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 		<Link
 			to="/p/$workspaceSlug/$planSlug"
 			params={{ workspaceSlug, planSlug: plan.slug }}
-			className="-mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-3 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto_5rem_3rem]"
+			className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-2xl px-4 py-4 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/30 sm:grid-cols-[minmax(0,1fr)_auto_5rem_3rem]"
 		>
 			<div className="min-w-0">
 				<div className="flex min-w-0 items-center gap-2.5">
@@ -136,7 +143,7 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 					{plan.openDecisions} open · v{plan.version}
 				</p>
 			</div>
-			<StatusChip status={plan.status} size="sm" />
+			<StatusChip status={plan.status} />
 			<span
 				className={cn(
 					"hidden font-mono text-xs sm:block",
@@ -160,7 +167,7 @@ function EmptyState({ slug }: { slug: string }) {
 			<p className="mt-3 text-muted-foreground leading-7">
 				Publishing is the CLI's job. Run this from the agent session that wrote the plan.
 			</p>
-			<div className="mt-6 flex items-center gap-2 rounded-lg border bg-muted/40 p-2 pl-4">
+			<div className="surface-inset mt-6 flex items-center gap-3 p-3 pl-5">
 				<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">{command}</code>
 				<Button
 					size="icon-sm"
@@ -185,17 +192,17 @@ function EmptyState({ slug }: { slug: string }) {
 export function DashboardSkeleton() {
 	return (
 		<output className="block" aria-label="Loading plans">
-			<div className="flex items-baseline gap-3 border-b pb-4">
-				<div className="h-7 w-20 animate-pulse rounded bg-muted" />
-				<div className="h-3 w-12 animate-pulse rounded bg-muted" />
+			<div className="flex items-baseline gap-3 border-b border-foreground/[0.08] pb-4">
+				<div className="h-7 w-20 animate-pulse rounded-2xl bg-muted" />
+				<div className="h-3 w-12 animate-pulse rounded-xl bg-muted" />
 			</div>
-			<div className="mt-5 h-9 w-full max-w-xs animate-pulse rounded bg-muted" />
-			<div className="mt-5 divide-y border-y">
+			<div className="mt-6 h-9 w-full max-w-xs animate-pulse rounded-2xl bg-muted" />
+			<div className="mt-6 space-y-1">
 				{[0, 1, 2, 3, 4, 5].map((row) => (
-					<div key={row} className="flex h-14 animate-pulse items-center gap-3 px-3">
-						<div className="size-5 rounded bg-muted" />
-						<div className="h-4 flex-1 rounded bg-muted" />
-						<div className="h-5 w-20 rounded bg-muted" />
+					<div key={row} className="flex h-16 animate-pulse items-center gap-3 rounded-2xl px-4">
+						<div className="size-5 rounded-xl bg-muted" />
+						<div className="h-4 flex-1 rounded-2xl bg-muted" />
+						<div className="h-5 w-20 rounded-xl bg-muted" />
 					</div>
 				))}
 			</div>

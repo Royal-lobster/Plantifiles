@@ -1,11 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
 const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000").origin;
-const port = new URL(origin).port || (origin.startsWith("https:") ? "443" : "80");
-const startServer = `${process.env.CI ? "" : "devcap "}pnpm exec vite dev --port ${port}`;
 
 export default defineConfig({
 	testDir: "./e2e",
+	globalSetup: "./e2e/clerk-fixture.ts",
+	globalTeardown: "./e2e/global-teardown.ts",
 	fullyParallel: false,
 	workers: 1,
 	timeout: 90_000,
@@ -16,10 +16,9 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: `pnpm --dir ../.. db:migrate:local && pnpm exec wrangler d1 execute plantifiles --local --file seed.sql && ${startServer}`,
-		env: { VITE_LOCAL_DEV: "true", VITE_PUBLIC_URL: origin },
-		url: `${origin}/cli/callback?code=ready&state=ready`,
-		reuseExistingServer: true,
+		command: "pnpm --dir ../.. db:migrate:local && pnpm dev",
+		url: origin,
+		reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "true",
 		timeout: 120_000,
 	},
 });

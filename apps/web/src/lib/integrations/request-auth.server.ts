@@ -1,8 +1,7 @@
 import { auth, clerkClient } from "@clerk/tanstack-react-start/server";
 import { user } from "@plantifiles/db/schema";
-import { eq } from "drizzle-orm";
 import { resolveClerkOrganizationMembership, resolveClerkUser } from "#/lib/data/clerk-projection.server";
-import { getDb, getRuntimeConfig } from "./runtime.server";
+import { getRuntimeConfig } from "./runtime.server";
 
 export type PlantifilesScope = "plantifiles:read" | "plantifiles:write";
 
@@ -27,45 +26,16 @@ type MachineIdentity = {
 
 export type RequestIdentity = SessionIdentity | MachineIdentity;
 
-const requestUserSelection = {
-	id: user.id,
-	name: user.name,
-	email: user.email,
-	image: user.image,
-};
-
+/**
+ * Clerk's middleware puts the request in async context, so `auth()` reads it
+ * without being handed one. The parameter stays because every data module
+ * threads a request down to authorization; removing it is a separate change.
+ */
 export async function authenticateRequest(
-	request: Request,
+	_request: Request,
 	requiredScope?: PlantifilesScope,
 ): Promise<RequestIdentity | null> {
 	const runtime = await getRuntimeConfig();
-	if (runtime.LOCAL_DEV === "true") {
-		const localApiKey = request.headers.get("authorization") === "Bearer pf_local_demo";
-		const devUserId = localApiKey
-			? "user_demo"
-			: request.headers
-					.get("cookie")
-					?.split(";")
-					.map((value) => value.trim().split("="))
-					.find(([name]) => name === "pf_dev_user")?.[1];
-		if (devUserId) {
-			const users = await getDb()
-				.select(requestUserSelection)
-				.from(user)
-				.where(eq(user.id, decodeURIComponent(devUserId)))
-				.limit(1);
-			if (users[0]) {
-				return localApiKey
-					? {
-							user: users[0],
-							method: "api_key",
-							scopes: ["plantifiles:read", "plantifiles:write"],
-						}
-					: { user: users[0], method: "session", scopes: ["plantifiles:read", "plantifiles:write"] };
-			}
-		}
-	}
-
 	const clerkIdentity = await auth({
 		acceptsToken: ["session_token", "oauth_token", "api_key"],
 	});

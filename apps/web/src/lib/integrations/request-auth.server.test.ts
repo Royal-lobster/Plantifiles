@@ -35,11 +35,10 @@ vi.mock("./runtime.server", () => ({
 		CLERK_WEBHOOK_SIGNING_SECRET: "whsec_test",
 		CLERK_OAUTH_CLIENT_ID: "client_test",
 		CLERK_OAUTH_ISSUER: "https://clerk.example",
-		LOCAL_DEV: "false",
 		PUBLIC_URL: "https://plans.example",
 	}),
 	getDb: () => {
-		throw new Error("Production Clerk authentication should not query a token table.");
+		throw new Error("Clerk authentication should never query the database for a credential.");
 	},
 }));
 

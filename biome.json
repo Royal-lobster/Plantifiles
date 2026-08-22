@@ -11,8 +11,9 @@
 			"!**/*.generated.ts",
 			"!**/worker-configuration.d.ts",
 			"!pnpm-lock.yaml",
-			"!playwright-report",
-			"!test-results"
+			"!**/playwright-report",
+			"!**/test-results",
+			"!packages/db/migrations"
 		]
 	},
 	"formatter": {
