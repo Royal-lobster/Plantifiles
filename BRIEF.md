@@ -35,9 +35,9 @@ The monorepo is `apps/web`, `apps/cli`, `apps/mcp`, `packages/core`, `packages/d
 
 ## Local environment
 
-`wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, then `drizzle-kit generate` and `wrangler d1 migrations apply plantifiles --local`. Vite development deterministically uses `PUBLIC_URL=http://localhost:3000` and `LOCAL_DEV=true` without `.dev.vars`. Production uses direct Worker bindings for `PUBLIC_URL`, `LOCAL_DEV`, `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_WEBHOOK_SIGNING_SECRET`.
+`wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, then `drizzle-kit generate` and `pnpm db:migrate:local`. `pnpm dev` selects the `dev` Cloudflare environment, so local runs resolve the same `wrangler.jsonc` block as the hosted dev Worker: the `VARS_ENV=dev` vars profile and the `plantifiles-dev` D1 binding. `apps/web/.dev.vars` supplies `VARS_KEY` to the local Worker; hosted Workers get it from `wrangler secret put VARS_KEY`. Every other value — `PUBLIC_URL`, `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET` — is decrypted from the vars bundle at runtime.
 
-Clerk is the production identity and Organization provider. Keep the deterministic `LOCAL_DEV` cookie smoke limited to the seeded user and fake linked Clerk Organization; do not add custom sign-in, invitation, or workspace-creation flows.
+Clerk is the identity and Organization provider in every environment, including local development. There is no local-only authentication branch and no seeded identity: sign in through the Clerk development instance and let the request-path projection create the user, workspace, and membership. Do not add custom sign-in, invitation, or workspace-creation flows.
 
 ## Verification
 

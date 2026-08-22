@@ -4,6 +4,8 @@ const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000
 
 export default defineConfig({
 	testDir: "./e2e",
+	globalSetup: "./e2e/clerk-fixture.ts",
+	globalTeardown: "./e2e/global-teardown.ts",
 	fullyParallel: false,
 	workers: 1,
 	timeout: 90_000,
@@ -14,8 +16,7 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command:
-			"pnpm --dir ../.. db:migrate:local && pnpm exec wrangler d1 execute plantifiles --local --file seed.sql && pnpm dev",
+		command: "pnpm --dir ../.. db:migrate:local && pnpm dev",
 		url: origin,
 		reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "true",
 		timeout: 120_000,

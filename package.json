@@ -15,7 +15,7 @@
 		"test:e2e": "turbo build --filter=@plantifiles/core --filter=@plantifiles/db --filter=@plantifiles/cli && pnpm --filter @plantifiles/web test:e2e",
 		"typecheck": "turbo typecheck",
 		"db:generate": "pnpm --filter @plantifiles/db generate",
-		"db:migrate:local": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --local",
+		"db:migrate:local": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles-dev --env dev --local",
 		"db:migrate:remote": "pnpm --dir apps/web exec wrangler d1 migrations apply plantifiles --remote"
 	},
 	"devDependencies": {

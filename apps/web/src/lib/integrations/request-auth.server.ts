@@ -57,21 +57,6 @@ export async function authenticateRequest(request: Request): Promise<RequestIden
 	}
 
 	const runtime = await getRuntimeConfig();
-	if (runtime.LOCAL_DEV === "true") {
-		const devUserId = request.headers
-			.get("cookie")
-			?.split(";")
-			.map((value) => value.trim().split("="))
-			.find(([name]) => name === "pf_dev_user")?.[1];
-		if (devUserId) {
-			const users = await getDb()
-				.select(requestUserSelection)
-				.from(user)
-				.where(eq(user.id, decodeURIComponent(devUserId)))
-				.limit(1);
-			if (users[0]) return { user: users[0], method: "session" };
-		}
-	}
 
 	const clerkIdentity = await auth();
 	if (!clerkIdentity.userId) return null;

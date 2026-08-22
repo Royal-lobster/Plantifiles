@@ -23,7 +23,6 @@ class Redacted<T> {
 
 const schema = z.object({
   PUBLIC_URL: z.string(),
-  LOCAL_DEV: z.string(),
   CLERK_PUBLISHABLE_KEY: z.string(),
   CLERK_SECRET_KEY: z.string(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string(),
@@ -32,7 +31,6 @@ const schema = z.object({
 
 export type Vars = {
   PUBLIC_URL: string;
-  LOCAL_DEV: string;
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_SECRET_KEY: Redacted<string>;
   CLERK_WEBHOOK_SIGNING_SECRET: Redacted<string>;
@@ -43,10 +41,6 @@ const PUBLIC_VARS = {
   PUBLIC_URL: {
     "dev": "http://localhost:3000",
     "prod": "https://plantifiles.com",
-  },
-  LOCAL_DEV: {
-    "dev": "true",
-    "prod": "false",
   },
   CLERK_PUBLISHABLE_KEY: {
     "dev": "pk_test_ZmFuY3ktbWFtbW90aC04ODE3LmNsZXJrLmFjY291bnRzLmRldiQ",
@@ -140,7 +134,6 @@ function selectPublicValue(value: unknown, targetEnv: string): unknown {
 function wrapRedacted(parsed: Record<string, unknown>): Vars {
   return {
     PUBLIC_URL: parsed.PUBLIC_URL as string,
-    LOCAL_DEV: parsed.LOCAL_DEV as string,
     CLERK_PUBLISHABLE_KEY: parsed.CLERK_PUBLISHABLE_KEY as string,
     CLERK_SECRET_KEY: new Redacted(parsed.CLERK_SECRET_KEY as string),
     CLERK_WEBHOOK_SIGNING_SECRET: new Redacted(parsed.CLERK_WEBHOOK_SIGNING_SECRET as string),

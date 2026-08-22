@@ -48,7 +48,6 @@ vi.mock("#/lib/integrations/runtime.server", () => ({
 		CLERK_PUBLISHABLE_KEY: "pk_test_contract",
 		CLERK_SECRET_KEY: "sk_test_contract",
 		CLERK_WEBHOOK_SIGNING_SECRET: "whsec_contract",
-		LOCAL_DEV: "false",
 		PUBLIC_URL: "https://plans.example",
 	}),
 }));
