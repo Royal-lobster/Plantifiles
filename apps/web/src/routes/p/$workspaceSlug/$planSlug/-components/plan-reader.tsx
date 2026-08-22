@@ -38,8 +38,8 @@ function PlanReader({ data }: PlanReaderProps) {
 	}
 
 	return (
-		<article aria-label={data.plan.title} className="mx-auto w-full max-w-measure">
-			<header className="border-b pb-7">
+		<article aria-label={data.plan.title} className="w-full">
+			<header className="border-b border-foreground/[0.08] pb-8">
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
 				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
 					{data.plan.emoji && (
@@ -59,11 +59,11 @@ function PlanReader({ data }: PlanReaderProps) {
 					    reading one; and the approval count is already spelled out by the
 					    gate sentence below when it blocks. */}
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
-						<StatusChip status={data.plan.status} size="sm" />
+						<StatusChip status={data.plan.status} />
 						{data.versions.length > 1 ? (
 							<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
 								<SelectTrigger
-									className="h-6 gap-1 rounded-sm border-0 bg-muted px-2 font-mono text-xs shadow-none focus-visible:ring-1"
+									className="h-6 gap-1 bg-muted px-2.5 font-mono text-xs shadow-none"
 									aria-label="Plan version"
 								>
 									<SelectValue />
@@ -77,12 +77,16 @@ function PlanReader({ data }: PlanReaderProps) {
 								</SelectContent>
 							</Select>
 						) : (
-							<span className="rounded-sm bg-muted px-2 py-0.5">v{data.version.number}</span>
+							<span className="rounded-full bg-muted px-2.5 py-0.5">v{data.version.number}</span>
 						)}
 						<span>{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read</span>
 						{openDecisions > 0 && (
 							<>
-								<span className="text-border">·</span>
+								{/* The meta row wraps on narrow viewports, so the separator only
+								    exists at widths where it stays between two items. */}
+								<span aria-hidden="true" className="hidden text-border sm:inline">
+									·
+								</span>
 								<a href={`#${encodeURIComponent(firstOpenDecision ?? "")}`} className="text-warning hover:underline">
 									{openDecisions} open {openDecisions === 1 ? "decision" : "decisions"}
 								</a>
@@ -102,21 +106,25 @@ function PlanReader({ data }: PlanReaderProps) {
 			</PlanReviewDocument>
 
 			{/* biome-ignore lint/correctness/useUniqueElementIds: stable fragment target for the overflow menu's jump link */}
-			<section className="mt-16 border-t pt-8" id="version-history" aria-label="Version history">
+			<section
+				className="mt-16 border-t border-foreground/[0.08] pt-10"
+				id="version-history"
+				aria-label="Version history"
+			>
 				<header className="flex items-center gap-2">
 					<History className="size-4 text-brand-ink" />
 					<h2 className="label-eyebrow text-foreground">Version history</h2>
 				</header>
-				<ol className="mt-5">
+				<ol className="mt-6">
 					{data.versions.map((item, index) => (
-						<li key={item.id} className="relative pl-10">
+						<li key={item.id} className="relative pb-6 pl-10">
 							{index < data.versions.length - 1 && (
-								<span aria-hidden className="absolute top-7 bottom-0 left-[0.6875rem] w-px bg-border" />
+								<span aria-hidden className="absolute top-12 bottom-0 left-[0.6875rem] w-px bg-border" />
 							)}
-							<span className="absolute top-0.5 left-0 flex h-6 items-center rounded-sm bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">
+							<span className="absolute top-5 left-0 flex h-6 items-center rounded-full bg-muted px-2 font-mono text-[11px] text-muted-foreground">
 								v{item.number}
 							</span>
-							<div className="pb-7">
+							<div className="surface-card p-5">
 								<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
 									<Link
 										to={
@@ -151,7 +159,7 @@ function PlanReader({ data }: PlanReaderProps) {
 										<summary className="cursor-pointer font-mono text-[11px] text-muted-foreground hover:text-foreground">
 											Agent prompt
 										</summary>
-										<pre className="mt-2 whitespace-pre-wrap rounded-md border bg-muted/40 p-3 font-mono text-xs leading-6">
+										<pre className="surface-inset mt-3 whitespace-pre-wrap p-5 font-mono text-xs leading-6">
 											{item.agentPrompt}
 										</pre>
 									</details>

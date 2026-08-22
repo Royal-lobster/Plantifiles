@@ -5,20 +5,21 @@
 	"tsx": true,
 	"tailwind": {
 		"config": "",
-		"css": "../../apps/web/src/styles.css",
+		"css": "src/styles.css",
 		"baseColor": "olive",
 		"cssVariables": true,
 		"prefix": ""
 	},
 	"iconLibrary": "lucide",
 	"aliases": {
-		"components": "@plantifiles/ui/components",
+		"components": "#/components",
 		"utils": "@plantifiles/ui/lib/utils",
-		"hooks": "@plantifiles/ui/hooks",
-		"lib": "@plantifiles/ui/lib",
+		"hooks": "#/hooks",
+		"lib": "#/lib",
 		"ui": "@plantifiles/ui/components"
 	},
+	"rtl": false,
 	"menuColor": "default",
 	"menuAccent": "subtle",
-	"rtl": false
+	"registries": {}
 }

@@ -17,7 +17,7 @@ import { Fragment, useReducer, useRef } from "react";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
 import { SettingsRow, SettingsRowDivider } from "../../../../components/settings-section";
 import { revokeTokenForPage, type TokenListItem } from "../-data/tokens";
-import { tokenActionError, TokenFeedback, type TokenFeedbackValue } from "./token-feedback";
+import { TokenFeedback, type TokenFeedbackValue, tokenActionError } from "./token-feedback";
 
 type RevokeState = { revokingId: string | undefined; feedback: TokenFeedbackValue | undefined };
 
@@ -65,7 +65,7 @@ export function TokenList({ tokens }: { tokens: TokenListItem[] }) {
 
 	if (tokens.length === 0) {
 		return (
-			<div className="px-4 py-8 text-center">
+			<div className="px-5 py-8 text-center">
 				<KeyRound className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
 				<p className="mt-2 font-medium text-sm">No API tokens yet</p>
 				<p className="mt-1 text-muted-foreground text-xs">Create one above to connect an agent.</p>
@@ -76,7 +76,7 @@ export function TokenList({ tokens }: { tokens: TokenListItem[] }) {
 	return (
 		<>
 			{state.feedback ? (
-				<div className="border-b px-4 py-3 text-right">
+				<div className="border-b border-foreground/[0.06] px-5 py-3 text-right">
 					<TokenFeedback feedback={state.feedback} />
 				</div>
 			) : null}

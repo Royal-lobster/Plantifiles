@@ -99,14 +99,14 @@ function CliApprovalPage() {
 					) : data.pending ? (
 						<section>
 							<Terminal className="size-6 text-muted-foreground" aria-hidden="true" />
-							<h1 className="mt-4 font-display font-medium text-3xl tracking-tight">Approve this terminal?</h1>
-							<p className="mt-3 text-muted-foreground leading-7">
+							<h1 className="mt-6 font-display font-medium text-3xl tracking-tight">Approve this terminal?</h1>
+							<p className="mt-4 text-muted-foreground leading-7">
 								A command line is asking to act as <strong className="text-foreground">{data.user.name}</strong> (
 								{data.user.email}). Approve it only if you started <code className="font-mono">plantifiles login</code>{" "}
 								yourself.
 							</p>
 
-							<dl className="mt-6 space-y-3 rounded-xl border bg-card px-4 py-3 text-sm">
+							<dl className="surface-card mt-8 space-y-4 p-5 text-sm">
 								<div className="flex justify-between gap-4">
 									<dt className="text-muted-foreground">Device</dt>
 									<dd className="font-medium">{data.pending.tokenName}</dd>
@@ -124,13 +124,13 @@ function CliApprovalPage() {
 							{state.error ? (
 								<p
 									role="alert"
-									className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-sm"
+									className="mt-6 rounded-2xl bg-destructive/10 px-4 py-3 text-destructive text-sm ring-1 ring-destructive/30"
 								>
 									{state.error}
 								</p>
 							) : null}
 
-							<div className="mt-6 flex gap-3">
+							<div className="mt-8 flex gap-3">
 								<Button type="button" className="flex-1" disabled={state.busy} onClick={() => void settle("approve")}>
 									{state.busy ? "Working…" : "Approve"}
 								</Button>
@@ -148,11 +148,11 @@ function CliApprovalPage() {
 					) : (
 						<section>
 							<Terminal className="size-6 text-muted-foreground" aria-hidden="true" />
-							<h1 className="mt-4 font-display font-medium text-3xl tracking-tight">Connect a terminal</h1>
-							<p className="mt-3 text-muted-foreground leading-7">
+							<h1 className="mt-6 font-display font-medium text-3xl tracking-tight">Connect a terminal</h1>
+							<p className="mt-4 text-muted-foreground leading-7">
 								Run <code className="font-mono">plantifiles login</code> and enter the code it prints.
 							</p>
-							<form className="mt-6 space-y-3" onSubmit={findCode}>
+							<form className="mt-8 space-y-4" onSubmit={findCode}>
 								<label htmlFor={codeId} className="font-medium text-sm">
 									Device code
 								</label>
@@ -187,7 +187,7 @@ function Settled({ outcome }: { outcome: Outcome }) {
 		return (
 			<section>
 				<h1 className="font-display font-medium text-3xl tracking-tight">Request denied</h1>
-				<p className="mt-3 text-muted-foreground leading-7">
+				<p className="mt-4 text-muted-foreground leading-7">
 					No token was issued. If you did not start that login, nothing further is needed.
 				</p>
 			</section>
@@ -196,12 +196,12 @@ function Settled({ outcome }: { outcome: Outcome }) {
 	return (
 		<section>
 			<CheckCircle2 className="size-6 text-success" aria-hidden="true" />
-			<h1 className="mt-4 font-display font-medium text-3xl tracking-tight">Terminal connected</h1>
-			<p className="mt-3 text-muted-foreground leading-7">
+			<h1 className="mt-6 font-display font-medium text-3xl tracking-tight">Terminal connected</h1>
+			<p className="mt-4 text-muted-foreground leading-7">
 				<strong className="text-foreground">{outcome.tokenName}</strong> can now publish plans as you until{" "}
 				{formatUtcTimestamp(outcome.expiresAt)}. Return to your terminal — it has the credential already.
 			</p>
-			<p className="mt-3 text-muted-foreground text-sm">Revoke it any time from Settings → Agent tokens.</p>
+			<p className="mt-4 text-muted-foreground text-sm">Revoke it any time from Settings → Agent tokens.</p>
 		</section>
 	);
 }

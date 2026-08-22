@@ -3,7 +3,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@plantifiles/ui/components/dropdown-menu";
@@ -30,7 +29,6 @@ export function PlanActionsMenu() {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-52">
-					<DropdownMenuLabel className="label-eyebrow">This plan</DropdownMenuLabel>
 					<DropdownMenuItem onSelect={() => void copyMarkdownUrl()}>
 						{clipboard.status === "copied" ? <Check /> : <FileDown />}
 						{clipboard.status === "copied" ? "Copied Markdown URL" : "Copy Markdown URL"}
