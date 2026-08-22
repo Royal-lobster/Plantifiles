@@ -182,12 +182,14 @@ class KeychainCredentialStore implements CredentialStore {
 }
 
 /**
- * Keyring errors arrive as a multi-line `Caused by:` chain. A degraded keychain
- * is a warning, not a crash, so it has to read as one line.
+ * Keyring errors arrive as a multi-line `Caused by:` chain that repeats the
+ * summary verbatim. A degraded keychain is a warning, not a crash, so it has to
+ * read as one line that says each thing once.
  */
 function message(error: unknown): string {
 	const text = error instanceof Error ? error.message : String(error);
-	return text.replace(/\s+/g, " ").trim();
+	const [summary] = text.split(/caused by:/i);
+	return (summary ?? text).replace(/\s+/g, " ").trim();
 }
 
 export function createCredentialStore(options: CredentialStoreOptions): CredentialStore {
