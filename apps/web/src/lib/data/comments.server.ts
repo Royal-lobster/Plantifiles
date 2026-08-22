@@ -12,7 +12,7 @@ export type CreateCommentInput = {
 };
 
 export async function createComment(request: Request, planId: string, input: CreateCommentInput) {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:write");
 	const db = getDb();
 	const plans = await db.select().from(plan).where(eq(plan.id, planId)).limit(1);
 	const target = plans[0];

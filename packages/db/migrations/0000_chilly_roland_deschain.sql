@@ -1,31 +1,3 @@
-CREATE TABLE `account` (
-	`id` text PRIMARY KEY NOT NULL,
-	`account_id` text NOT NULL,
-	`provider_id` text NOT NULL,
-	`user_id` text NOT NULL,
-	`access_token` text,
-	`refresh_token` text,
-	`id_token` text,
-	`access_token_expires_at` integer,
-	`refresh_token_expires_at` integer,
-	`scope` text,
-	`password` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE INDEX `account_user_idx` ON `account` (`user_id`);--> statement-breakpoint
-CREATE TABLE `api_token` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`name` text NOT NULL,
-	`token_hash` text NOT NULL,
-	`last_used_at` integer,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `api_token_token_hash_unique` ON `api_token` (`token_hash`);--> statement-breakpoint
 CREATE TABLE `approval` (
 	`id` text PRIMARY KEY NOT NULL,
 	`plan_id` text NOT NULL,
@@ -79,7 +51,7 @@ CREATE TABLE `membership` (
 	`role` text NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspace`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "membership_role_ck" CHECK("membership"."role" in ('owner','admin','member','viewer'))
+	CONSTRAINT "membership_role_ck" CHECK("membership"."role" in ('owner','member'))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `membership_user_workspace` ON `membership` (`user_id`,`workspace_id`);--> statement-breakpoint
@@ -88,6 +60,7 @@ CREATE TABLE `plan` (
 	`workspace_id` text NOT NULL,
 	`slug` text NOT NULL,
 	`title` text NOT NULL,
+	`emoji` text,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`visibility` text DEFAULT 'workspace' NOT NULL,
 	`public_slug` text,
@@ -96,7 +69,7 @@ CREATE TABLE `plan` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspace`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "plan_status_ck" CHECK("plan"."status" in ('draft','in_review','approved','building','shipped','archived')),
+	CONSTRAINT "plan_status_ck" CHECK("plan"."status" in ('draft','in_review','approved','archived')),
 	CONSTRAINT "plan_visibility_ck" CHECK("plan"."visibility" in ('private','workspace','public'))
 );
 --> statement-breakpoint
@@ -121,7 +94,6 @@ CREATE TABLE `plan_version` (
 	`number` integer NOT NULL,
 	`source` text NOT NULL,
 	`change_summary` text,
-	`change_summary_prose` text,
 	`lint_score` integer NOT NULL,
 	`lint_report` text NOT NULL,
 	`lint_overridden` integer DEFAULT false NOT NULL,
@@ -135,22 +107,9 @@ CREATE TABLE `plan_version` (
 --> statement-breakpoint
 CREATE INDEX `plan_version_plan_idx` ON `plan_version` (`plan_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `plan_version_number` ON `plan_version` (`plan_id`,`number`);--> statement-breakpoint
-CREATE TABLE `session` (
-	`id` text PRIMARY KEY NOT NULL,
-	`expires_at` integer NOT NULL,
-	`token` text NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`ip_address` text,
-	`user_agent` text,
-	`user_id` text NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`);--> statement-breakpoint
-CREATE INDEX `session_user_idx` ON `session` (`user_id`);--> statement-breakpoint
 CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
+	`clerk_user_id` text,
 	`name` text NOT NULL,
 	`email` text NOT NULL,
 	`email_verified` integer DEFAULT false NOT NULL,
@@ -159,22 +118,14 @@ CREATE TABLE `user` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `user_clerk_user_id_unique` ON `user` (`clerk_user_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
-CREATE TABLE `verification` (
-	`id` text PRIMARY KEY NOT NULL,
-	`identifier` text NOT NULL,
-	`value` text NOT NULL,
-	`expires_at` integer NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
 CREATE TABLE `workspace` (
 	`id` text PRIMARY KEY NOT NULL,
+	`clerk_organization_id` text,
 	`slug` text NOT NULL,
-	`name` text NOT NULL,
-	`required_approvals` integer DEFAULT 1 NOT NULL
+	`name` text NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `workspace_clerk_organization_id_unique` ON `workspace` (`clerk_organization_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `workspace_slug_unique` ON `workspace` (`slug`);

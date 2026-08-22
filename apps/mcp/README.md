@@ -10,15 +10,15 @@ pnpm --filter @plantifiles/mcp build
 
 ## Add to Claude Code
 
-Run this from the repository root, replacing the token and URL:
+After `plantifiles login`, the MCP server reuses the CLI's service configuration and OAuth credentials:
 
 ```bash
 claude mcp add --scope project \
-  --env PLANTIFILES_TOKEN=pf_your_token \
-  --env PLANTIFILES_BASE_URL=https://plantifiles.example.com \
   --transport stdio plantifiles \
   -- node "${PWD}/apps/mcp/dist/index.js"
 ```
+
+For CI or another headless environment, set `PLANTIFILES_BASE_URL` and a user-scoped Clerk API key in `PLANTIFILES_TOKEN`.
 
 The equivalent project-scoped `.mcp.json` is:
 
@@ -30,7 +30,7 @@ The equivalent project-scoped `.mcp.json` is:
       "command": "node",
       "args": ["${CLAUDE_PROJECT_DIR:-.}/apps/mcp/dist/index.js"],
       "env": {
-        "PLANTIFILES_TOKEN": "pf_your_token",
+        "PLANTIFILES_TOKEN": "ak_your_clerk_api_key",
         "PLANTIFILES_BASE_URL": "https://plantifiles.example.com"
       }
     }

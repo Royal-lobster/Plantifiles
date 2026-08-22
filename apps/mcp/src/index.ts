@@ -1,14 +1,9 @@
 #!/usr/bin/env node
+import { resolveConnection } from "@plantifiles/auth";
 import { ApiError, PlantifilesClient } from "@plantifiles/api-client";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
-
-function requiredEnvironment(name: "PLANTIFILES_TOKEN" | "PLANTIFILES_BASE_URL"): string {
-	const value = process.env[name]?.trim();
-	if (!value) throw new Error(`${name} is required.`);
-	return value;
-}
 
 function toolError(caught: unknown) {
 	const message = caught instanceof Error ? caught.message : String(caught);
@@ -21,10 +16,7 @@ function textResult(value: unknown) {
 }
 
 async function main() {
-	const api = new PlantifilesClient({
-		token: requiredEnvironment("PLANTIFILES_TOKEN"),
-		baseUrl: requiredEnvironment("PLANTIFILES_BASE_URL"),
-	});
+	const api = new PlantifilesClient(await resolveConnection());
 	const server = new McpServer({ name: "plantifiles", version: "0.1.0" });
 
 	server.registerTool(

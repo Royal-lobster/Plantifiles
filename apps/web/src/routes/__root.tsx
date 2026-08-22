@@ -66,7 +66,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{import.meta.env.DEV ? (
+				{import.meta.env.VITE_LOCAL_DEV === "true" ? (
 					<ThemeProvider>
 						<AppShell localDev>{children}</AppShell>
 					</ThemeProvider>

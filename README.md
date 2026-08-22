@@ -32,18 +32,18 @@ Open <http://localhost:3000> to use the seeded local demo.
 
 ## Demo loop
 
-Build the command-line client and authorize this machine. `login` prints a short code, opens the browser, and receives the token over its own channel — nothing is pasted into the terminal:
+Build the command-line client and authorize this machine. `login` opens Clerk in the browser; after signing in, copy the one-time authorization code from the Plantifiles callback page into the terminal:
 
 ```bash
 pnpm --filter @plantifiles/cli build
-node apps/cli/dist/index.js login --base-url http://localhost:3000
+node apps/cli/dist/index.js login --base-url https://dev.plantifiles.com
 ```
 
-Approve the code in the browser. The token is saved to `~/.config/plantifiles/config.json` with mode 0600, expires after 90 days, and can be revoked at `/settings/tokens`. CI has no browser, so it keeps using an environment token created there:
+OAuth access and refresh tokens are stored in the system keychain, with a mode-0600 credential-file fallback when no keychain is available. `plantifiles logout` revokes the refresh token. CI and other headless environments use a user-scoped Clerk API key created at `/settings/api-keys`:
 
 ```bash
-export PLANTIFILES_BASE_URL=http://localhost:3000
-export PLANTIFILES_TOKEN=pf_replace_with_the_token_from_settings
+export PLANTIFILES_BASE_URL=https://dev.plantifiles.com
+export PLANTIFILES_TOKEN=ak_replace_with_your_clerk_api_key
 ```
 
 Download `skills/write-plan/SKILL.md` from `/skills/write-plan/SKILL.md`, give it to a coding agent, and publish the resulting plan with provenance:
@@ -71,7 +71,7 @@ The MCP server exposes the same loop over stdio. Build it with `pnpm --filter @p
 
 ## Workspaces and members
 
-Every Plantifiles workspace maps to a Clerk Organization. Use Clerk's organization switcher to select or create one, invite members, and manage member/admin roles. Plantifiles projects that organization membership into D1 so plans, reviews, and agent tokens can keep using stable local workspace IDs.
+Every Plantifiles workspace maps to a Clerk Organization. Use Clerk's organization switcher to select or create one, invite members, and manage member/admin roles. Plantifiles projects that organization membership into D1 so plans, reviews, OAuth sessions, and user-scoped API keys keep stable local authorship.
 
 ## Slack unfurls
 
@@ -93,7 +93,7 @@ pnpm build
 pnpm --dir apps/web exec wrangler deploy --dry-run
 ```
 
-The Playwright smoke starts the local Worker, applies D1 migrations, signs in, mints a token, publishes through the CLI, checks the dashboard and reader, fetches Markdown, comments, resolves, approves, pushes a second version, verifies the structural diff, and confirms CLI pull byte parity.
+The Playwright smoke starts the local Worker, applies D1 migrations, verifies the hosted OAuth callback, publishes through the CLI's deterministic local credential adapter, checks the dashboard and reader, fetches Markdown, comments, resolves, approves, pushes a second version, verifies the structural diff, and confirms CLI pull byte parity.
 
 ## Deployment
 
@@ -107,6 +107,13 @@ pnpm --dir apps/web exec wrangler secret put VARS_KEY --env dev
 ```
 
 Clerk keys are managed inside the vars bundle and must not be added as separate Worker or GitHub Actions secrets. Wrangler preserves installed Worker secrets across deploys.
+
+Create one public Clerk OAuth application per environment with PKCE required, opaque access tokens, callback `${PUBLIC_URL}/cli/callback`, and scopes `openid profile offline_access plantifiles:read plantifiles:write`. Install its client ID on each Worker:
+
+```bash
+pnpm --dir apps/web exec wrangler secret put CLERK_OAUTH_CLIENT_ID
+pnpm --dir apps/web exec wrangler secret put CLERK_OAUTH_CLIENT_ID --env dev
+```
 
 GitHub Actions builds, applies D1 migrations, and deploys on updates to `main`. The workflow requires the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; the API token needs Workers edit and D1 edit access.
 

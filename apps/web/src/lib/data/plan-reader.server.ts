@@ -63,7 +63,7 @@ export type PlanDocument = {
 };
 
 export async function getPlanById(request: Request, planId: string) {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:read");
 	const db = getDb();
 	const rows = await db
 		.select({
@@ -104,7 +104,7 @@ export async function listPlans(
 	workspaceSlug: string,
 	status?: typeof plan.$inferSelect.status,
 ): Promise<PlanListItem[]> {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:read");
 	const db = getDb();
 	const workspaceRows = await db
 		.select()
@@ -171,7 +171,7 @@ export async function loadPlanDocument(
 	if (!target) throw new Response("Plan not found", { status: 404 });
 
 	if (target.plan.visibility !== "public") {
-		const identity = await authenticateRequest(request);
+		const identity = await authenticateRequest(request, "plantifiles:read");
 		if (!identity) throw new Response("Unauthorized", { status: 401 });
 		await assertWorkspaceAccess(target.workspace.id, identity.user.id);
 	}
@@ -254,7 +254,7 @@ export async function loadPlanReaderData(
 }> {
 	const document = await loadPlanDocument(request, workspaceSlug, requestedSlug, versionNumber);
 	const [identity, rows] = await Promise.all([
-		authenticateRequest(request),
+		authenticateRequest(request, "plantifiles:read"),
 		getDb()
 			.select({ version: planReaderVersionSelection, author: { name: user.name } })
 			.from(planVersion)
@@ -293,7 +293,7 @@ export async function renderPlanMarkdown(document: PlanDocument): Promise<string
 }
 
 export async function getVersionHistory(request: Request, planId: string) {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:read");
 	const db = getDb();
 	const planRows = await db
 		.select({ plan })

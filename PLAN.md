@@ -244,7 +244,6 @@ The remaining tables carry the same columns the product needs, expressed the sam
 - `decision` — `id` pk, `planId` fk, `key`, `status` enum `open|resolved`, `resolution` nullable, `ownerId` nullable, `resolvedById` nullable, `resolvedAt` nullable. Unique on `(planId, key)`.
 - `approval` — `id` pk, `planId` fk, `versionId` fk, `userId` fk, `createdAt`. Unique on `(versionId, userId)`.
 - `membership` — `id` pk, `userId` fk, `workspaceId` fk, `role` enum `owner|admin|member|viewer`.
-- `apiToken` — `id` pk, `userId` fk, `name`, `tokenHash` unique, `lastUsedAt` nullable.
 
 A `decision` row holds only app state: status, resolution, owner. The question text always comes from the `<Decision>` block in the source, so the document and the database can never disagree about what was asked.
 
@@ -262,9 +261,9 @@ Every endpoint is a file in `src/routes/` whose `createFileRoute` carries a `ser
 - `api.plans.$id.ts` — `GET` metadata plus current version.
 - `api.plans.$id.versions.ts` — `POST` a new version; computes `changeSummary` against the current version and re-anchors comments.
 - `api.plans.$id.comments.ts` — `POST { blockKey?, parentId?, body, agentAssisted? }`.
-- `api.tokens.ts` — `POST`, session-authed only, returns the plaintext token exactly once.
+- `api.auth.cli.ts` — `GET`, returns the public Clerk issuer, OAuth client ID, hosted callback, and allowed scopes for the CLI.
 
-Token auth is `Authorization: Bearer <token>`, sha256-hashed and compared against `apiToken.tokenHash`. Browser requests use Clerk sessions and synchronously project the active Organization membership.
+Browser requests use Clerk sessions. CLI requests use Clerk OAuth access tokens; CI and headless agents use user-scoped Clerk API keys. The Clerk middleware verifies every credential, and API routes enforce `plantifiles:read` or `plantifiles:write`.
 
 Note that a route defining only `POST` answers a `GET` with 200 and SSR HTML rather than 405. Where method rejection matters, add an explicit `ANY` handler returning 405.
 
@@ -314,7 +313,7 @@ Publishing must happen from inside the agent session. A dev who has to copy HTML
 
 Commands:
 
-- `plantifiles login` — prompts for a token from `/settings/tokens` (Phase 4 builds that page), stores it in `~/.config/plantifiles/config.json` at mode `0600`.
+- `plantifiles login` — runs Clerk Authorization Code + PKCE, opens the hosted callback page, accepts its pasted one-time code, and stores access and refresh tokens in the system keychain with a mode-0600 file fallback.
 - `plantifiles push <file> [--workspace slug] [--title t] [--agent claude-code] [--prompt "..."] [--force]` — creates or updates. Writes the plan id back into `.plantifiles.json` in the repo root keyed by file path, so subsequent pushes update instead of duplicating. Prints the plan URL.
 - `plantifiles pull <id|url> [-o file]` — fetches Markdown. This is the command an agent runs at build time.
 - `plantifiles lint <file>` — runs `packages/core` locally, exits non-zero on errors, prints findings as `file:line rule message`.
@@ -365,14 +364,14 @@ Status chips are defined once and reused by the dashboard, the reader header, an
 
 ## The shell
 
-The application shell is one compact row: Plantifiles, Clerk Organization switcher, agent tokens, theme, and account controls. The plan reader and dashboard use the same content region.
+The application shell is one compact row: Plantifiles, Clerk Organization switcher, API keys, theme, and account controls. The plan reader and dashboard use the same content region.
 
 Routes, with the TanStack Start file that owns each. Shell chrome lives in `src/routes/__root/-components/`, following the dash-prefixed colocation convention:
 
 - `/` — redirect signed-out users to hosted Clerk sign-in, signed-in users without an Organization to Clerk Organization creation, and members to their first linked workspace.
 - `/w/:slug` — workspace dashboard.
-- `/settings/tokens` — create a named token, reveal the plaintext exactly once, list tokens with `lastUsedAt`, and revoke.
-- `/cli` — approve or deny a CLI device login from a signed-in browser.
+- `/settings/api-keys` — create scoped Clerk API keys for CI and headless agents, reveal the secret once, list active keys, and revoke.
+- `/cli/callback` — stateless OAuth callback that packages Clerk's authorization code and state for the user to copy into the waiting CLI.
 - `/p/:workspaceSlug/:planSlug` — reader and content-negotiated Markdown route.
 
 ## The dashboard
@@ -383,7 +382,7 @@ The empty state shows the literal `plantifiles push` command with the user's wor
 
 Every route gets a loading skeleton and an empty state. Keyboard navigation and contrast per the design skill. On mobile the sidebar collapses to a sheet.
 
-**Phase 4 done when:** navigating dashboard → plan → version history never leaves the shell; the sidebar, content column, and outline rail match the stated widths; toggling dark mode restyles chrome, plan blocks, and Mermaid diagrams from the same tokens; every status renders its chip from the table above; `/settings/tokens` mints a token that `plantifiles login` accepts; `cmd+k` opens a plan by title; the dashboard empty state shows a copyable push command carrying the real workspace slug.
+**Phase 4 done when:** navigating dashboard → plan → version history never leaves the shell; the sidebar, content column, and outline rail match the stated widths; toggling dark mode restyles chrome, plan blocks, and Mermaid diagrams from the same tokens; every status renders its chip from the table above; `/settings/api-keys` creates a scoped Clerk key; the hosted OAuth callback copies a one-time CLI authorization response; `cmd+k` opens a plan by title; the dashboard empty state shows a copyable push command carrying the real workspace slug.
 
 ---
 
@@ -500,7 +499,7 @@ The save request carries the base version number. On mismatch the server rejects
 
 # Phase 8 — MCP server
 
-Stdio server so the agent publishes and reads plans as tool calls without leaving the editor. Auth via `PLANTIFILES_TOKEN`.
+Stdio server so the agent publishes and reads plans as tool calls without leaving the editor. It reuses the CLI's OAuth keychain login, while `PLANTIFILES_TOKEN` supplies a Clerk API key in headless environments.
 
 Tools: `create_plan`, `update_plan`, `get_plan`, `list_plans`, `comment_on_plan`. Each is a thin wrapper over the Phase 2 endpoints — the HTTP API stays the single source of truth for behaviour.
 
@@ -543,7 +542,7 @@ The skill suggests; the lint enforces. Keep it short enough that an agent reads 
 Not a test file. Run the product and show the output.
 
 1. `wrangler d1 create plantifiles`, paste the id into `wrangler.jsonc`, `pnpm drizzle-kit generate`, `wrangler d1 migrations apply plantifiles --local`, then `pnpm dev`.
-2. Sign in with GitHub, create workspace `demo`, mint a token at `/settings/tokens`.
+2. Sign in with GitHub, create workspace `demo`, run `plantifiles login`, and complete the hosted copy/paste OAuth callback.
 3. From a real agent session, write a plan for any small feature using the Phase 10 skill and `plantifiles push --agent claude-code`.
 4. Land on the dashboard and confirm the new plan appears in the table with its status, version, and agent name.
 5. Open it from the table. Confirm it reads as a page of the app: same sidebar, same breadcrumb, same tokens. Check the theme, the diagram, skim mode, and the outline rail. Toggle dark mode and confirm chrome, blocks, and diagram all follow.

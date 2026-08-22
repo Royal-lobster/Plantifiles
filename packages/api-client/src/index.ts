@@ -1,4 +1,4 @@
-export type PlantifilesClientConfig = { token: string; baseUrl: string };
+export type PlantifilesClientConfig = { getAccessToken(): string | Promise<string>; baseUrl: string };
 
 export type PublishPlanInput = {
 	workspaceSlug: string;
@@ -59,17 +59,6 @@ export type WorkspaceSummary = {
 	role: "owner" | "member";
 };
 
-export type DeviceLoginStart = {
-	deviceCode: string;
-	userCode: string;
-	verificationUri: string;
-	verificationUriComplete: string;
-	expiresIn: number;
-	interval: number;
-};
-
-export type DeviceLoginPoll = { status: "pending" } | { status: "issued"; token: string; baseUrl: string };
-
 export class ApiError extends Error {
 	readonly status: number;
 	readonly body: unknown;
@@ -91,41 +80,6 @@ export class ApiError extends Error {
 	}
 }
 
-async function postToService(baseUrl: string, path: string, body: unknown): Promise<Response> {
-	const response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(body),
-	});
-	if (response.ok) return response;
-	const text = await response.text();
-	let parsed: unknown = text;
-	try {
-		parsed = JSON.parse(text);
-	} catch {
-		// Preserve readable plain-text API errors.
-	}
-	throw new ApiError(response.status, parsed);
-}
-
-/**
- * Both device-grant calls live outside `PlantifilesClient` because the whole
- * point of the flow is that the caller has no token yet.
- */
-export function startDeviceLogin(baseUrl: string, tokenName: string): Promise<DeviceLoginStart> {
-	return postToService(baseUrl, "/api/cli/device", { tokenName }).then(
-		(response) => response.json() as Promise<DeviceLoginStart>,
-	);
-}
-
-export async function pollDeviceLogin(baseUrl: string, deviceCode: string): Promise<DeviceLoginPoll> {
-	const response = await postToService(baseUrl, "/api/cli/device/token", { deviceCode });
-	// 202 is "nobody has approved yet", which is the expected answer most of the
-	// time and must not read as an error to the caller.
-	if (response.status === 202) return { status: "pending" };
-	return response.json() as Promise<DeviceLoginPoll>;
-}
-
 export class PlantifilesClient {
 	readonly #config: PlantifilesClientConfig;
 
@@ -135,7 +89,7 @@ export class PlantifilesClient {
 
 	async #response(path: string, init: RequestInit = {}): Promise<Response> {
 		const headers = new Headers(init.headers);
-		headers.set("authorization", `Bearer ${this.#config.token}`);
+		headers.set("authorization", `Bearer ${await this.#config.getAccessToken()}`);
 		if (init.body) headers.set("content-type", "application/json");
 		const response = await fetch(`${this.#config.baseUrl}${path}`, { ...init, headers });
 		if (response.ok) return response;

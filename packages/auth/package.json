@@ -1,25 +1,24 @@
 {
-	"name": "@plantifiles/mcp",
+	"name": "@plantifiles/auth",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"bin": {
-		"plantifiles-mcp": "dist/index.js"
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
-		"test": "pnpm build && vitest run",
+		"test": "vitest run",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
-		"@plantifiles/auth": "workspace:*",
-		"@plantifiles/api-client": "workspace:*",
-		"@modelcontextprotocol/server": "2.0.0",
-		"zod": "^4.4.3"
+		"@napi-rs/keyring": "^1.1.7"
 	},
 	"devDependencies": {
-		"@modelcontextprotocol/client": "2.0.0",
 		"@types/node": "^24.0.0",
 		"typescript": "^6.0.2",
 		"vitest": "^4.1.10"

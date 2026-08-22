@@ -9,7 +9,7 @@
 	},
 	"scripts": {
 		"vars:gen": "vars gen config.vars --platform serverless",
-		"dev": "vars run --env dev -- vite dev --port 3000",
+		"dev": "VITE_LOCAL_DEV=true VITE_PUBLIC_URL=http://localhost:3000 vite dev --port 3000",
 		"generate-routes": "tsr generate",
 		"build": "vite build && tsc --noEmit",
 		"build:dev": "CLOUDFLARE_ENV=dev vite build && tsc --noEmit",

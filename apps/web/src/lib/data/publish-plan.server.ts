@@ -70,7 +70,7 @@ function decisionStatements(blocks: Block[], planId: string): D1PreparedStatemen
 }
 
 export async function createPlan(request: Request, input: PublishPlanInput) {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:write");
 	const db = getDb();
 	const workspaceRow = await db
 		.select()
@@ -127,7 +127,7 @@ export async function createPlan(request: Request, input: PublishPlanInput) {
 }
 
 export async function createPlanVersion(request: Request, planId: string, input: PublishVersionInput) {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:write");
 	const db = getDb();
 	const rows = await db
 		.select({ plan, workspace, version: planVersion })

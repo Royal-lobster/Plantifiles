@@ -13,6 +13,7 @@
 		"lint": "tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
+		"@plantifiles/auth": "workspace:*",
 		"@plantifiles/api-client": "workspace:*",
 		"@plantifiles/core": "workspace:*",
 		"commander": "^15.0.0"

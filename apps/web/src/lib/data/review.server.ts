@@ -22,7 +22,7 @@ const NEXT_STATUS: Record<PlanStatus, PlanStatus | null> = {
 };
 
 async function requireReviewAccess(request: Request, planId: string): Promise<ReviewAccess> {
-	const identity = await requireIdentity(request);
+	const identity = await requireIdentity(request, "plantifiles:write");
 	const rows = await getDb()
 		.select({ plan, workspace, role: membership.role })
 		.from(plan)

@@ -36,9 +36,9 @@ function LocalDevShell({ children }: { children: React.ReactNode }) {
 					<span className="truncate text-muted-foreground text-sm">Demo</span>
 					<div className="ml-auto flex shrink-0 items-center gap-1">
 						<Button variant="ghost" size="sm" asChild>
-							<Link to="/settings/tokens" aria-label="Agent tokens">
+							<Link to="/settings/api-keys" aria-label="API keys">
 								<KeyRound className="size-4" />
-								<span className="hidden sm:inline">Agent tokens</span>
+								<span className="hidden sm:inline">API keys</span>
 							</Link>
 						</Button>
 						<ThemeToggle />
@@ -53,7 +53,7 @@ function LocalDevShell({ children }: { children: React.ReactNode }) {
 function AppShell({ children, localDev = false }: { children: React.ReactNode; localDev?: boolean }) {
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-	if (pathname === "/cli") return children;
+	if (pathname === "/cli/callback") return children;
 	if (localDev) return <LocalDevShell>{children}</LocalDevShell>;
 
 	return (
@@ -108,9 +108,9 @@ function AppShell({ children, localDev = false }: { children: React.ReactNode; l
 					<div className="ml-auto flex shrink-0 items-center gap-1">
 						<Show when="signed-in">
 							<Button variant="ghost" size="sm" asChild>
-								<Link to="/settings/tokens" aria-label="Agent tokens">
+								<Link to="/settings/api-keys" aria-label="API keys">
 									<KeyRound className="size-4" />
-									<span className="hidden sm:inline">Agent tokens</span>
+									<span className="hidden sm:inline">API keys</span>
 								</Link>
 							</Button>
 							<UserButton

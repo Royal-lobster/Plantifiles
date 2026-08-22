@@ -101,8 +101,8 @@ async function findUserByClerkId(db: Database, clerkUserId: string) {
 
 /**
  * Link a Clerk user to the existing local author row with the same normalized
- * email before creating a new row. Local IDs never change, so plan history and
- * user-scoped agent tokens continue to point at the same person.
+ * email before creating a new row. Local IDs never change, so plan history,
+ * OAuth sessions, and user-scoped API keys continue to identify one author.
  */
 export async function resolveClerkUser(input: ClerkUserProjection, db: Database = getDb()): Promise<LocalUser> {
 	const values = projectedUserValues(input);

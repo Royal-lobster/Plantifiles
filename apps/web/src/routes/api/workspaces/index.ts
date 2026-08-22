@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/workspaces/")({
 		handlers: {
 			GET: async ({ request }) => {
 				try {
-					const identity = await requireIdentity(request);
+					const identity = await requireIdentity(request, "plantifiles:read");
 					return Response.json(await listWorkspacesForUser(identity.user));
 				} catch (error) {
 					return errorResponse(error);

@@ -9,9 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as CliRouteRouteImport } from './routes/cli/route'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
-import { Route as SettingsTokensRouteRouteImport } from './routes/settings/tokens/route'
+import { Route as CliCallbackRouteImport } from './routes/cli/callback'
+import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
+import { Route as ApiAuthCliRouteImport } from './routes/api/auth/cli'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk/webhook'
 import { Route as ApiPlansIndexRouteImport } from './routes/api/plans/index'
 import { Route as ApiPlansIdRouteRouteImport } from './routes/api/plans/$id/route'
@@ -19,26 +20,29 @@ import { Route as ApiWorkspacesIndexRouteImport } from './routes/api/workspaces/
 import { Route as PWorkspaceSlugPlanSlugRouteRouteImport } from './routes/p/$workspaceSlug/$planSlug/route'
 import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills/write-plan/SKILL[.]md'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
-import { Route as ApiCliDeviceIndexRouteImport } from './routes/api/cli/device/index'
-import { Route as ApiCliDeviceTokenRouteImport } from './routes/api/cli/device/token'
 import { Route as ApiPlansIdCommentsRouteImport } from './routes/api/plans/$id/comments'
 import { Route as ApiPlansIdVersionsRouteImport } from './routes/api/plans/$id/versions'
 import { Route as PWorkspaceSlugPlanSlugIndexRouteImport } from './routes/p/$workspaceSlug/$planSlug/index'
 import { Route as PWorkspaceSlugPlanSlugVNumberRouteRouteImport } from './routes/p/$workspaceSlug/$planSlug/v/$number/route'
 
-const CliRouteRoute = CliRouteRouteImport.update({
-  id: '/cli',
-  path: '/cli',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const homeIndexRoute = homeIndexRouteImport.update({
   id: '/(home)/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsTokensRouteRoute = SettingsTokensRouteRouteImport.update({
-  id: '/settings/tokens',
-  path: '/settings/tokens',
+const CliCallbackRoute = CliCallbackRouteImport.update({
+  id: '/cli/callback',
+  path: '/cli/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
+  id: '/settings/api-keys',
+  path: '/settings/api-keys',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthCliRoute = ApiAuthCliRouteImport.update({
+  id: '/api/auth/cli',
+  path: '/api/auth/cli',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiClerkWebhookRoute = ApiClerkWebhookRouteImport.update({
@@ -78,16 +82,6 @@ const WSlugIndexRoute = WSlugIndexRouteImport.update({
   path: '/w/$slug/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCliDeviceIndexRoute = ApiCliDeviceIndexRouteImport.update({
-  id: '/api/cli/device/',
-  path: '/api/cli/device/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCliDeviceTokenRoute = ApiCliDeviceTokenRouteImport.update({
-  id: '/api/cli/device/token',
-  path: '/api/cli/device/token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPlansIdCommentsRoute = ApiPlansIdCommentsRouteImport.update({
   id: '/comments',
   path: '/comments',
@@ -112,139 +106,125 @@ const PWorkspaceSlugPlanSlugVNumberRouteRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/cli': typeof CliRouteRoute
-  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/cli/callback': typeof CliCallbackRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  '/api/auth/cli': typeof ApiAuthCliRoute
   '/api/clerk/webhook': typeof ApiClerkWebhookRoute
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/api/plans/': typeof ApiPlansIndexRoute
   '/api/workspaces/': typeof ApiWorkspacesIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
-  '/api/cli/device/token': typeof ApiCliDeviceTokenRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/api/cli/device/': typeof ApiCliDeviceIndexRoute
   '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRoutesByTo {
-  '/cli': typeof CliRouteRoute
-  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/cli/callback': typeof CliCallbackRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
+  '/api/auth/cli': typeof ApiAuthCliRoute
   '/api/clerk/webhook': typeof ApiClerkWebhookRoute
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/api/plans': typeof ApiPlansIndexRoute
   '/api/workspaces': typeof ApiWorkspacesIndexRoute
   '/w/$slug': typeof WSlugIndexRoute
-  '/api/cli/device/token': typeof ApiCliDeviceTokenRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/api/cli/device': typeof ApiCliDeviceIndexRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/cli': typeof CliRouteRoute
-  '/settings/tokens': typeof SettingsTokensRouteRoute
+  '/cli/callback': typeof CliCallbackRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
   '/(home)/': typeof homeIndexRoute
   '/api/plans/$id': typeof ApiPlansIdRouteRouteWithChildren
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  '/api/auth/cli': typeof ApiAuthCliRoute
   '/api/clerk/webhook': typeof ApiClerkWebhookRoute
   '/skills/write-plan/SKILL.md': typeof SkillsWritePlanSKILLDotmdRoute
   '/api/plans/': typeof ApiPlansIndexRoute
   '/api/workspaces/': typeof ApiWorkspacesIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
-  '/api/cli/device/token': typeof ApiCliDeviceTokenRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
-  '/api/cli/device/': typeof ApiCliDeviceIndexRoute
   '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/cli'
-    | '/settings/tokens'
+    | '/cli/callback'
+    | '/settings/api-keys'
     | '/'
     | '/api/plans/$id'
     | '/p/$workspaceSlug/$planSlug'
+    | '/api/auth/cli'
     | '/api/clerk/webhook'
     | '/skills/write-plan/SKILL.md'
     | '/api/plans/'
     | '/api/workspaces/'
     | '/w/$slug/'
-    | '/api/cli/device/token'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/api/cli/device/'
     | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/cli'
-    | '/settings/tokens'
+    | '/cli/callback'
+    | '/settings/api-keys'
     | '/'
     | '/api/plans/$id'
+    | '/api/auth/cli'
     | '/api/clerk/webhook'
     | '/skills/write-plan/SKILL.md'
     | '/api/plans'
     | '/api/workspaces'
     | '/w/$slug'
-    | '/api/cli/device/token'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/api/cli/device'
     | '/p/$workspaceSlug/$planSlug'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   id:
     | '__root__'
-    | '/cli'
-    | '/settings/tokens'
+    | '/cli/callback'
+    | '/settings/api-keys'
     | '/(home)/'
     | '/api/plans/$id'
     | '/p/$workspaceSlug/$planSlug'
+    | '/api/auth/cli'
     | '/api/clerk/webhook'
     | '/skills/write-plan/SKILL.md'
     | '/api/plans/'
     | '/api/workspaces/'
     | '/w/$slug/'
-    | '/api/cli/device/token'
     | '/api/plans/$id/comments'
     | '/api/plans/$id/versions'
-    | '/api/cli/device/'
     | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  CliRouteRoute: typeof CliRouteRoute
-  SettingsTokensRouteRoute: typeof SettingsTokensRouteRoute
+  CliCallbackRoute: typeof CliCallbackRoute
+  SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   homeIndexRoute: typeof homeIndexRoute
   ApiPlansIdRouteRoute: typeof ApiPlansIdRouteRouteWithChildren
   PWorkspaceSlugPlanSlugRouteRoute: typeof PWorkspaceSlugPlanSlugRouteRouteWithChildren
+  ApiAuthCliRoute: typeof ApiAuthCliRoute
   ApiClerkWebhookRoute: typeof ApiClerkWebhookRoute
   SkillsWritePlanSKILLDotmdRoute: typeof SkillsWritePlanSKILLDotmdRoute
   ApiPlansIndexRoute: typeof ApiPlansIndexRoute
   ApiWorkspacesIndexRoute: typeof ApiWorkspacesIndexRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
-  ApiCliDeviceTokenRoute: typeof ApiCliDeviceTokenRoute
-  ApiCliDeviceIndexRoute: typeof ApiCliDeviceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/cli': {
-      id: '/cli'
-      path: '/cli'
-      fullPath: '/cli'
-      preLoaderRoute: typeof CliRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(home)/': {
       id: '/(home)/'
       path: '/'
@@ -252,11 +232,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/tokens': {
-      id: '/settings/tokens'
-      path: '/settings/tokens'
-      fullPath: '/settings/tokens'
-      preLoaderRoute: typeof SettingsTokensRouteRouteImport
+    '/cli/callback': {
+      id: '/cli/callback'
+      path: '/cli/callback'
+      fullPath: '/cli/callback'
+      preLoaderRoute: typeof CliCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/api-keys': {
+      id: '/settings/api-keys'
+      path: '/settings/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof SettingsApiKeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/cli': {
+      id: '/api/auth/cli'
+      path: '/api/auth/cli'
+      fullPath: '/api/auth/cli'
+      preLoaderRoute: typeof ApiAuthCliRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/clerk/webhook': {
@@ -306,20 +300,6 @@ declare module '@tanstack/react-router' {
       path: '/w/$slug'
       fullPath: '/w/$slug/'
       preLoaderRoute: typeof WSlugIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/cli/device/': {
-      id: '/api/cli/device/'
-      path: '/api/cli/device'
-      fullPath: '/api/cli/device/'
-      preLoaderRoute: typeof ApiCliDeviceIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/cli/device/token': {
-      id: '/api/cli/device/token'
-      path: '/api/cli/device/token'
-      fullPath: '/api/cli/device/token'
-      preLoaderRoute: typeof ApiCliDeviceTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/plans/$id/comments': {
@@ -385,19 +365,18 @@ const PWorkspaceSlugPlanSlugRouteRouteWithChildren =
   )
 
 const rootRouteChildren: RootRouteChildren = {
-  CliRouteRoute: CliRouteRoute,
-  SettingsTokensRouteRoute: SettingsTokensRouteRoute,
+  CliCallbackRoute: CliCallbackRoute,
+  SettingsApiKeysRoute: SettingsApiKeysRoute,
   homeIndexRoute: homeIndexRoute,
   ApiPlansIdRouteRoute: ApiPlansIdRouteRouteWithChildren,
   PWorkspaceSlugPlanSlugRouteRoute:
     PWorkspaceSlugPlanSlugRouteRouteWithChildren,
+  ApiAuthCliRoute: ApiAuthCliRoute,
   ApiClerkWebhookRoute: ApiClerkWebhookRoute,
   SkillsWritePlanSKILLDotmdRoute: SkillsWritePlanSKILLDotmdRoute,
   ApiPlansIndexRoute: ApiPlansIndexRoute,
   ApiWorkspacesIndexRoute: ApiWorkspacesIndexRoute,
   WSlugIndexRoute: WSlugIndexRoute,
-  ApiCliDeviceTokenRoute: ApiCliDeviceTokenRoute,
-  ApiCliDeviceIndexRoute: ApiCliDeviceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

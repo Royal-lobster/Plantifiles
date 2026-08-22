@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ApiError, PlantifilesClient } from "./index.js";
 
-const client = new PlantifilesClient({ token: "secret", baseUrl: "https://plans.example/" });
+const client = new PlantifilesClient({ getAccessToken: () => "secret", baseUrl: "https://plans.example/" });
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -19,6 +19,23 @@ describe("PlantifilesClient", () => {
 		expect(url).toBe("https://plans.example/api/plans");
 		expect(new Headers(init?.headers).get("authorization")).toBe("Bearer secret");
 		expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
+	});
+
+	it("reads the current access token for every request", async () => {
+		const tokens = ["access-1", "access-2"];
+		const freshClient = new PlantifilesClient({
+			baseUrl: "https://plans.example",
+			getAccessToken: () => tokens.shift() ?? "missing",
+		});
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({}));
+
+		await freshClient.getPlan("one");
+		await freshClient.getPlan("two");
+
+		expect(fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers).get("authorization"))).toEqual([
+			"Bearer access-1",
+			"Bearer access-2",
+		]);
 	});
 
 	it("preserves structured and plain-text API failures", async () => {

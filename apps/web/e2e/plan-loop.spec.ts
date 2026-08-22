@@ -67,6 +67,18 @@ function runCli(args: string[], cwd: string, token: string, baseUrl: string): st
 	});
 }
 
+test("hosted OAuth callback copies a one-time CLI response", async ({ context, page }) => {
+	await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+	const callbackResponse = await page.goto("/cli/callback?code=browser-code&state=browser-state");
+	expect(callbackResponse?.headers()["cache-control"]).toBe("no-store");
+	expect(callbackResponse?.headers()["referrer-policy"]).toBe("no-referrer");
+	await expect(page.getByRole("heading", { name: "Return to your terminal" })).toBeVisible();
+	await expect(page.getByTestId("cli-authorization-code")).toContainText("code=browser-code&state=browser-state");
+	await page.getByRole("button", { name: "Copy authorization code" }).click();
+	await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
+	await expect(page).toHaveURL("/cli/callback");
+});
+
 test("agent publish, browser review, approval, and version diff", async ({ page, baseURL }) => {
 	if (!baseURL) throw new Error("Playwright baseURL is required");
 	const agentRepo = await mkdtemp(`${tmpdir()}/plantifiles-playwright-`);
@@ -78,19 +90,10 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 				url: baseURL,
 			},
 		]);
+
 		await page.goto("/");
 		await expect(page).toHaveURL(/\/w\/demo$/);
-
-		await page.goto("/settings/tokens");
-		const tokenName = `Playwright ${Date.now()}`;
-		const tokenNameInput = page.getByRole("textbox", { name: "Create a token" });
-		await tokenNameInput.pressSequentially(tokenName);
-		await expect(tokenNameInput).toHaveValue(tokenName);
-		await tokenNameInput.press("Tab");
-		await page.getByRole("button", { name: "Create token" }).click();
-		const token = (await page.getByRole("dialog").locator("code").textContent())?.trim();
-		expect(token).toMatch(/^pf_/);
-		if (!token) throw new Error("Token creation returned no plaintext token");
+		const token = "pf_local_demo";
 
 		const title = `Reversible deploy approvals ${Date.now()}`;
 		const source = planSource(title);

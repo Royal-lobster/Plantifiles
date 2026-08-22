@@ -52,3 +52,4 @@
 - 2026-08-21 — Stop accepting new `<Prototype>` blocks and render immutable historical ones as inert source, removing iframe hosting, HTML sanitization, runtime Tailwind compilation, and their security surface.
 - 2026-08-21 — Keep one Sprout palette plus dark mode and one fixed 68ch reading measure; theme galleries, downloadable reader fonts, and typography steppers added preferences without strengthening plan review.
 - 2026-08-21 — Use compact dashboard rows instead of elevated cards so title, status, decisions, and version remain scannable without decorative height or motion.
+- 2026-08-22 — Replace product-issued tokens and the custom device grant with Clerk Authorization Code + PKCE through a stateless hosted copy/paste callback; store OAuth credentials in the system keychain, use scoped Clerk API keys for headless automation, and keep no production credential tables in D1.

@@ -2,21 +2,12 @@
 
 import { spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
-import { hostname } from "node:os";
 import { basename, extname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { setTimeout as sleep } from "node:timers/promises";
-import { Command } from "commander";
-import {
-	ApiError,
-	type DeviceLoginPoll,
-	type PlanSummary,
-	PlantifilesClient,
-	pollDeviceLogin,
-	startDeviceLogin,
-} from "@plantifiles/api-client";
+import { CONFIG_PATH, createAuth, loadConfig, resolveConnection, saveConfig } from "@plantifiles/auth";
+import { ApiError, type PlanSummary, PlantifilesClient } from "@plantifiles/api-client";
 import { lint } from "@plantifiles/core";
-import { CONFIG_PATH, type CliConfig, resolveConnection, saveConfig } from "./config.js";
+import { Command } from "commander";
 import { findRepositoryRoot, loadRepositoryState, saveRepositoryState, trackedPath } from "./repository-state.js";
 
 type PushOptions = {
@@ -45,48 +36,53 @@ function titleFromSource(source: string, file: string): string {
 		.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-/**
- * OAuth 2.0 device authorization, the flow `gh` and `wrangler` use. The terminal
- * never handles the credential a human can see: it prints a short code, the
- * browser proves who you are, and the token arrives over the polling channel
- * keyed by a device code that was never displayed.
- */
 async function login(options: { baseUrl?: string }): Promise<void> {
 	const baseUrl = (options.baseUrl ?? process.env.PLANTIFILES_BASE_URL ?? (await askForBaseUrl()))
 		.trim()
 		.replace(/\/$/, "");
 	if (!baseUrl) throw new Error("Plantifiles URL is required.");
 
-	const started = await startDeviceLogin(baseUrl, `${hostname()} (${process.platform})`);
-	console.log(`\n  Your code: ${started.userCode}`);
-	console.log(`  Approve at: ${started.verificationUri}\n`);
-	openUrl(started.verificationUriComplete);
-	console.log("Waiting for approval… (Ctrl-C to cancel)");
-
-	const deadline = Date.now() + started.expiresIn * 1000;
-	while (Date.now() < deadline) {
-		await sleep(started.interval * 1000);
-		let result: DeviceLoginPoll;
-		try {
-			result = await pollDeviceLogin(baseUrl, started.deviceCode);
-		} catch (error) {
-			// 404 is the server's single answer for expired, denied, and unknown, so
-			// it ends the wait rather than looping until the deadline.
-			if (error instanceof ApiError && error.status === 404) throw new Error("Login was denied or expired.");
-			throw error;
-		}
-		if (result.status === "pending") continue;
-
-		const config: CliConfig = { token: result.token, baseUrl };
-		const workspaces = await new PlantifilesClient(config).listWorkspaces();
+	const terminal = createInterface({ input: process.stdin, output: process.stdout });
+	const auth = createAuth(baseUrl);
+	try {
+		const user = await auth.login({
+			async openBrowser(url) {
+				console.log(`\nOpen this URL to sign in:\n${url}\n`);
+				await openUrl(url);
+			},
+			readAuthorizationResponse: () => terminal.question("Paste the authorization code shown by Plantifiles:\n> "),
+		});
+		const connection = {
+			baseUrl,
+			async getAccessToken() {
+				const token = await auth.getAccessToken();
+				if (!token) throw new Error("Clerk did not retain the new login.");
+				return token;
+			},
+		};
+		const workspaces = await new PlantifilesClient(connection).listWorkspaces();
 		const defaultWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
-		if (defaultWorkspace) config.defaultWorkspace = defaultWorkspace.slug;
-		await saveConfig(config);
-		console.log(`\nSigned in. Credentials saved to ${CONFIG_PATH} with mode 0600.`);
+		await saveConfig({
+			baseUrl,
+			...(defaultWorkspace ? { defaultWorkspace: defaultWorkspace.slug } : {}),
+		});
+		console.log(`\nSigned in${user.email ? ` as ${user.email}` : ""}.`);
+		console.log(`Service configuration saved to ${CONFIG_PATH}; credentials are in the system keychain.`);
 		if (defaultWorkspace) console.log(`Default workspace: ${defaultWorkspace.slug}`);
-		return;
+	} finally {
+		terminal.close();
 	}
-	throw new Error("Login timed out. Run `plantifiles login` again.");
+}
+
+async function logout(): Promise<void> {
+	const saved = await loadConfig();
+	const baseUrl = process.env.PLANTIFILES_BASE_URL?.trim() || saved?.baseUrl;
+	if (!baseUrl) throw new Error("No Plantifiles login is configured.");
+	await createAuth(baseUrl).logout();
+	console.log("Signed out of Plantifiles on this machine.");
+	if (process.env.PLANTIFILES_TOKEN) {
+		console.log("PLANTIFILES_TOKEN remains active because environment credentials are not managed by the CLI.");
+	}
 }
 
 async function askForBaseUrl(): Promise<string> {
@@ -167,17 +163,25 @@ async function lintFile(file: string): Promise<void> {
 	if (report.errors > 0) process.exitCode = 1;
 }
 
-function openUrl(url: string): void {
+async function openUrl(url: string): Promise<void> {
 	const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
 	const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
-	const child = spawn(command, args, { detached: true, stdio: "ignore" });
-	child.unref();
+	await new Promise<void>((resolveOpen) => {
+		const child = spawn(command, args, { detached: true, stdio: "ignore" });
+		child.once("error", resolveOpen);
+		child.once("spawn", () => {
+			child.unref();
+			resolveOpen();
+		});
+	});
 }
 
 async function openPlan(id: string): Promise<void> {
 	const config = await resolveConnection();
 	const detail = await new PlantifilesClient(config).getPlan(id);
-	openUrl(`${config.baseUrl}/p/${encodeURIComponent(detail.workspace.slug)}/${encodeURIComponent(detail.plan.slug)}`);
+	await openUrl(
+		`${config.baseUrl}/p/${encodeURIComponent(detail.workspace.slug)}/${encodeURIComponent(detail.plan.slug)}`,
+	);
 }
 
 function renderStatusTable(plans: PlanSummary[]): string {
@@ -217,6 +221,8 @@ async function main(): Promise<void> {
 		.description("Authorize this machine through the browser")
 		.option("--base-url <url>", "Plantifiles service URL")
 		.action(login);
+
+	program.command("logout").description("Revoke this machine's browser login").action(logout);
 
 	program.command("workspaces").description("List workspaces you belong to").action(listWorkspaces);
 
