@@ -10,6 +10,9 @@ import { lint } from "@plantifiles/core";
 import { Command } from "commander";
 import { findRepositoryRoot, loadRepositoryState, saveRepositoryState, trackedPath } from "./repository-state.js";
 
+/** The hosted service, so `plantifiles login` needs no argument for the common case. */
+const DEFAULT_BASE_URL = "https://plantifiles.com";
+
 type PushOptions = {
 	workspace?: string;
 	title?: string;
@@ -88,7 +91,8 @@ async function logout(): Promise<void> {
 async function askForBaseUrl(): Promise<string> {
 	const terminal = createInterface({ input: process.stdin, output: process.stdout });
 	try {
-		return await terminal.question("Plantifiles URL: ");
+		const answer = await terminal.question(`Plantifiles URL [${DEFAULT_BASE_URL}]: `);
+		return answer.trim() || DEFAULT_BASE_URL;
 	} finally {
 		terminal.close();
 	}
