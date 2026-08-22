@@ -111,13 +111,14 @@ function MermaidFigure({ chart, className }: { chart: string; className?: string
 	}, [chart, id, rootClassSignature]);
 	useEffect(() => {
 		if (!svg || !rootRef.current) return;
-		const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
-		if (parsed.documentElement.localName !== "svg") {
+		const parsed = new DOMParser().parseFromString(svg, "text/html");
+		const svgElement = parsed.querySelector("svg");
+		if (!svgElement) {
 			setError("Mermaid returned invalid SVG.");
 			return;
 		}
-		for (const script of parsed.querySelectorAll("script")) script.remove();
-		for (const element of parsed.querySelectorAll("*")) {
+		for (const script of svgElement.querySelectorAll("script")) script.remove();
+		for (const element of [svgElement, ...svgElement.querySelectorAll("*")]) {
 			for (const attribute of [...element.attributes]) {
 				const name = attribute.name.toLowerCase();
 				if (
@@ -128,7 +129,7 @@ function MermaidFigure({ chart, className }: { chart: string; className?: string
 				}
 			}
 		}
-		rootRef.current.replaceChildren(document.importNode(parsed.documentElement, true));
+		rootRef.current.replaceChildren(document.importNode(svgElement, true));
 	}, [svg]);
 	if (error) return <pre className="overflow-x-auto p-4 text-destructive text-xs">{error}</pre>;
 	if (!svg) return <pre className="overflow-x-auto p-4 font-mono text-muted-foreground text-xs">{chart}</pre>;

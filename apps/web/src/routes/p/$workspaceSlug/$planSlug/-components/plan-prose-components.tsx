@@ -2,7 +2,7 @@ import { Badge } from "@plantifiles/ui/components/badge";
 import { Checkbox } from "@plantifiles/ui/components/checkbox";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { AlertTriangle, ChevronRight, Info, Scale, X } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { Children, type ComponentProps, type ReactNode } from "react";
 import { usePlanRender } from "./plan-render-context";
 
 type RiskSeverity = "low" | "med" | "high";
@@ -34,8 +34,26 @@ function PlanOrderedList({ node: _node, className, ...props }: ComponentProps<"o
 	return <ol className={cn("my-4 list-decimal space-y-2 pl-5", className)} {...props} />;
 }
 
-function PlanListItem({ node: _node, className, ...props }: ComponentProps<"li"> & { node?: unknown }) {
-	return <li className={cn("pl-1 text-sm leading-6 marker:text-muted-foreground", className)} {...props} />;
+function PlanListItem({ node: _node, className, children, ...props }: ComponentProps<"li"> & { node?: unknown }) {
+	const itemChildren = Children.toArray(children);
+	const isTaskItem = className?.split(/\s+/).includes("task-list-item") ?? false;
+	if (!isTaskItem) {
+		return (
+			<li className={cn("pl-1 text-sm leading-6 marker:text-muted-foreground", className)} {...props}>
+				{children}
+			</li>
+		);
+	}
+	const [checkbox, ...content] = itemChildren;
+	return (
+		<li
+			className={cn("flex items-start gap-2.5 pl-0 text-sm leading-6 marker:text-muted-foreground", className)}
+			{...props}
+		>
+			{checkbox}
+			<span className="min-w-0 flex-1">{content}</span>
+		</li>
+	);
 }
 
 function PlanPre({ node: _node, className, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
@@ -156,9 +174,7 @@ function Phase({
 				{n}
 			</span>
 			<h3 className="pt-1 font-medium text-xl tracking-tight">{title}</h3>
-			<div className="mt-3 [&_li]:flex [&_li]:items-start [&_li]:gap-2.5 [&_li]:pl-0 [&_ul]:space-y-2.5 [&_ul]:pl-0">
-				{children}
-			</div>
+			<div className="mt-3 [&_ul]:space-y-2.5 [&_ul]:pl-0">{children}</div>
 		</section>
 	);
 }
