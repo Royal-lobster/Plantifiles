@@ -51,11 +51,18 @@ export async function saveConfig(config: PlantifilesConfig, path = CONFIG_PATH):
 
 export function createAuth(
 	baseUrl: string,
-	options: { store?: CredentialStore; apiKey?: string; fetch?: typeof fetch; now?: () => number } = {},
+	options: {
+		store?: CredentialStore;
+		apiKey?: string;
+		fetch?: typeof fetch;
+		now?: () => number;
+		warn?: (message: string) => void;
+	} = {},
 ): PlantifilesAuth {
 	const normalizedBaseUrl = new URL(baseUrl).origin;
 	const environment = createHash("sha256").update(normalizedBaseUrl).digest("hex").slice(0, 16);
-	const store = options.store ?? createCredentialStore({ environment });
+	const store =
+		options.store ?? createCredentialStore({ environment, ...(options.warn ? { warn: options.warn } : {}) });
 	return new PlantifilesAuth(normalizedBaseUrl, {
 		store,
 		...(options.apiKey ? { apiKey: options.apiKey } : {}),

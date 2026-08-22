@@ -44,8 +44,11 @@ async function login(options: { baseUrl?: string }): Promise<void> {
 	if (!baseUrl) throw new Error("Plantifiles URL is required.");
 	console.log(`Signing in to ${baseUrl}`);
 
+	/* Storage degrades to a file mid-login. Collecting the notice and printing it
+	   after the result keeps a working sign-in from reading as a failure. */
+	const notices = new Set<string>();
 	const terminal = createInterface({ input: process.stdin, output: process.stdout });
-	const auth = createAuth(baseUrl);
+	const auth = createAuth(baseUrl, { warn: (message) => notices.add(message) });
 	try {
 		const user = await auth.login({
 			async openBrowser(url) {
@@ -69,8 +72,10 @@ async function login(options: { baseUrl?: string }): Promise<void> {
 			...(defaultWorkspace ? { defaultWorkspace: defaultWorkspace.slug } : {}),
 		});
 		console.log(`\nSigned in${user.email ? ` as ${user.email}` : ""}.`);
-		console.log(`Service configuration saved to ${CONFIG_PATH}; credentials are in ${auth.credentialLocation()}.`);
 		if (defaultWorkspace) console.log(`Default workspace: ${defaultWorkspace.slug}`);
+		console.log(`Configuration: ${CONFIG_PATH}`);
+		console.log(`Credentials:   ${auth.credentialLocation()}`);
+		for (const notice of notices) console.log(`\nNote: ${notice}`);
 	} finally {
 		terminal.close();
 	}
@@ -85,6 +90,49 @@ async function logout(): Promise<void> {
 	if (process.env.PLANTIFILES_TOKEN) {
 		console.log("PLANTIFILES_TOKEN remains active because environment credentials are not managed by the CLI.");
 	}
+}
+
+async function whoami(): Promise<void> {
+	const saved = await loadConfig();
+	const baseUrl = process.env.PLANTIFILES_BASE_URL?.trim() || saved?.baseUrl;
+	if (!baseUrl) {
+		console.log("Not signed in. Run `plantifiles login`.");
+		return;
+	}
+
+	const apiKey = process.env.PLANTIFILES_TOKEN?.trim();
+	const notices = new Set<string>();
+	const auth = createAuth(baseUrl, {
+		...(apiKey ? { apiKey } : {}),
+		warn: (message) => notices.add(message),
+	});
+	const user = apiKey ? null : await auth.whoami();
+	if (!apiKey && !user) {
+		console.log(`Not signed in to ${baseUrl}. Run \`plantifiles login\`.`);
+		return;
+	}
+
+	console.log(`Service:    ${baseUrl}`);
+	if (apiKey) {
+		console.log("Credential: Clerk API key from PLANTIFILES_TOKEN");
+		console.log("Account:    not stored locally; an API key carries no local identity");
+	} else if (user) {
+		console.log(`Account:    ${user.email ?? user.sub}`);
+		console.log(`Credential: OAuth session in ${auth.credentialLocation()}`);
+	}
+	if (saved?.defaultWorkspace) console.log(`Workspace:  ${saved.defaultWorkspace} (default)`);
+
+	/* Local state says who you were; only a request says whether you still are.
+	   A revoked key or a dead refresh token looks identical on disk. */
+	try {
+		const token = await auth.getAccessToken();
+		if (!token) throw new Error("no usable credential");
+		const workspaces = await new PlantifilesClient({ baseUrl, getAccessToken: async () => token }).listWorkspaces();
+		console.log(`Verified:   works, ${workspaces.length} workspace${workspaces.length === 1 ? "" : "s"} reachable`);
+	} catch (error) {
+		console.log(`Verified:   FAILED, ${error instanceof Error ? error.message : String(error)}`);
+	}
+	for (const notice of notices) console.log(`\nNote: ${notice}`);
 }
 
 async function listWorkspaces(): Promise<void> {
@@ -216,6 +264,8 @@ async function main(): Promise<void> {
 		.action(login);
 
 	program.command("logout").description("Revoke this machine's browser login").action(logout);
+
+	program.command("whoami").description("Show the signed-in account and verify the credential").action(whoami);
 
 	program.command("workspaces").description("List workspaces you belong to").action(listWorkspaces);
 

@@ -128,10 +128,23 @@ class KeychainCredentialStore implements CredentialStore {
 	async get(key: string): Promise<string | null> {
 		try {
 			const keyring = await this.#loadKeyring();
-			if (!keyring) return this.fallback.get(key);
-			return new keyring.Entry(this.service, this.#account(key)).getPassword() ?? (await this.fallback.get(key));
+			if (!keyring) {
+				this.#degraded = true;
+				return this.fallback.get(key);
+			}
+			const stored = new keyring.Entry(this.service, this.#account(key)).getPassword();
+			if (stored !== null && stored !== undefined) {
+				this.#degraded = false;
+				return stored;
+			}
+			/* No keychain entry: whatever the file holds is the real credential, and
+			   `location` must say so rather than name a store that has nothing. */
+			const fromFile = await this.fallback.get(key);
+			if (fromFile !== null) this.#degraded = true;
+			return fromFile;
 		} catch (error) {
 			this.warn(`System keychain read failed; using the credential file. ${message(error)}`);
+			this.#degraded = true;
 			return this.fallback.get(key);
 		}
 	}
@@ -168,8 +181,13 @@ class KeychainCredentialStore implements CredentialStore {
 	}
 }
 
+/**
+ * Keyring errors arrive as a multi-line `Caused by:` chain. A degraded keychain
+ * is a warning, not a crash, so it has to read as one line.
+ */
 function message(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
+	const text = error instanceof Error ? error.message : String(error);
+	return text.replace(/\s+/g, " ").trim();
 }
 
 export function createCredentialStore(options: CredentialStoreOptions): CredentialStore {
