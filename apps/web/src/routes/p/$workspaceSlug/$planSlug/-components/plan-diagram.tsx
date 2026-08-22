@@ -144,9 +144,11 @@ function DiagramLightbox({
 	figure: number | undefined;
 	lang: "mermaid" | "d2";
 }) {
+	/* The primitive caps itself at sm:max-w-md, so the override has to carry the
+	   same breakpoint or it loses at every width above mobile. */
 	return (
-		<DialogContent className="flex h-[88vh] w-[calc(100%-2rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0">
-			<DialogTitle className="border-b px-4 py-3 pr-12 label-eyebrow text-foreground">
+		<DialogContent className="flex h-[88vh] w-[calc(100%-2rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0 sm:max-w-[min(96vw,80rem)]">
+			<DialogTitle className="border-b border-foreground/[0.06] px-4 py-3 pr-12 label-eyebrow text-foreground">
 				{figure === undefined ? "Diagram" : `Fig. ${figure}`}
 			</DialogTitle>
 			<div className="flex-1 overflow-auto bg-muted/20 p-6">
@@ -167,7 +169,7 @@ function Diagram({ lang, blockKey, children }: { lang: "mermaid" | "d2"; blockKe
 	return (
 		<figure className="group/diagram">
 			<Dialog>
-				<div className="relative overflow-hidden rounded-lg border bg-card p-6 transition-colors hover:border-brand-ink/40 focus-within:border-brand-ink/40">
+				<div className="relative overflow-hidden surface-card p-6 transition-shadow hover:ring-brand-ink/40 focus-within:ring-brand-ink/40">
 					{lang === "mermaid" ? (
 						<MermaidFigure chart={chart} />
 					) : (
@@ -177,12 +179,12 @@ function Diagram({ lang, blockKey, children }: { lang: "mermaid" | "d2"; blockKe
 						<button
 							type="button"
 							aria-label={figure === undefined ? "Enlarge diagram" : `Enlarge figure ${figure}`}
-							className="absolute inset-0 cursor-zoom-in rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+							className="absolute inset-0 cursor-zoom-in rounded-3xl outline-none focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:ring-inset"
 						>
 							<span className="sr-only">{figure === undefined ? "Enlarge diagram" : `Enlarge figure ${figure}`}</span>
 						</button>
 					</DialogTrigger>
-					<span className="pointer-events-none absolute top-2.5 right-2.5 flex items-center gap-1 rounded-md border bg-background/90 px-2 py-1 font-mono text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/diagram:opacity-100 group-focus-within/diagram:opacity-100">
+					<span className="pointer-events-none absolute top-2.5 right-2.5 flex items-center gap-1 rounded-xl bg-background/90 px-2 py-1 font-mono text-[10px] text-muted-foreground ring-1 ring-foreground/5 dark:ring-foreground/10 opacity-0 transition-opacity group-hover/diagram:opacity-100 group-focus-within/diagram:opacity-100">
 						<Maximize2 className="size-3" /> zoom
 					</span>
 				</div>

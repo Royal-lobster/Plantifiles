@@ -6,5 +6,5 @@ import { getTokensForPage } from "./-data/tokens";
 export const Route = createFileRoute("/settings/tokens")({
 	loader: () => guardLoader(() => getTokensForPage()),
 	component: TokenSettings,
-	pendingComponent: () => <div className="h-64 animate-pulse rounded-lg bg-muted" />,
+	pendingComponent: () => <div className="h-64 animate-pulse rounded-2xl bg-muted" />,
 });

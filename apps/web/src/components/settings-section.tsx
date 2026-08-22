@@ -1,6 +1,6 @@
 import { Label } from "@plantifiles/ui/components/label";
 import type { LucideIcon } from "lucide-react";
-import { useId, type ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 function SettingsSection({
 	icon: Icon,
@@ -15,9 +15,9 @@ function SettingsSection({
 }) {
 	const headingId = useId();
 	return (
-		<section className="scroll-mt-20 space-y-3" aria-labelledby={headingId}>
+		<section className="scroll-mt-20 space-y-4" aria-labelledby={headingId}>
 			<div className="flex items-start gap-3">
-				<div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+				<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
 					<Icon className="size-4" aria-hidden="true" />
 				</div>
 				<div className="space-y-0.5">
@@ -27,7 +27,7 @@ function SettingsSection({
 					{description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
 				</div>
 			</div>
-			<div className="rounded-xl border bg-card">{children}</div>
+			<div className="surface-card">{children}</div>
 		</section>
 	);
 }
@@ -44,7 +44,7 @@ function SettingsRow({
 	control: ReactNode;
 }) {
 	return (
-		<div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+		<div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
 			<div className="min-w-0 flex-1 space-y-0.5">
 				{labelFor ? (
 					<Label htmlFor={labelFor} className="font-medium text-sm">
@@ -61,7 +61,7 @@ function SettingsRow({
 }
 
 function SettingsRowDivider() {
-	return <div className="border-t" aria-hidden="true" />;
+	return <div className="border-t border-foreground/[0.06]" aria-hidden="true" />;
 }
 
 export { SettingsRow, SettingsRowDivider, SettingsSection };

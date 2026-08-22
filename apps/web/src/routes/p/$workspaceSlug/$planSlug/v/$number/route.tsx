@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loadPlanDocument, renderPlanMarkdown } from "#/lib/data/plan-reader.server";
 import { negotiatePlanResponse } from "#/lib/helpers/content-negotiation";
 import { errorResponse } from "#/lib/helpers/http";
 import { guardLoader } from "#/lib/helpers/loader-guard";
 import { getPlanReaderData } from "#/routes/p/$workspaceSlug/$planSlug/-data/plan-reader";
-import { loadPlanDocument, renderPlanMarkdown } from "#/lib/data/plan-reader.server";
 import { PlanReader } from "../../-components/plan-reader";
 
 export const Route = createFileRoute("/p/$workspaceSlug/$planSlug/v/$number")({
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/p/$workspaceSlug/$planSlug/v/$number")({
 	},
 	loader: ({ params }) => guardLoader(() => getPlanReaderData({ data: params })),
 	component: VersionPage,
-	pendingComponent: () => <div className="h-96 animate-pulse rounded-lg bg-muted" />,
+	pendingComponent: () => <div className="h-96 animate-pulse rounded-3xl bg-muted" />,
 });
 
 function VersionPage() {

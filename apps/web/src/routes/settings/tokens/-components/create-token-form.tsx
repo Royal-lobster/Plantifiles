@@ -7,7 +7,7 @@ import { type SyntheticEvent, useId, useReducer, useRef } from "react";
 import { SettingsRow } from "../../../../components/settings-section";
 import { createTokenForPage } from "../-data/tokens";
 import { CreatedTokenDialog } from "./created-token-dialog";
-import { tokenActionError, TokenFeedback, type TokenFeedbackValue } from "./token-feedback";
+import { TokenFeedback, type TokenFeedbackValue, tokenActionError } from "./token-feedback";
 
 type CreatedToken = { name: string; value: string };
 type CreateState = {
@@ -95,7 +95,7 @@ export function CreateTokenForm() {
 				hint="Give each device or agent its own token so access can be revoked independently."
 				control={
 					<form
-						className="flex w-full flex-wrap justify-end gap-2 sm:w-auto"
+						className="flex w-full flex-wrap justify-end gap-3 sm:w-auto"
 						aria-busy={state.creating}
 						onSubmit={submit}
 					>
@@ -117,7 +117,7 @@ export function CreateTokenForm() {
 				}
 			/>
 			{state.feedback ? (
-				<div className="px-4 pb-3 text-right">
+				<div className="px-5 pb-4 text-right">
 					<TokenFeedback feedback={state.feedback} />
 				</div>
 			) : null}

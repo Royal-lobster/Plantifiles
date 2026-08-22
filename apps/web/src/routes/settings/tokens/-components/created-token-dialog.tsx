@@ -25,7 +25,7 @@ export function CreatedTokenDialog({
 				<output className="block text-success text-sm" aria-live="polite">
 					{token.name} was created. Copy it before closing this dialog.
 				</output>
-				<div className="flex items-center gap-2 rounded-md border bg-muted/40 p-2 pl-3">
+				<div className="surface-inset flex items-center gap-2 p-2 pl-4">
 					<code className="min-w-0 flex-1 break-all font-mono text-xs">{token.value}</code>
 					<Button
 						size="icon"

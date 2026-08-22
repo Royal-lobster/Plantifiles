@@ -3,9 +3,10 @@ import { Button } from "@plantifiles/ui/components/button";
 import { Textarea } from "@plantifiles/ui/components/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@plantifiles/ui/components/tooltip";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { Bot, Check, CheckCircle2, HelpCircle, MessageSquare, Plus, Reply } from "lucide-react";
+import { Bot, Check, CheckCircle2, CircleDot, HelpCircle, MessageSquare, Plus, Reply } from "lucide-react";
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import { useId, useState } from "react";
+import { StateLabel } from "#/components/state-label";
 import type { ReaderComment } from "./plan-render-context";
 import { usePlanRender } from "./plan-render-context";
 
@@ -160,7 +161,7 @@ function CommentComposer({
 		}
 	}
 	return (
-		<form className="space-y-2 rounded-md border bg-card p-3" onSubmit={submit}>
+		<form className="surface-card space-y-3 p-5" onSubmit={submit}>
 			<label className="label-eyebrow" htmlFor={inputId}>
 				{label}
 			</label>
@@ -237,7 +238,11 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 			</div>
 			<p className="whitespace-pre-wrap leading-6">{root.body}</p>
 			{replies.map((reply) => (
-				<article key={reply.id} className="ml-3 border-l pl-3" aria-label={`Reply by ${reply.author.name}`}>
+				<article
+					key={reply.id}
+					className="ml-3 border-l border-foreground/[0.08] pl-3"
+					aria-label={`Reply by ${reply.author.name}`}
+				>
 					<div className="mb-1 flex items-center gap-2 text-xs">
 						<span className="font-medium">{reply.author.name}</span>
 						<time className="font-mono text-muted-foreground" dateTime={reply.createdAt}>
@@ -280,7 +285,7 @@ function DetachedCommentThreads() {
 	const roots = context.detachedRoots;
 	if (roots.length === 0) return null;
 	return (
-		<details className="mt-12 border-t pt-4" aria-label="Comments from earlier versions">
+		<details className="mt-12 border-t border-foreground/[0.08] pt-6" aria-label="Comments from earlier versions">
 			<summary className="label-eyebrow cursor-pointer">From an earlier version ({roots.length})</summary>
 			<div className="mt-4 space-y-5">
 				{roots.map((thread) => {
@@ -331,35 +336,41 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 			setBusy(false);
 		}
 	}
+	/* One record for the open/resolved reading, so the ring, the header wash, the
+	   eyebrow icon and the state label cannot drift apart. */
+	const presentation =
+		status === "open"
+			? {
+					ring: "ring-decision/35",
+					header: "border-decision/25 bg-decision/[0.07]",
+					eyebrow: "text-decision",
+					state: { icon: CircleDot, ink: "text-decision" },
+				}
+			: {
+					ring: "",
+					header: "border-foreground/[0.06] bg-muted/40",
+					eyebrow: "text-muted-foreground",
+					state: { icon: CheckCircle2, ink: "text-success" },
+				};
 	return (
-		<section
-			className={cn(
-				"overflow-hidden rounded-lg border bg-card",
-				status === "open" ? "border-decision/35" : "border-border",
-			)}
-		>
-			<header
-				className={cn(
-					"flex flex-wrap items-center gap-2 border-b px-5 py-2.5",
-					status === "open" ? "border-decision/25 bg-decision/[0.07]" : "bg-muted/40",
-				)}
-			>
-				<HelpCircle className={cn("size-4", status === "open" ? "text-decision" : "text-muted-foreground")} />
+		<section className={cn("surface-card overflow-hidden", presentation.ring)}>
+			<header className={cn("flex flex-wrap items-center gap-2 border-b px-5 py-3", presentation.header)}>
+				<HelpCircle className={cn("size-4", presentation.eyebrow)} />
 				<h3 className="label-eyebrow text-foreground">Decision</h3>
 				<span className="ml-auto font-mono text-muted-foreground text-xs">{owner}</span>
-				<Badge variant={status === "resolved" ? "success" : "decision"} size="sm">
+				<StateLabel icon={presentation.state.icon} ink={presentation.state.ink}>
 					{status}
-				</Badge>
+				</StateLabel>
 			</header>
-			<div className="px-5 py-4 [&>p]:text-lg [&>p]:text-foreground [&>p]:leading-[1.55]">{children}</div>
+			<div className="px-5 py-5 [&>p]:text-lg [&>p]:text-foreground [&>p]:leading-[1.55]">{children}</div>
 			{record?.resolution && (
-				<footer className="flex gap-2.5 border-t bg-success/[0.06] px-5 py-3 text-sm">
+				<footer className="flex gap-2.5 border-t border-foreground/[0.06] bg-success/[0.06] px-5 py-4 text-sm">
 					<Check className="mt-0.5 size-4 shrink-0 text-success" />
 					<p className="leading-6">{record.resolution}</p>
 				</footer>
 			)}
 			{canResolve && (
-				<div className="border-t px-5 py-3">
+				<div className="border-t border-foreground/[0.06] px-5 py-4">
 					{!resolving ? (
 						<Button type="button" size="sm" variant="outline" onClick={() => setResolving(true)}>
 							Resolve decision

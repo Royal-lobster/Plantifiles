@@ -14,7 +14,12 @@ function PlanParagraph({ node: _node, className, ...props }: ComponentProps<"p">
 /* A rule above the section, the way a manuscript opens one, rather than an
    underline that makes every heading look like a table header. */
 function PlanHeading2({ node: _node, className, ...props }: ComponentProps<"h2"> & { node?: unknown }) {
-	return <h2 className={cn("mt-7 border-t pt-6 font-medium text-2xl tracking-tight", className)} {...props} />;
+	return (
+		<h2
+			className={cn("mt-7 border-t border-foreground/[0.08] pt-6 font-medium text-2xl tracking-tight", className)}
+			{...props}
+		/>
+	);
 }
 
 function PlanHeading3({ node: _node, className, ...props }: ComponentProps<"h3"> & { node?: unknown }) {
@@ -37,7 +42,7 @@ function PlanPre({ node: _node, className, ...props }: ComponentProps<"pre"> & {
 	return (
 		<pre
 			className={cn(
-				"my-4 overflow-x-auto rounded-lg border p-4 font-mono text-sm leading-6 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]",
+				"my-4 overflow-x-auto surface-card p-5 font-mono text-sm leading-6 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]",
 				className,
 			)}
 			{...props}
@@ -46,7 +51,7 @@ function PlanPre({ node: _node, className, ...props }: ComponentProps<"pre"> & {
 }
 
 function PlanCode({ node: _node, className, ...props }: ComponentProps<"code"> & { node?: unknown }) {
-	return <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]", className)} {...props} />;
+	return <code className={cn("rounded-xl bg-muted px-1.5 py-0.5 font-mono text-[0.85em]", className)} {...props} />;
 }
 
 function PlanLink({ node: _node, className, children, ...props }: ComponentProps<"a"> & { node?: unknown }) {
@@ -73,12 +78,14 @@ function TLDR({ children }: { children?: ReactNode }) {
 	return <div className="text-lg text-foreground leading-[1.7] tracking-tight sm:text-xl">{children}</div>;
 }
 
-/* A tradeoff is a weighing, so it is drawn as one: options share a beam and the
-   recommended arm sits heavier than the alternatives it beat. */
+/* A tradeoff is a weighing: two arms side by side, with the recommended one
+   ringed and tinted so it sits heavier than the alternatives it beat. The label
+   carries no rule under it, because a hairline directly above two rounded cards
+   collides with their own top edges. */
 function Tradeoff({ children }: { children?: ReactNode }) {
 	return (
 		<section>
-			<header className="flex items-center gap-2 border-b pb-2">
+			<header className="mb-4 flex items-center gap-2">
 				<Scale className="size-4 text-brand-ink" />
 				<h3 className="label-eyebrow text-foreground">Tradeoff</h3>
 			</header>
@@ -91,8 +98,10 @@ function Option({ name, recommended, children }: { name: string; recommended?: b
 	return (
 		<section
 			className={cn(
-				"border-t-2 px-4 pt-3 pb-4",
-				recommended ? "border-brand-ink bg-brand-ink/[0.05]" : "border-border/70 text-muted-foreground",
+				"rounded-2xl px-5 pt-4 pb-5 ring-1",
+				recommended
+					? "bg-brand-ink/[0.06] ring-brand-ink/40"
+					: "bg-muted/40 text-muted-foreground ring-foreground/[0.06]",
 			)}
 		>
 			<header className="mb-2 flex items-center gap-2">
@@ -110,14 +119,14 @@ function Option({ name, recommended, children }: { name: string; recommended?: b
 
 function Rejected({ what, children }: { what: string; children?: ReactNode }) {
 	return (
-		<details className="group/rejected border-y py-2.5">
+		<details className="group/rejected surface-inset px-4 py-3">
 			<summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground">
 				<ChevronRight className="size-3.5 transition-transform group-open/rejected:rotate-90" />
 				<X className="size-3.5 text-destructive/70" />
 				<span className="label-eyebrow">Rejected</span>
 				<span className="text-foreground/70 line-through decoration-destructive/40">{what}</span>
 			</summary>
-			<div className="mt-2.5 pl-7 text-sm leading-6">{children}</div>
+			<div className="mt-3 pl-7 text-sm leading-6">{children}</div>
 		</details>
 	);
 }
@@ -183,7 +192,7 @@ const RISK_LEVEL: Record<RiskSeverity, { bars: number; label: string; wrapper: s
 function Risk({ severity, children }: { severity: RiskSeverity; children?: ReactNode }) {
 	const level = RISK_LEVEL[severity] ?? RISK_LEVEL.med;
 	return (
-		<section className={cn("rounded-r-lg border border-l-[3px] p-5", level.wrapper)}>
+		<section className={cn("rounded-r-3xl border-l-[3px] p-5", level.wrapper)}>
 			<header className="mb-2 flex items-center gap-2">
 				<AlertTriangle className={cn("size-4", level.ink)} />
 				<h3 className="label-eyebrow text-foreground">Risk</h3>
@@ -193,7 +202,7 @@ function Risk({ severity, children }: { severity: RiskSeverity; children?: React
 						<span
 							key={rung}
 							className={cn(
-								"w-1 rounded-sm",
+								"w-1 rounded-full",
 								rung === 0 ? "h-1.5" : rung === 1 ? "h-2.5" : "h-3.5",
 								rung < level.bars ? level.fill : "bg-current opacity-15",
 							)}
@@ -208,25 +217,29 @@ function Risk({ severity, children }: { severity: RiskSeverity; children?: React
 
 function CodeSketch({ lang: _lang, file, children }: { lang: string; file?: string; children?: ReactNode }) {
 	return (
-		<figure className="overflow-hidden rounded-lg border bg-card">
+		<figure className="overflow-hidden surface-card">
 			{file && (
-				<figcaption className="flex items-center gap-2 border-b bg-muted/60 px-4 py-2 font-mono text-[11px] text-muted-foreground">
+				<figcaption className="flex items-center gap-2 border-b border-foreground/[0.06] bg-muted/60 px-5 py-3 font-mono text-[11px] text-muted-foreground">
 					<span className="size-1.5 rounded-full bg-brand-ink/60" />
 					{file}
 				</figcaption>
 			)}
-			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0">{children}</div>
+			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0 [&_pre]:shadow-none [&_pre]:ring-0">
+				{children}
+			</div>
 		</figure>
 	);
 }
 
 function LegacyPrototype({ title, children }: { title: string; children?: ReactNode }) {
 	return (
-		<figure className="overflow-hidden rounded-lg border bg-card">
-			<figcaption className="border-b bg-muted/60 px-4 py-2 font-mono text-[11px] text-muted-foreground">
+		<figure className="overflow-hidden surface-card">
+			<figcaption className="border-b border-foreground/[0.06] bg-muted/60 px-5 py-3 font-mono text-[11px] text-muted-foreground">
 				{title} · archived prototype source
 			</figcaption>
-			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0">{children}</div>
+			<div className="[&_pre]:my-0 [&_pre]:rounded-none [&_pre]:border-0 [&_pre]:shadow-none [&_pre]:ring-0">
+				{children}
+			</div>
 		</figure>
 	);
 }
@@ -239,7 +252,7 @@ function Callout({ kind, children }: { kind: "note" | "warning"; children?: Reac
 			aria-label={warning ? "Warning" : "Note"}
 			className={cn(
 				"flex gap-3 border-l-2 py-1 pl-4 text-sm leading-6",
-				warning ? "border-warning bg-warning/[0.06] py-3 pr-4" : "border-brand-ink/50",
+				warning ? "rounded-r-2xl border-warning bg-warning/[0.06] py-3 pr-4" : "border-brand-ink/50",
 			)}
 		>
 			<Icon className={cn("mt-1 size-4 shrink-0", warning ? "text-warning" : "text-brand-ink")} />
@@ -264,21 +277,21 @@ function PlanBlockquote({ node: _node, className, ...props }: ComponentProps<"bl
  */
 function PlanTable({ node: _node, className, ...props }: ComponentProps<"table"> & { node?: unknown }) {
 	return (
-		<div className="-mx-1 my-5 overflow-x-auto rounded-lg border bg-card px-1">
+		<div className="my-5 overflow-x-auto surface-card">
 			<table className={cn("w-full border-collapse text-left text-sm", className)} {...props} />
 		</div>
 	);
 }
 
 function PlanThead({ node: _node, className, ...props }: ComponentProps<"thead"> & { node?: unknown }) {
-	return <thead className={cn("border-b bg-muted/40", className)} {...props} />;
+	return <thead className={cn("border-b border-foreground/[0.06] bg-muted/40", className)} {...props} />;
 }
 
 function PlanTh({ node: _node, className, ...props }: ComponentProps<"th"> & { node?: unknown }) {
 	return (
 		<th
 			className={cn(
-				"px-3 py-2.5 align-bottom font-mono font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.12em]",
+				"px-4 py-3 align-bottom font-mono font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.12em]",
 				className,
 			)}
 			{...props}
@@ -287,11 +300,11 @@ function PlanTh({ node: _node, className, ...props }: ComponentProps<"th"> & { n
 }
 
 function PlanTr({ node: _node, className, ...props }: ComponentProps<"tr"> & { node?: unknown }) {
-	return <tr className={cn("border-b last:border-b-0", className)} {...props} />;
+	return <tr className={cn("border-b border-foreground/[0.06] last:border-b-0", className)} {...props} />;
 }
 
 function PlanTd({ node: _node, className, ...props }: ComponentProps<"td"> & { node?: unknown }) {
-	return <td className={cn("px-3 py-2.5 align-top leading-6", className)} {...props} />;
+	return <td className={cn("px-4 py-3 align-top leading-6", className)} {...props} />;
 }
 
 export {
