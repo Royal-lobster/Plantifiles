@@ -1,10 +1,10 @@
 import { type Block, normalize } from "@plantifiles/core";
 import { approval, comment, decision, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
-import type { PlanStatus } from "./plan-types";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
+import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
+import type { PlanStatus } from "./plan-types";
 
 const authorSelection = {
 	id: user.id,
@@ -97,6 +97,8 @@ export type PlanListItem = {
 	approvals: number;
 	readTimeMinutes: number;
 	authorName: string;
+	mine: boolean;
+	needsMyReview: boolean;
 };
 
 export async function listPlans(
@@ -115,7 +117,8 @@ export async function listPlans(
 	if (!targetWorkspace) throw new Response("Workspace not found", { status: 404 });
 	await assertWorkspaceAccess(targetWorkspace.id, identity.user.id);
 
-	return db
+	const viewerId = identity.user.id;
+	const rows = await db
 		.select({
 			id: plan.id,
 			slug: plan.slug,
@@ -135,6 +138,12 @@ export async function listPlans(
 			)`,
 			readTimeMinutes: sql<number>`coalesce(json_extract(${planVersion.lintReport}, '$.readTimeMinutes'), 0)`,
 			authorName: user.name,
+			createdById: plan.createdById,
+			authorId: planVersion.authorId,
+			approvedByMe: sql<number>`exists(
+				select 1 from approval a
+				where a.version_id = ${planVersion.id} and a.user_id = ${viewerId}
+			)`,
 		})
 		.from(plan)
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
@@ -145,6 +154,14 @@ export async function listPlans(
 				: eq(plan.workspaceId, targetWorkspace.id),
 		)
 		.orderBy(desc(plan.updatedAt));
+	return rows.map(({ createdById, authorId, approvedByMe, ...item }) => {
+		const mine = createdById === viewerId || authorId === viewerId;
+		return {
+			...item,
+			mine,
+			needsMyReview: item.status === "in_review" && !mine && !approvedByMe,
+		};
+	});
 }
 
 export async function loadPlanDocument(

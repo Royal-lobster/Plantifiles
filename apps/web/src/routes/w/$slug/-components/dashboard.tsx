@@ -1,16 +1,40 @@
 import { Button } from "@plantifiles/ui/components/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { Check, Copy, ListFilter, Search } from "lucide-react";
+import { Check, Copy, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PLAN_STATUSES, type PlanStatus } from "#/lib/data/plan-types";
 import { useClipboard } from "#/lib/helpers/use-clipboard";
-import { PLAN_STATUS_PRESENTATION, StatusChip } from "../../../../components/status-chip";
+import { StatusChip } from "../../../../components/status-chip";
 import type { DashboardPlan } from "../-data/dashboard";
 
 const route = getRouteApi("/w/$slug/");
+
+export const DASHBOARD_VIEWS = ["active", "review", "approved", "archived", "all"] as const;
+type DashboardView = (typeof DASHBOARD_VIEWS)[number];
+
+const VIEW_LABELS: Record<DashboardView, string> = {
+	active: "Active",
+	review: "Needs review",
+	approved: "Approved",
+	archived: "Archived",
+	all: "All",
+};
+
+const VIEW_EMPTY_COPY: Record<DashboardView, string> = {
+	active: "No active plans.",
+	review: "Nothing waiting on your review.",
+	approved: "No approved plans yet.",
+	archived: "No archived plans.",
+	all: "No plans match these filters.",
+};
+
+function matchesView(plan: DashboardPlan, view: DashboardView): boolean {
+	if (view === "all") return true;
+	if (view === "review") return plan.needsMyReview;
+	if (view === "active") return plan.status === "draft" || plan.status === "in_review";
+	return plan.status === view;
+}
 
 export function Dashboard() {
 	const { plans } = route.useLoaderData();
@@ -35,17 +59,29 @@ export function Dashboard() {
 		}, 150);
 		return () => window.clearTimeout(timer);
 	}, [navigate, query, search.q]);
+	const view: DashboardView = search.view ?? "active";
+	const mineOnly = search.mine === true;
 	const normalizedQuery = query.trim().toLowerCase();
+	const scopedPlans = useMemo(() => (mineOnly ? plans.filter((plan) => plan.mine) : plans), [plans, mineOnly]);
+	const counts = useMemo(() => {
+		const next: Record<DashboardView, number> = { active: 0, review: 0, approved: 0, archived: 0, all: 0 };
+		for (const plan of scopedPlans) {
+			for (const candidate of DASHBOARD_VIEWS) {
+				if (matchesView(plan, candidate)) next[candidate] += 1;
+			}
+		}
+		return next;
+	}, [scopedPlans]);
 	const visiblePlans = useMemo(
 		() =>
-			plans.filter(
+			scopedPlans.filter(
 				(plan) =>
-					(!search.status || plan.status === search.status) &&
+					matchesView(plan, view) &&
 					(!normalizedQuery ||
 						plan.title.toLowerCase().includes(normalizedQuery) ||
 						plan.emoji?.includes(normalizedQuery)),
 			),
-		[plans, normalizedQuery, search.status],
+		[scopedPlans, normalizedQuery, view],
 	);
 
 	return (
@@ -53,7 +89,7 @@ export function Dashboard() {
 			<header className="flex items-baseline gap-3 border-b border-foreground/[0.08] pb-4">
 				<h1 className="font-medium text-2xl tracking-tight">Plans</h1>
 				<span className="font-mono text-muted-foreground text-xs">
-					{plans.length} {plans.length === 1 ? "plan" : "plans"}
+					{counts[view]} {counts[view] === 1 ? "plan" : "plans"}
 				</span>
 			</header>
 
@@ -61,7 +97,38 @@ export function Dashboard() {
 				<EmptyState slug={slug} />
 			) : (
 				<>
-					<div className="flex flex-col gap-3 py-6 sm:flex-row sm:items-center">
+					<nav aria-label="Plan views" className="mt-6 flex flex-wrap items-center gap-1">
+						{DASHBOARD_VIEWS.map((candidate) => (
+							<button
+								key={candidate}
+								type="button"
+								aria-pressed={candidate === view}
+								onClick={() =>
+									void navigate({
+										search: (previous) => ({
+											...previous,
+											view: candidate === "active" ? undefined : candidate,
+										}),
+									})
+								}
+								className={cn(
+									"flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-xs outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
+									candidate === view ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+								)}
+							>
+								{VIEW_LABELS[candidate]}
+								<span
+									className={cn(
+										candidate === "review" && counts.review > 0 ? "text-warning" : "text-muted-foreground/70",
+									)}
+								>
+									{counts[candidate]}
+								</span>
+							</button>
+						))}
+					</nav>
+
+					<div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
 						<InputGroup className="h-9 flex-1 sm:max-w-xs">
 							<InputGroupAddon>
 								<Search />
@@ -73,42 +140,24 @@ export function Dashboard() {
 								placeholder="Filter title or emoji"
 							/>
 						</InputGroup>
-						<Select
-							value={search.status ?? "all"}
-							onValueChange={(value) =>
-								void navigate({
-									search: (previous) => ({
-										...previous,
-										status: value === "all" ? undefined : (value as PlanStatus),
-									}),
-								})
+						<button
+							type="button"
+							aria-pressed={mineOnly}
+							onClick={() =>
+								void navigate({ search: (previous) => ({ ...previous, mine: mineOnly ? undefined : true }) })
 							}
+							className={cn(
+								"h-9 rounded-xl px-3 font-mono text-xs outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
+								mineOnly ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+							)}
 						>
-							<SelectTrigger className="h-9 w-44 sm:ml-auto" aria-label="Filter by status">
-								<ListFilter className="size-3.5 text-muted-foreground" />
-								<SelectValue>{search.status ? search.status.replace("_", " ") : "All statuses"}</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">
-									<ListFilter className="size-3.5 text-muted-foreground" />
-									All statuses
-								</SelectItem>
-								{PLAN_STATUSES.map((status) => {
-									const { icon: Icon, ink } = PLAN_STATUS_PRESENTATION[status];
-									return (
-										<SelectItem key={status} value={status}>
-											<Icon className={cn("size-3.5", ink)} />
-											{status.replace("_", " ")}
-										</SelectItem>
-									);
-								})}
-							</SelectContent>
-						</Select>
+							Mine
+						</button>
 					</div>
 
 					{visiblePlans.length === 0 ? (
 						<output className="block py-16 text-center text-muted-foreground text-sm" aria-live="polite">
-							No plans match these filters.
+							{normalizedQuery || mineOnly ? "No plans match these filters." : VIEW_EMPTY_COPY[view]}
 						</output>
 					) : (
 						<ul className="space-y-1">
@@ -138,6 +187,9 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 						{plan.emoji ?? "📝"}
 					</span>
 					<h2 className="truncate font-medium text-sm">{plan.title}</h2>
+					{plan.needsMyReview ? (
+						<span className="shrink-0 font-mono text-[11px] text-warning">needs your review</span>
+					) : null}
 				</div>
 				<p className="mt-1 pl-7 font-mono text-[11px] text-muted-foreground sm:hidden">
 					{plan.openDecisions} open · v{plan.version}
@@ -196,7 +248,12 @@ export function DashboardSkeleton() {
 				<div className="h-7 w-20 animate-pulse rounded-2xl bg-muted" />
 				<div className="h-3 w-12 animate-pulse rounded-xl bg-muted" />
 			</div>
-			<div className="mt-6 h-9 w-full max-w-xs animate-pulse rounded-2xl bg-muted" />
+			<div className="mt-6 flex gap-1">
+				{[0, 1, 2, 3, 4].map((tab) => (
+					<div key={tab} className="h-7 w-16 animate-pulse rounded-xl bg-muted" />
+				))}
+			</div>
+			<div className="mt-4 h-9 w-full max-w-xs animate-pulse rounded-2xl bg-muted" />
 			<div className="mt-6 space-y-1">
 				{[0, 1, 2, 3, 4, 5].map((row) => (
 					<div key={row} className="flex h-16 animate-pulse items-center gap-3 rounded-2xl px-4">
