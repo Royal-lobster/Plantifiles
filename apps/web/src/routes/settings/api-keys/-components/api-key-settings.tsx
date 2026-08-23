@@ -1,14 +1,13 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { KeyRound } from "lucide-react";
+import type { ReactNode } from "react";
 import { SettingsRowDivider, SettingsSection } from "../../../../components/settings-section";
-import { ApiKeyList } from "./api-key-list";
-import { CreateApiKeyForm } from "./create-api-key-form";
+import { ApiKeyList, ApiKeyListSkeleton } from "./api-key-list";
+import { CreateApiKeyForm, CreateApiKeyFormSkeleton } from "./create-api-key-form";
 
 const route = getRouteApi("/settings/api-keys");
 
-export function ApiKeySettings() {
-	const apiKeys = route.useLoaderData();
-
+function ApiKeySettingsLayout({ children }: { children: ReactNode }) {
 	return (
 		<section className="space-y-8">
 			<header>
@@ -25,10 +24,30 @@ export function ApiKeySettings() {
 				title="Keys"
 				description="Credentials issued to pipelines and headless agents that cannot complete a browser sign-in."
 			>
-				<CreateApiKeyForm />
-				<SettingsRowDivider />
-				<ApiKeyList apiKeys={apiKeys} />
+				{children}
 			</SettingsSection>
 		</section>
+	);
+}
+
+export function ApiKeySettings() {
+	const apiKeys = route.useLoaderData();
+
+	return (
+		<ApiKeySettingsLayout>
+			<CreateApiKeyForm />
+			<SettingsRowDivider />
+			<ApiKeyList apiKeys={apiKeys} />
+		</ApiKeySettingsLayout>
+	);
+}
+
+export function ApiKeySettingsSkeleton() {
+	return (
+		<ApiKeySettingsLayout>
+			<CreateApiKeyFormSkeleton />
+			<SettingsRowDivider />
+			<ApiKeyListSkeleton />
+		</ApiKeySettingsLayout>
 	);
 }

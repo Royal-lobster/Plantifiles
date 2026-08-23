@@ -6,8 +6,10 @@ import { KeyRound } from "lucide-react";
 import { type SyntheticEvent, useId, useReducer, useRef } from "react";
 import { SettingsRow } from "../../../../components/settings-section";
 import { createApiKey } from "../-data/api-keys";
-import { type ApiKeyFeedbackValue, ApiKeyFeedback, apiKeyActionError } from "./api-key-feedback";
+import { ApiKeyFeedback, type ApiKeyFeedbackValue, apiKeyActionError } from "./api-key-feedback";
 import { CreatedApiKeyDialog } from "./created-api-key-dialog";
+
+const CREATE_API_KEY_HINT = "Give each pipeline or headless agent its own key so access can be revoked independently.";
 
 type CreatedApiKey = { name: string; secret: string };
 
@@ -43,6 +45,21 @@ function createReducer(state: CreateState, action: CreateAction): CreateState {
 		case "closed":
 			return { ...state, created: undefined };
 	}
+}
+
+export function CreateApiKeyFormSkeleton() {
+	return (
+		<SettingsRow
+			label="Create an API key"
+			hint={CREATE_API_KEY_HINT}
+			control={
+				<output className="flex w-full justify-end gap-3 sm:w-auto" aria-label="Loading API key controls">
+					<span className="h-9 min-w-0 flex-1 animate-pulse rounded-2xl bg-muted sm:w-40" />
+					<span className="h-9 w-32 animate-pulse rounded-2xl bg-muted" />
+				</output>
+			}
+		/>
+	);
 }
 
 export function CreateApiKeyForm() {
@@ -92,7 +109,7 @@ export function CreateApiKeyForm() {
 			<SettingsRow
 				label="Create an API key"
 				labelFor={inputId}
-				hint="Give each pipeline or headless agent its own key so access can be revoked independently."
+				hint={CREATE_API_KEY_HINT}
 				control={
 					<form
 						className="flex w-full flex-wrap justify-end gap-3 sm:w-auto"

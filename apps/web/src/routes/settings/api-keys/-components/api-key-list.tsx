@@ -17,7 +17,7 @@ import { Fragment, useReducer, useRef } from "react";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
 import { SettingsRow, SettingsRowDivider } from "../../../../components/settings-section";
 import { type ApiKeyListItem, revokeApiKey } from "../-data/api-keys";
-import { type ApiKeyFeedbackValue, ApiKeyFeedback, apiKeyActionError } from "./api-key-feedback";
+import { ApiKeyFeedback, type ApiKeyFeedbackValue, apiKeyActionError } from "./api-key-feedback";
 
 type RevokeState = { revokingId: string | undefined; feedback: ApiKeyFeedbackValue | undefined };
 
@@ -30,6 +30,23 @@ function revokeReducer(state: RevokeState, action: RevokeAction): RevokeState {
 		case "finished":
 			return { ...state, revokingId: undefined, feedback: action.feedback };
 	}
+}
+
+export function ApiKeyListSkeleton() {
+	return (
+		<output className="block" aria-label="Loading API keys">
+			{[0, 1].map((row) => (
+				<Fragment key={row}>
+					{row > 0 ? <SettingsRowDivider /> : null}
+					<SettingsRow
+						label={<div className="h-4 w-32 animate-pulse rounded-xl bg-muted" />}
+						hint={<div className="h-3 w-56 max-w-full animate-pulse rounded-xl bg-muted" />}
+						control={<div className="size-9 animate-pulse rounded-2xl bg-muted" />}
+					/>
+				</Fragment>
+			))}
+		</output>
+	);
 }
 
 export function ApiKeyList({ apiKeys }: { apiKeys: ApiKeyListItem[] }) {
