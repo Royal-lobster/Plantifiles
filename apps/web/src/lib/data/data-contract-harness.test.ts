@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createDb } from "@plantifiles/db";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
+import { listPlans } from "./plan-reader.server";
 import { createPlan, createPlanVersion } from "./publish-plan.server";
 import { advancePlanStatus, approveCurrentVersion, resolveDecision } from "./review.server";
 
@@ -287,5 +288,38 @@ describe("publication and review contracts", () => {
 			status: "archived",
 			reason: "Archived is the final lifecycle state.",
 		});
+	});
+
+	it("derives viewer-relative mine and needsMyReview on the plan list", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedUser("user-member", "Member");
+		await harness.seedMembership("user-member", "member");
+		const published = await createPlan(harness.request, {
+			workspaceSlug: "demo",
+			title: "Viewer contract",
+			source: VALID_PLAN,
+			force: true,
+		});
+		await advancePlanStatus(harness.request, published.id);
+
+		const [asCreator] = await listPlans(harness.request, "demo");
+		expect(asCreator).toMatchObject({ status: "in_review", mine: true, needsMyReview: false });
+
+		harness.setIdentity("user-member");
+		const [asReviewer] = await listPlans(harness.request, "demo");
+		expect(asReviewer).toMatchObject({ mine: false, needsMyReview: true });
+		const versionRows = await harness.all<{ versionId: string }>(
+			"select current_version_id as versionId from plan where id = ?",
+			published.id,
+		);
+		const versionId = versionRows[0]?.versionId;
+		if (!versionId) throw new Error("plan has no current version");
+		await harness.run(
+			"insert into approval (id, plan_id, version_id, user_id) values ('approval-member', ?, ?, 'user-member')",
+			published.id,
+			versionId,
+		);
+		const [afterApproval] = await listPlans(harness.request, "demo");
+		expect(afterApproval).toMatchObject({ mine: false, needsMyReview: false });
 	});
 });
