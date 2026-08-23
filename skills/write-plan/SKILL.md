@@ -1,136 +1,104 @@
 ---
 name: write-plan
-description: Write and publish Plantifiles plans, lessons, and guided plans. Use for implementation planning, technical teaching, or a plan that must teach its readers.
+description: Write and publish Plantifiles plans, lessons, and guided plans. Use for implementation planning, technical teaching, or any plan that must teach its readers.
 ---
 
 # Write a Plantifile
 
-Make one source that a person can understand and an agent can act on.
+Produce one source that a person understands and an agent acts on.
 
-This skill is downloaded into other repositories, so it contains every rule it needs.
+This skill gets downloaded into other repositories, so every rule it needs lives in this file.
 
 ## 1. Pick the document type
 
-Choose one:
+Choose the kind that matches what the reader must walk away with:
 
-- `plan` — decide and deliver a change;
-- `lesson` — understand and practice a topic;
-- `guided-plan` — learn enough to judge and deliver a change.
+- `plan` decides and delivers a change.
+- `lesson` builds understanding of one topic.
+- `guided-plan` teaches enough to judge a change, then delivers it.
 
-Every document needs `title`, `kind`, and `emoji`.
+Every document carries `title`, `kind`, and `emoji`. A `lesson` or `guided-plan` adds two more:
 
-`lesson` and `guided-plan` also need:
+- a one-line `audience` stating what readers already know;
+- one to five `outcomes`, each naming something the reader can explain, predict, compare, trace, review, or do.
 
-- one-line `audience` stating what the reader already knows;
-- one to five `outcomes` that say what the reader can explain, predict, compare, trace, review, or do.
-
-**Done when:** one document type clearly matches the reader’s job.
+**Done when:** you can name the type and say why it fits the reader's job.
 
 ## 2. Gather evidence
 
-For a plan or guided plan, read:
+Plans and guided plans rest on the repository itself. Read the request or issue, the repo instructions, the code that owns the behavior, every production caller, and the tests covering success, failure, and regression. Include public types, configuration, migrations, commands, and user docs anywhere the change touches them.
 
-- the request, issue, or specification;
-- repository instructions;
-- the code that owns the behavior;
-- every production caller;
-- success, failure, and regression tests;
-- public types, configuration, migrations, commands, and user docs that may change.
+A lesson needs trustworthy sources for facts the repository cannot prove. Find them before writing.
 
-For a lesson, also find trustworthy sources for facts the repository cannot prove.
+Run a real experiment only when source and tests both fail to answer a runtime question, then record the command and its result.
 
-Run a small experiment only when source and tests cannot answer a runtime question. Record the command and result.
+Sort claims into two sections. Proven claims go under `### Verified facts`, each citing a repository path plus a symbol or line range, and test names for behavior. Guesses go under `### Inferences`, each starting with **Inference:** and naming how it will be tested.
 
-Put proven claims under `### Verified facts`. Cite repository paths plus symbols or line ranges. Cite test names for behavior.
-
-Put assumptions under `### Inferences`. Start each with **Inference:** and say how it will be tested.
-
-**Done when:** every important claim has evidence or is labeled as an inference.
+**Done when:** every important claim cites evidence or openly labels itself an inference.
 
 ## 3. Build the plan and learning path
 
 ### For `plan`
 
-Name:
-
-- the interface that owns the change;
-- every caller that moves;
-- every old path that is deleted;
-- important input, output, ordering, failure, persistence, authorization, and performance rules;
-- real decisions, tradeoffs, risks, delivery gates, and rollback.
+Name the interface that owns the change, every caller that moves, and every old path that dies. State the rules callers depend on: input, output, ordering, failure, persistence, authorization, performance. Record the real decisions, tradeoffs, risks, delivery gates, and rollback path.
 
 ### For `lesson`
 
-Teach the smallest mental model needed for the outcomes:
+Teach the smallest mental model that makes the outcomes reachable:
 
-1. show why it matters;
-2. explain it with a real diagram, code example, table, or trace;
-3. ask the reader to remember or predict;
-4. reveal Answer and Why;
-5. ask the reader to apply or explain the idea;
-6. end with a recap and next action.
+1. Show why the idea matters.
+2. Explain it with a diagram, code example, table, or trace taken from reality.
+3. Ask the reader to remember or predict something.
+4. Reveal the answer and the reason behind it.
+5. Ask the reader to apply or explain the idea themselves.
+6. Close with a recap and a next action.
 
 ### For `guided-plan`
 
-Do both. Put teaching beside the decision, risk, diagram, or phase that needs it. Do not add a separate textbook appendix.
+Do both jobs in one document. Teaching sits beside the decision, risk, diagram, or phase that needs it. Skip the textbook appendix at the end.
 
-**Done when:** the reader can say what changes, why it works, how to prove it, and what they should now understand.
+**Done when:** the reader can say what changes, why it works, how to prove it, and what they now understand.
 
 ## 4. Write reversible phases
 
-Each `<Phase>` needs:
+Each `<Phase>` carries three things: tasks, an observable **Gate**, and a concrete **Rollback**.
 
-- tasks;
-- an observable **Gate**;
-- a concrete **Rollback**.
+A good gate points at a test, command, measured rule, count, or visible result. "Code complete" proves nothing.
 
-Good gates name a test, command, measured rule, count, or visible result. “Code complete” is not a gate.
+Sequence matters: prove the new path first, move callers next, delete old code last.
 
-Prove the new path first, move callers next, and delete old code last.
+Include two diagrams that do different jobs. One might show request order, another ownership, state, failure, or cutover. Leave out anything decorative.
 
-Use two useful diagrams with different jobs. Show request order, ownership, state, failure, or cutover. Do not add decorative diagrams.
-
-**Done when:** every phase can be proved or rolled back without guessing.
+**Done when:** every phase can be proved and rolled back without guessing.
 
 ## 5. Add real questions
 
-Use `<Check>` for quizzes:
+Quizzes use `<Check>` blocks in four kinds:
 
-- `predict` — answer before seeing what happens;
-- `recall` — remember a fact or relationship;
-- `apply` — use the idea on a new case;
-- `reflect` — explain a decision or uncertainty in your own words.
+- `predict`: answer before seeing what happens.
+- `recall`: bring back a fact or relationship.
+- `apply`: use the idea on a fresh case.
+- `reflect`: explain a decision or uncertainty in your own words.
 
-Every `lesson` and `guided-plan` needs:
+Every `lesson` and `guided-plan` includes at least one memory question (a `predict` or `recall`) and at least one transfer question (an `apply` or `reflect`).
 
-- at least one `predict` or `recall` Check;
-- at least one `apply` or `reflect` Check.
+Each Check declares a unique `id`, a `kind`, and a plain-text `prompt` of 40 words or fewer, followed by `**Answer:**` and `**Why:**`, then optionally `**Next:**` and optionally `for="BLOCK_ID"` pointing at another root component in the same document.
 
-Each Check needs:
+Ask something that takes thought. A question whose answer was stated one sentence earlier tests nothing.
 
-- a unique `id`;
-- a `kind`;
-- a plain-text `prompt` of 40 words or fewer;
-- `**Answer:**`;
-- `**Why:**`;
-- optional `**Next:**`;
-- optional `for="BLOCK_ID"` pointing to another root component in the same document.
+**Done when:** questions cover both memory and transfer, and every answer explains why.
 
-Ask something that requires thought. Copying the previous sentence is not a quiz.
+## 6. Lint, publish, and pull back
 
-**Done when:** questions test both memory and transfer, and every answer explains why.
+Copy the template below and fill in every uppercase placeholder.
 
-## 6. Lint, publish, and pull it back
-
-Copy the template below and replace every uppercase placeholder.
-
-Run:
+Lint first:
 
 ```sh
 plantifiles lint <file>
 ```
 
-Fix every error and warning. Read the output because a zero exit code can still include warnings.
+Read the output rather than trusting the exit code. Fix every error and warning, because a zero exit code can still hide warnings.
 
 Publish:
 
@@ -138,71 +106,66 @@ Publish:
 plantifiles push <file> --workspace <slug> --emoji <emoji> --agent <agent-name> --prompt "<original request>"
 ```
 
-Find the workspace when needed:
+Unsure which workspace to target? List them:
 
 ```sh
 plantifiles workspaces
 ```
 
-Pull the result once:
+Once published, pull the page back and confirm the document survived the round trip:
 
 ```sh
 plantifiles pull <url> -o /tmp/published-plantifile.mdx
 ```
 
-**Done when:** lint reports `errors 0 warnings 0`, push returns a URL, the page opens, and pulled Markdown contains the full document.
+**Done when:** lint reports `errors 0 warnings 0`, push returns a URL, the page opens, and the pulled Markdown contains the full document.
 
 ## Document rules
 
-- Put exactly one `<TLDR>` first after frontmatter. Keep it at 60 words or fewer.
-- Start every `##` section with one physical line of summary text, 30 words or fewer.
-- Keep every paragraph at 120 words or fewer and five sentences or fewer.
-- Use headings no deeper than `###`.
+- Put exactly one `<TLDR>` right after the frontmatter, 60 words or fewer.
+- Open every `##` section with one physical line of summary text, 30 words or fewer.
+- Hold paragraphs to 120 words and five sentences.
+- Stop headings at `###`.
 - Keep reading time at 12 minutes or less. Plantifiles counts 200 words per minute.
-- Keep all prompts, answers, evidence, diagrams, code, gates, and rollback in source.
-- Use Markdown, not raw HTML or executable MDX.
-- Put component content on lines between opening and closing tags.
-- Use only the components below. Unknown components, props, and values are errors.
+- Keep all prompts, answers, evidence, diagrams, code, gates, and rollback in source, not only in conversation.
+- Use Markdown alone. Raw HTML and executable MDX break rendering.
+- Put component content between opening and closing tags.
+- Stick to the components below. Unknown components, props, and values are errors.
 
-For `plan` and `guided-plan`:
+Plans and guided plans also:
 
-- include Decision, Phase, and Diagram;
-- include one Rejected alternative;
-- use two useful diagrams with different diagram types;
-- give every Decision an owner;
-- give every Phase tasks, Gate, and Rollback;
-- give every Tradeoff at least two Options and exactly one recommendation;
-- give every Risk low, med, or high severity.
+- include Decision, Phase, and Diagram blocks;
+- reject one alternative explicitly with a Rejected block;
+- ship two diagrams of different types, each doing a distinct job;
+- name an owner on every Decision;
+- give every Phase tasks, a Gate, and a Rollback;
+- give every Tradeoff at least two Options with exactly one marked `recommended`;
+- rate every Risk `low`, `med`, or `high`.
 
-For `lesson` and `guided-plan`:
+Lessons and guided plans also:
 
-- include audience and outcomes;
+- state audience and outcomes;
 - include one retrieval Check and one transfer Check;
 - warn on paragraphs above 60 words;
-- end with outcomes revisited, unresolved uncertainty, and next action.
+- end by revisiting outcomes, naming unresolved uncertainty, and giving a next action.
 
-Plantifiles starts at 100 points, subtracts 10 per error and 3 per warning, and never goes below 0. Publication requires zero errors and score 70 or higher. This skill requires zero errors and zero warnings.
+Scoring starts at 100 points, loses 10 per error and 3 per warning, and never falls below 0. Publication requires zero errors and a score of 70 or higher. This skill holds itself to zero errors and zero warnings.
 
 ## Placement and IDs
 
-Put `TLDR`, `Decision`, `Tradeoff`, `Rejected`, `Phase`, `Risk`, `Diagram`, `CodeSketch`, `Callout`, and `Check` at the document root.
+These components sit at the document root: `TLDR`, `Decision`, `Tradeoff`, `Rejected`, `Phase`, `Risk`, `Diagram`, `CodeSketch`, `Callout`, and `Check`.
 
-`Option` is the only nested component. It must be a direct child of `Tradeoff`.
+`Option` nests exactly one level deep, always as a direct child of `Tradeoff`.
 
-Every top-level component may have an `id`; Check requires one. IDs must:
-
-- be unique;
-- start with an ASCII letter;
-- contain only ASCII letters, digits, `_`, or `-`;
-- stay unchanged when a block moves or changes.
+Every top-level component may take an `id`; Check requires one. An id is unique, starts with an ASCII letter, and contains only ASCII letters, digits, `_`, or `-`. Once assigned, an id sticks: move or rewrite a block and its id stays put, so Checks and links keep pointing at it.
 
 ## Component reference
 
 | Component | Required props | Put inside |
 |---|---|---|
-| `<TLDR>` | — | Result summary, at most 60 words |
+| `<TLDR>` | none | Result summary, at most 60 words |
 | `<Decision>` | `owner` | One real unanswered question |
-| `<Tradeoff>` | — | At least two direct Options |
+| `<Tradeoff>` | none | At least two direct Options |
 | `<Option>` | `name`; exactly one sibling has `recommended` | Pros and cons |
 | `<Rejected>` | `what` | Why the option lost |
 | `<Phase>` | `n`, `title` | Tasks, Gate, and Rollback |
@@ -212,18 +175,18 @@ Every top-level component may have an `id`; Check requires one. IDs must:
 | `<Callout>` | `kind="note|warning"` | Supporting context |
 | `<Check>` | `id`, `kind`, `prompt`; optional `for` | Answer, Why, and optional Next |
 
-For diagrams:
+Pick the diagram type that matches the truth being shown:
 
-- use `sequenceDiagram` for requests, actors, ordering, and failure;
-- use `stateDiagram-v2` for lifecycle and cutover;
-- use `flowchart` or `graph` for data and control flow;
-- use `erDiagram` for stored relationships.
+- `sequenceDiagram` for requests, actors, ordering, and failure;
+- `stateDiagram-v2` for lifecycle and cutover;
+- `flowchart` or `graph` for data and control flow;
+- `erDiagram` for stored relationships.
 
-Use `<CodeSketch>` only when a small type, payload, row, or function signature makes a rule clearer.
+Reach for `<CodeSketch>` only when a small type, payload, row, or function signature genuinely clarifies a rule.
 
 ## Guided-plan template
 
-For `plan`, remove audience, outcomes, and Checks when they add no value. For `lesson`, remove Decision, Phase, and other planning blocks that do not teach an outcome.
+Trim the template to fit. A `plan` drops audience, outcomes, and Checks whenever they add no value. A `lesson` drops Decision, Phase, and other planning blocks that teach nothing.
 
 `````mdx
 ---
@@ -245,9 +208,9 @@ Show what is true today and what still needs testing.
 
 ### Verified facts
 
-- `PATH:SYMBOL` — FACT PROVED BY CODE.
-- `CALLER_PATH:SYMBOL` — HOW THIS CALLER USES THE INTERFACE.
-- `TEST_PATH:TEST NAME` — BEHAVIOR THIS TEST PROTECTS.
+- `PATH:SYMBOL` proves FACT FROM CODE.
+- `CALLER_PATH:SYMBOL` shows HOW THIS CALLER USES THE INTERFACE.
+- `TEST_PATH:TEST NAME` pins BEHAVIOR THIS TEST PROTECTS.
 
 ### Inferences
 
