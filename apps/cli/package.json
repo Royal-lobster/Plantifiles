@@ -1,25 +1,49 @@
 {
-	"name": "@plantifiles/cli",
+	"name": "plantifiles",
 	"version": "0.1.0",
-	"private": true,
+	"description": "Publish, review, and retrieve Plantifiles plans",
+	"keywords": [
+		"plantifiles",
+		"cli",
+		"plans",
+		"mdx"
+	],
+	"homepage": "https://plantifiles.com",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Royal-lobster/Plantifiles.git",
+		"directory": "apps/cli"
+	},
+	"bugs": "https://github.com/Royal-lobster/Plantifiles/issues",
 	"type": "module",
 	"bin": {
 		"plantifiles": "./dist/index.js"
 	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
-		"build": "tsc -p tsconfig.json",
+		"build": "tsup",
 		"test": "vitest run --passWithNoTests",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
+		"@napi-rs/keyring": "^1.1.7"
+	},
+	"devDependencies": {
 		"@plantifiles/auth": "workspace:*",
 		"@plantifiles/api-client": "workspace:*",
 		"@plantifiles/core": "workspace:*",
-		"commander": "^15.0.0"
-	},
-	"devDependencies": {
 		"@types/node": "^24.0.0",
+		"commander": "^15.0.0",
+		"tsup": "^8.5.1",
 		"typescript": "^6.0.2",
 		"vitest": "^4.1.10"
 	}

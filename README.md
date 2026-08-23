@@ -55,7 +55,7 @@ membership into it.
 Build the command-line client and authorize this machine. `login` opens Clerk in the browser; after signing in, copy the one-time authorization code from the Plantifiles callback page into the terminal:
 
 ```bash
-pnpm --filter @plantifiles/cli build
+pnpm --filter plantifiles build
 node apps/cli/dist/index.js login --base-url http://localhost:3000
 ```
 

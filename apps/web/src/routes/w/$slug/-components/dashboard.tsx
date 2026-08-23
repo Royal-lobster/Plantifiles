@@ -1,10 +1,11 @@
 import { Button } from "@plantifiles/ui/components/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@plantifiles/ui/components/dialog";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { Check, Copy, Search } from "lucide-react";
+import { Search, Terminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useClipboard } from "#/lib/helpers/use-clipboard";
+import { InstallInstructions } from "../../../../components/install-instructions";
 import { StatusChip } from "../../../../components/status-chip";
 import type { DashboardPlan } from "../-data/dashboard";
 
@@ -41,6 +42,7 @@ export function Dashboard() {
 	const { slug } = route.useParams();
 	const search = route.useSearch();
 	const navigate = route.useNavigate();
+	const [installOpen, setInstallOpen] = useState(false);
 	const [query, setQuery] = useState(search.q ?? "");
 	const pendingQueryRef = useRef<string | undefined | null>(null);
 	useEffect(() => {
@@ -91,10 +93,14 @@ export function Dashboard() {
 				<span className="font-mono text-muted-foreground text-xs">
 					{counts[view]} {counts[view] === 1 ? "plan" : "plans"}
 				</span>
+				<Button variant="quiet" size="sm" className="ml-auto self-center" onClick={() => setInstallOpen(true)}>
+					<Terminal aria-hidden="true" />
+					Install CLI
+				</Button>
 			</header>
 
 			{plans.length === 0 ? (
-				<EmptyState slug={slug} />
+				<EmptyState />
 			) : (
 				<>
 					<nav aria-label="Plan views" className="mt-6 flex flex-wrap items-center gap-1">
@@ -170,6 +176,19 @@ export function Dashboard() {
 					)}
 				</>
 			)}
+			{installOpen ? (
+				<Dialog open onOpenChange={setInstallOpen}>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Install Plantifiles</DialogTitle>
+							<DialogDescription>
+								The CLI publishes plans from the terminal; the write-plan skill teaches your agent the format.
+							</DialogDescription>
+						</DialogHeader>
+						<InstallInstructions />
+					</DialogContent>
+				</Dialog>
+			) : null}
 		</section>
 	);
 }
@@ -228,34 +247,14 @@ function CreatorAvatar({ name, image }: { name: string; image: string | null }) 
 	);
 }
 
-function EmptyState({ slug }: { slug: string }) {
-	const clipboard = useClipboard();
-	const command = `plantifiles push plan.mdx --workspace ${slug}`;
-
+function EmptyState() {
 	return (
 		<div className="mt-10">
 			<h2 className="font-display font-medium text-2xl">Nothing has been proposed yet.</h2>
-			<p className="mt-3 text-muted-foreground leading-7">
-				Publishing is the CLI's job. Run this from the agent session that wrote the plan.
+			<p className="mt-3 max-w-xl text-muted-foreground leading-7">
+				Publishing is the CLI's job. Set it up here, or hand the setup to the agent session that writes your plans.
 			</p>
-			<div className="surface-inset mt-6 flex items-center gap-3 p-3 pl-5">
-				<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">{command}</code>
-				<Button
-					size="icon-sm"
-					variant="quiet"
-					aria-label="Copy push command"
-					onClick={() => void clipboard.copy(command)}
-				>
-					{clipboard.status === "copied" ? <Check /> : <Copy />}
-				</Button>
-			</div>
-			<output aria-live="polite" className="mt-2 block min-h-5 text-muted-foreground text-xs">
-				{clipboard.status === "copied"
-					? "Push command copied."
-					: clipboard.status === "error"
-						? "Couldn't copy the push command. Select it and copy manually."
-						: ""}
-			</output>
+			<InstallInstructions className="mt-6" />
 		</div>
 	);
 }

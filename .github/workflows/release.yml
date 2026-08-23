@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write # push the version branch, release commits, and tags
+      pull-requests: write # open and refresh the version pull request
+      id-token: write # mint the OIDC token npm provenance is signed with
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@v1
+        with:
+          version: 11.17.0
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # changesets/action does not configure npm auth itself, so the registry token
+      # has to be in place before the publish script runs.
+      - name: Authenticate with npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z "$NPM_TOKEN" ]]; then
+            echo "::error::NPM_TOKEN repository secret is missing; plantifiles cannot be published."
+            exit 1
+          fi
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+      # With pending changesets this opens or refreshes the version pull request.
+      # Merging that pull request removes them, and the next run publishes instead.
+      - name: Create version pull request or publish
+        uses: changesets/action@v2.1.1
+        with:
+          version-script: pnpm release:version
+          publish-script: pnpm release:publish
+          commit-message: "chore: version packages"
+          pr-title: "chore: version packages"
+        env:
+          NPM_CONFIG_PROVENANCE: "true"

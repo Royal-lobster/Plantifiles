@@ -338,7 +338,7 @@ async function main(): Promise<void> {
 		.command("push")
 		.description("Publish a plan or create its next version")
 		.argument("<file>", "plan file to publish")
-		.option("--workspace <slug>", "workspace to publish into")
+		.option("-w, --workspace <slug>", "workspace to publish into")
 		.option("--title <title>", "plan title; defaults to frontmatter or filename")
 		.option("--agent <name>", "agent that authored the plan")
 		.option("--prompt <prompt>", "prompt used to author the plan")
