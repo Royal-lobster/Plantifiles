@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import type { PlanStatus } from "#/lib/data/plan-types";
 import { listPlans } from "#/lib/data/plan-reader.server";
+import type { PlanStatus } from "#/lib/data/plan-types";
 
 export type DashboardPlan = {
 	id: string;
@@ -17,6 +17,8 @@ export type DashboardPlan = {
 	approvals: number;
 	readTimeMinutes: number;
 	authorName: string;
+	mine: boolean;
+	needsMyReview: boolean;
 };
 
 export type DashboardData = {
