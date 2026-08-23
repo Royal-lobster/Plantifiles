@@ -72,6 +72,30 @@ async function main() {
 	);
 
 	server.registerTool(
+		"move_plan",
+		{
+			description:
+				"Move a plan to a different organization, for when it was published to the wrong one. Approvals on the current version are cleared because they belonged to the previous organization.",
+			inputSchema: z.object({
+				planId: z.string().min(1),
+				workspaceSlug: z.string().min(1).describe("Slug of the organization the plan should end up in."),
+				slug: z
+					.string()
+					.min(1)
+					.optional()
+					.describe("New plan slug; only needed when the destination already has a plan at the current slug."),
+			}),
+		},
+		async ({ planId, ...input }) => {
+			try {
+				return textResult(await api.movePlan(planId, input));
+			} catch (caught) {
+				return toolError(caught);
+			}
+		},
+	);
+
+	server.registerTool(
 		"get_plan",
 		{
 			description: "Get the exact Markdown-with-frontmatter representation served by a plan URL.",

@@ -3,6 +3,7 @@ import { plan, planVersion, workspace } from "@plantifiles/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
 import { resolvePlanEmoji } from "#/lib/helpers/plan-emoji";
+import { slugify } from "#/lib/helpers/plan-slug";
 import { requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getBindings, getDb } from "#/lib/integrations/runtime.server";
 
@@ -26,15 +27,6 @@ export type PublishVersionInput = {
 	agentPrompt?: string | undefined;
 	force?: boolean | undefined;
 };
-
-function slugify(value: string): string {
-	return value
-		.normalize("NFKD")
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-|-$/g, "")
-		.slice(0, 80);
-}
 
 function assertPublishableSource(source: string, emoji: string | null, force = false): PlanAnalysis {
 	if (new TextEncoder().encode(source).byteLength > MAX_SOURCE_BYTES) {

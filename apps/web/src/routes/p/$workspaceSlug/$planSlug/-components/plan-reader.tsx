@@ -99,7 +99,12 @@ function PlanReader({ data }: PlanReaderProps) {
 					</div>
 					<div className="ml-auto flex shrink-0 items-center gap-2">
 						<PlanStatusAction data={data} isCurrentVersion={isCurrentVersion} />
-						<PlanActionsMenu />
+						<PlanActionsMenu
+							planId={data.plan.id}
+							planSlug={planSlug}
+							workspaceSlug={workspaceSlug}
+							canMove={Boolean(data.viewer?.canMovePlan)}
+						/>
 					</div>
 				</div>
 			</header>

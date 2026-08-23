@@ -78,6 +78,20 @@ node apps/cli/dist/index.js push plan.mdx \
 
 At login, the CLI records a default only when your account has exactly one workspace. Otherwise the first `push` and `status` require `--workspace <slug>`; run `node apps/cli/dist/index.js workspaces` to list the slugs you can target. Later pushes of the same file reuse its tracked workspace.
 
+A plan pushed into the wrong organization moves without being republished, taking its
+version history, comments, and decisions with it. Approvals on the current version are
+cleared, because the new organization has not reviewed it, and the file's next `push`
+follows the plan:
+
+```bash
+node apps/cli/dist/index.js move plan.mdx --to <workspace-slug>
+```
+
+Only the plan's author can move it, and only into an organization they belong to. Pass
+`--slug <slug>` when the destination already has a plan at that slug; the plan page's
+actions menu offers the same move, names the collision before you commit to it, and
+previews the resulting URL. The old URL stops resolving after a move.
+
 Open the printed URL. Confirm the plan appears in the dashboard, review it in the shared shell, add comments, resolve every decision, and approve the current version. The same URL serves Markdown to agents:
 
 ```bash

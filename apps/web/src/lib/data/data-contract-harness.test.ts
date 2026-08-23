@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { createDb } from "@plantifiles/db";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
-import { listPlans, loadPlanDocument, renderPlanMarkdown } from "./plan-reader.server";
+import { listMoveTargets, movePlan } from "./move-plan.server";
+import { listPlans, loadPlanDocument, loadPlanReaderData, renderPlanMarkdown } from "./plan-reader.server";
 import { createPlan, createPlanVersion } from "./publish-plan.server";
 import { advancePlanStatus, approveCurrentVersion, resolveDecision } from "./review.server";
 
@@ -67,7 +68,8 @@ type ContractHarness = {
 	request: Request;
 	setIdentity(userId: string): void;
 	seedUser(userId: string, name?: string): Promise<void>;
-	seedMembership(userId: string, role?: "owner" | "member"): Promise<void>;
+	seedWorkspace(workspaceId: string, slug: string, name: string): Promise<void>;
+	seedMembership(userId: string, role?: "owner" | "member", workspaceId?: string): Promise<void>;
 	all<T>(sql: string, ...values: unknown[]): Promise<T[]>;
 	run(sql: string, ...values: unknown[]): Promise<void>;
 };
@@ -104,6 +106,13 @@ beforeEach(async (context: TestContext & { harness?: ContractHarness }) => {
 	await applyMigrations(db);
 	runtime.bindings = { DB: db };
 	runtime.failNextBatch = false;
+	// Identity is module state in the mocked auth module, so a test that ends as
+	// somebody else must not decide who the next test runs as.
+	runtime.identity = {
+		user: { id: "user-owner", name: "Owner", email: "owner@example.com", image: null },
+		method: "oauth",
+		scopes: ["plantifiles:read", "plantifiles:write"],
+	};
 
 	const harness: ContractHarness = {
 		db,
@@ -121,10 +130,16 @@ beforeEach(async (context: TestContext & { harness?: ContractHarness }) => {
 				.bind(userId, name, `${userId}@example.com`)
 				.run();
 		},
-		async seedMembership(userId, role = "member") {
+		async seedWorkspace(workspaceId, slug, name) {
 			await db
-				.prepare("insert into membership (id, user_id, workspace_id, role) values (?, ?, 'workspace-demo', ?)")
-				.bind(`membership-${userId}`, userId, role)
+				.prepare("insert into workspace (id, clerk_organization_id, slug, name) values (?, ?, ?, ?)")
+				.bind(workspaceId, `org_local_${slug}`, slug, name)
+				.run();
+		},
+		async seedMembership(userId, role = "member", workspaceId = "workspace-demo") {
+			await db
+				.prepare("insert into membership (id, user_id, workspace_id, role) values (?, ?, ?, ?)")
+				.bind(`membership-${userId}-${workspaceId}`, userId, workspaceId, role)
 				.run();
 		},
 		async all<T>(sql: string, ...values: unknown[]) {
@@ -365,5 +380,141 @@ describe("publication and review contracts", () => {
 		);
 		const [afterApproval] = await listPlans(harness.request, "demo");
 		expect(afterApproval).toMatchObject({ mine: false, needsMyReview: false });
+	});
+});
+
+describe("organization move contracts", () => {
+	async function publishInDemo(harness: ContractHarness, title = "Movable plan") {
+		return createPlan(harness.request, { workspaceSlug: "demo", title, source: VALID_PLAN, force: true });
+	}
+
+	it("moves the plan, rewrites its URL, and drops approvals granted by the old organization", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedWorkspace("workspace-other", "other", "Other");
+		await harness.seedMembership("user-owner", "member", "workspace-other");
+		const published = await publishInDemo(harness);
+		await resolveDecision(harness.request, published.id, "contract-decision", "Resolved.");
+		await advancePlanStatus(harness.request, published.id);
+		expect(await approveCurrentVersion(harness.request, published.id)).toMatchObject({ status: "approved" });
+
+		const moved = await movePlan(harness.request, published.id, { workspaceSlug: "other" });
+
+		expect(moved).toMatchObject({
+			workspaceSlug: "other",
+			slug: "movable-plan",
+			url: "https://plans.example/p/other/movable-plan",
+			status: "in_review",
+			movedFrom: "demo",
+			clearedApprovals: 1,
+		});
+		expect(
+			await harness.all<{ workspaceId: string; status: string; approvals: number }>(
+				"select workspace_id as workspaceId, status, (select count(*) from approval where plan_id = plan.id) as approvals from plan where id = ?",
+				published.id,
+			),
+		).toEqual([{ workspaceId: "workspace-other", status: "in_review", approvals: 0 }]);
+		// Version history, comments, and decisions follow the plan rather than the
+		// organization, so the moved plan still reads as one artifact.
+		const document = await loadPlanDocument(harness.request, "other", "movable-plan");
+		expect(document.version.number).toBe(1);
+		expect(document.decisions).toHaveLength(1);
+		await expect(loadPlanDocument(harness.request, "demo", "movable-plan")).rejects.toMatchObject({ status: 404 });
+	});
+
+	it("refuses a destination the mover does not belong to", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedWorkspace("workspace-other", "other", "Other");
+		const published = await publishInDemo(harness);
+
+		await expect(movePlan(harness.request, published.id, { workspaceSlug: "other" })).rejects.toMatchObject({
+			status: 403,
+		});
+		expect(
+			await harness.all<{ workspaceId: string }>(
+				"select workspace_id as workspaceId from plan where id = ?",
+				published.id,
+			),
+		).toEqual([{ workspaceId: "workspace-demo" }]);
+	});
+
+	it("reports slug collisions before the move and accepts a slug that resolves them", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedWorkspace("workspace-other", "other", "Other");
+		await harness.seedMembership("user-owner", "member", "workspace-other");
+		const published = await publishInDemo(harness);
+		await createPlan(harness.request, {
+			workspaceSlug: "other",
+			title: "Movable plan",
+			source: VALID_PLAN,
+			force: true,
+		});
+
+		expect(await listMoveTargets(harness.request, published.id)).toEqual([
+			{ id: "workspace-other", slug: "other", name: "Other", role: "member", slugTaken: true },
+		]);
+		await expect(movePlan(harness.request, published.id, { workspaceSlug: "other" })).rejects.toMatchObject({
+			name: "PlanSlugConflictError",
+			workspaceSlug: "other",
+			slug: "movable-plan",
+		});
+
+		const moved = await movePlan(harness.request, published.id, { workspaceSlug: "other", slug: "Movable Plan v2" });
+		expect(moved).toMatchObject({ workspaceSlug: "other", slug: "movable-plan-v2" });
+	});
+
+	it("treats a move into the current organization as a no-op instead of a conflict", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		const published = await publishInDemo(harness);
+
+		expect(await movePlan(harness.request, published.id, { workspaceSlug: "demo" })).toMatchObject({
+			workspaceSlug: "demo",
+			movedFrom: null,
+			clearedApprovals: 0,
+		});
+	});
+
+	it("limits moving to the plan's author, against organization owners included", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedWorkspace("workspace-other", "other", "Other");
+		await harness.seedUser("user-member", "Member");
+		await harness.seedMembership("user-member", "member");
+		await harness.seedMembership("user-member", "member", "workspace-other");
+		await harness.seedMembership("user-owner", "owner", "workspace-other");
+
+		harness.setIdentity("user-member");
+		const published = await publishInDemo(harness);
+
+		// Owner of both organizations, author of neither plan: review authority
+		// over a plan is not the right to relocate it.
+		harness.setIdentity("user-owner");
+		await expect(movePlan(harness.request, published.id, { workspaceSlug: "other" })).rejects.toMatchObject({
+			status: 403,
+		});
+		await expect(listMoveTargets(harness.request, published.id)).rejects.toMatchObject({ status: 403 });
+
+		harness.setIdentity("user-member");
+		expect(await movePlan(harness.request, published.id, { workspaceSlug: "other" })).toMatchObject({
+			movedFrom: "demo",
+		});
+	});
+
+	it("tells the plan page which viewers may move it", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedUser("user-member", "Member");
+		await harness.seedMembership("user-member", "member");
+		await harness.seedUser("user-second-owner", "Second owner");
+		await harness.seedMembership("user-second-owner", "owner");
+		await publishInDemo(harness);
+
+		const asAuthor = await loadPlanReaderData(harness.request, "demo", "movable-plan");
+		expect(asAuthor.viewer).toEqual({ id: "user-owner", canMovePlan: true });
+
+		harness.setIdentity("user-member");
+		const asMember = await loadPlanReaderData(harness.request, "demo", "movable-plan");
+		expect(asMember.viewer).toEqual({ id: "user-member", canMovePlan: false });
+
+		harness.setIdentity("user-second-owner");
+		const asOtherOwner = await loadPlanReaderData(harness.request, "demo", "movable-plan");
+		expect(asOtherOwner.viewer).toEqual({ id: "user-second-owner", canMovePlan: false });
 	});
 });
