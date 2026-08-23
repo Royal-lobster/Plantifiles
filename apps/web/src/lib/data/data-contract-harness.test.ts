@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createDb } from "@plantifiles/db";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
+import { loadPlanDocument, renderPlanMarkdown } from "./plan-reader.server";
 import { createPlan, createPlanVersion } from "./publish-plan.server";
 import { advancePlanStatus, approveCurrentVersion, resolveDecision } from "./review.server";
 
@@ -158,8 +159,10 @@ afterEach(async () => {
 
 const VALID_PLAN = `---
 title: Contract plan
+kind: plan
+emoji: 🧪
 ---
-<TLDR>
+<TLDR id="summary">
 Keep publication and review state transitions explicit, atomic, and bound to the current immutable plan version.
 </TLDR>
 
@@ -171,7 +174,7 @@ The contract suite exercises persisted behavior through the production module in
 Should the publication contract preserve this decision across versions?
 </Decision>
 
-<Tradeoff>
+<Tradeoff id="review-options">
 <Option name="Preserve" recommended>
 The decision remains stable while its source block exists.
 </Option>
@@ -180,11 +183,11 @@ Every version starts over, but prior review context is lost.
 </Option>
 </Tradeoff>
 
-<Rejected what="Unchecked writes">
+<Rejected id="rejected-unchecked-writes" what="Unchecked writes">
 Partial plan state would make retries unsafe.
 </Rejected>
 
-<Diagram lang="mermaid">
+<Diagram id="review-flow" lang="mermaid">
 \`\`\`mermaid
 graph LR
 A[Source] --> B[Version]
@@ -192,11 +195,23 @@ B --> C[Review]
 \`\`\`
 </Diagram>
 
-<Phase n="1" title="Publish">
+<Phase id="phase-publish" n="1" title="Publish">
 - [ ] Persist the version atomically
+
+**Gate:** The publication batch stores the plan, version, blocks, and decisions together.
+
+**Rollback:** Revert the internal write path before accepting another publication.
 </Phase>
 
-<Risk severity="high">
+<Diagram id="review-lifecycle" lang="mermaid">
+\`\`\`mermaid
+stateDiagram-v2
+[*] --> Draft
+Draft --> Approved: decision resolved and current version approved
+\`\`\`
+</Diagram>
+
+<Risk id="risk-stale-approval" severity="high">
 An approval attached to stale source must never approve the current version.
 </Risk>
 `;
@@ -219,7 +234,37 @@ describe("publication and review contracts", () => {
 			await harness.all<{ planCount: number; versionCount: number; blockCount: number; decisionCount: number }>(
 				"select (select count(*) from plan) as planCount, (select count(*) from plan_version) as versionCount, (select count(*) from plan_block) as blockCount, (select count(*) from decision) as decisionCount",
 			),
-		).toEqual([{ planCount: 1, versionCount: 1, blockCount: 9, decisionCount: 1 }]);
+		).toEqual([{ planCount: 1, versionCount: 1, blockCount: 10, decisionCount: 1 }]);
+	});
+
+	it("keeps profile metadata in canonical Markdown pull-back", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await createPlan(harness.request, {
+			workspaceSlug: "demo",
+			title: "Contract plan",
+			source: VALID_PLAN,
+		});
+		const document = await loadPlanDocument(harness.request, "demo", "contract-plan");
+		const markdown = await renderPlanMarkdown(document);
+		expect(markdown).toContain('title: "Contract plan"');
+		expect(markdown).toContain("kind: plan");
+		expect(markdown.match(/^kind: plan$/gm)).toHaveLength(1);
+		expect(markdown).toContain('<TLDR id="summary">');
+	});
+
+	it("rejects unsafe grammar even when force is true", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		const unsafeSource = VALID_PLAN.replace('<TLDR id="summary">', '<TLDR id="summary" tone="unsafe">');
+		await expect(
+			createPlan(harness.request, {
+				workspaceSlug: "demo",
+				title: "Unsafe plan",
+				source: unsafeSource,
+				force: true,
+			}),
+		).rejects.toMatchObject({ status: 422 });
+		expect(await harness.all<{ count: number }>("select count(*) as count from plan")).toEqual([{ count: 0 }]);
+		expect(await harness.all<{ count: number }>("select count(*) as count from plan_version")).toEqual([{ count: 0 }]);
 	});
 
 	it("leaves no partial rows when a publication batch fails", async (context) => {

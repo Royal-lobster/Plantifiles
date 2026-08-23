@@ -1,12 +1,14 @@
+import { Button } from "@plantifiles/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { History } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { StatusChip } from "#/components/status-chip";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
 import { renderPlan } from "#/routes/p/$workspaceSlug/$planSlug/-components/plan-render";
 import type { PlanReaderData } from "#/routes/p/$workspaceSlug/$planSlug/-data/plan-reader";
+import { GuidedPlanDocument } from "./guided-plan-document";
 import { PlanActionsMenu } from "./plan-actions-menu";
 import { PlanReviewDocument } from "./plan-review-document";
 import { PlanStatusAction } from "./plan-status-action";
@@ -21,7 +23,9 @@ function PlanReader({ data }: PlanReaderProps) {
 	const router = useRouter();
 	const latest = data.versions[0];
 	const isCurrentVersion = data.version.number === latest?.number;
-	const rendered = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
+	const renderedDocument = useMemo(() => renderPlan(data.renderTree), [data.renderTree]);
+	const supportsGuided = data.metadata.profile === "lesson" || data.metadata.profile === "guided-plan";
+	const [readerMode, setReaderMode] = useState<"document" | "guided">(supportsGuided ? "guided" : "document");
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
 
@@ -100,9 +104,33 @@ function PlanReader({ data }: PlanReaderProps) {
 				</div>
 			</header>
 
+			{supportsGuided && (
+				<fieldset className="mt-5 flex items-center gap-2 border-0 p-0">
+					<legend className="sr-only">Reader view</legend>
+					<Button
+						type="button"
+						size="sm"
+						variant={readerMode === "guided" ? "default" : "outline"}
+						aria-pressed={readerMode === "guided"}
+						onClick={() => setReaderMode("guided")}
+					>
+						Guided
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={readerMode === "document" ? "default" : "outline"}
+						aria-pressed={readerMode === "document"}
+						onClick={() => setReaderMode("document")}
+					>
+						Document
+					</Button>
+				</fieldset>
+			)}
+
 			{/* One column, flush with the nav and the title. */}
 			<PlanReviewDocument data={data} isCurrentVersion={isCurrentVersion}>
-				{rendered}
+				{readerMode === "guided" && supportsGuided ? <GuidedPlanDocument data={data} /> : renderedDocument}
 			</PlanReviewDocument>
 
 			{/* biome-ignore lint/correctness/useUniqueElementIds: stable fragment target for the overflow menu's jump link */}

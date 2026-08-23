@@ -15,7 +15,7 @@ type ReaderComment = {
 };
 type CreateCommentValue = { blockKey?: string; parentId?: string; body: string; agentAssisted?: boolean };
 type ReviewResult = { status: string; reason: string | null };
-type PlanBlockSummary = { key: string; kind: string };
+type PlanBlockSummary = { key: string; kind: string; contentHash: string };
 type PlanCommentIndex = {
 	visibleComments: ReaderComment[];
 	rootsByBlockKey: ReadonlyMap<string, readonly ReaderComment[]>;
@@ -32,6 +32,7 @@ type PlanRenderContextValue = {
 	figureNumbers: Record<string, number>;
 	/** Phase blocks that are followed by another phase, which draw the spine on. */
 	phaseContinues: Record<string, true>;
+	contentHashByBlockKey: Record<string, string>;
 	viewerId: string | null;
 	isCurrentVersion: boolean;
 	versionNumberById: Record<string, number>;
@@ -53,20 +54,23 @@ function planBlockIndex(blocks: PlanBlockSummary[]): {
 	selectedBlockKeys: Record<string, true>;
 	figureNumbers: Record<string, number>;
 	phaseContinues: Record<string, true>;
+	contentHashByBlockKey: Record<string, string>;
 } {
 	const figureNumbers: Record<string, number> = {};
 	const selectedBlockKeys: Record<string, true> = {};
 	const phaseContinues: Record<string, true> = {};
+	const contentHashByBlockKey: Record<string, string> = {};
 	let figure = 1;
 	blocks.forEach((block, index) => {
 		selectedBlockKeys[block.key] = true;
+		contentHashByBlockKey[block.key] = block.contentHash;
 		if (block.kind === "Diagram") {
 			figureNumbers[block.key] = figure;
 			figure += 1;
 		}
 		if (block.kind === "Phase" && blocks[index + 1]?.kind === "Phase") phaseContinues[block.key] = true;
 	});
-	return { figureNumbers, phaseContinues, selectedBlockKeys };
+	return { contentHashByBlockKey, figureNumbers, phaseContinues, selectedBlockKeys };
 }
 
 /**
@@ -144,7 +148,10 @@ function PlanRenderProvider({
 	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
 	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
 }) {
-	const { figureNumbers, phaseContinues, selectedBlockKeys } = useMemo(() => planBlockIndex(blocks), [blocks]);
+	const { contentHashByBlockKey, figureNumbers, phaseContinues, selectedBlockKeys } = useMemo(
+		() => planBlockIndex(blocks),
+		[blocks],
+	);
 	const { rootsByBlockKey, detachedRoots, repliesByParentId } = useMemo(
 		() => planCommentIndex(comments, selectedVersionNumber, selectedBlockKeys, versionNumberById),
 		[comments, selectedVersionNumber, selectedBlockKeys, versionNumberById],
@@ -158,6 +165,7 @@ function PlanRenderProvider({
 			repliesByParentId,
 			figureNumbers,
 			phaseContinues,
+			contentHashByBlockKey,
 			viewerId,
 			isCurrentVersion,
 			versionNumberById,
@@ -174,6 +182,7 @@ function PlanRenderProvider({
 			detachedRoots,
 			repliesByParentId,
 			figureNumbers,
+			contentHashByBlockKey,
 			phaseContinues,
 			viewerId,
 			isCurrentVersion,

@@ -1,55 +1,128 @@
 ---
 name: write-plan
-description: Write and publish Plantifiles implementation plans. Use when an agent is asked to plan a feature, architecture change, migration, or refactor for team review.
+description: Write and publish Plantifiles plans, lessons, and guided plans. Use for implementation planning, technical teaching, or a plan that must teach its readers.
 ---
 
-# Write a Plantifiles plan
+# Write a Plantifile
 
-Produce an evidence-backed implementation plan whose decisions, invariants, phases, and cutover gates remain useful during implementation.
+Make one source that a person can understand and an agent can act on.
 
-This downloadable skill is self-contained. It cannot rely on Plantifiles repository-local instructions or references; everything required to author a valid plan is in this file.
+This skill is downloaded into other repositories, so it contains every rule it needs.
 
-## Workflow
+## 1. Pick the document type
 
-### 1. Establish authority before proposing a design
+Choose one:
 
-Read the target repository's agent instructions and the originating request, issue, specification, or decision record. Extract the requested behavior, acceptance criteria, compatibility constraints, and named non-goals.
+- `plan` — decide and deliver a change;
+- `lesson` — understand and practice a topic;
+- `guided-plan` — learn enough to judge and deliver a change.
 
-Then inspect the repository itself:
+Every document needs `title`, `kind`, and `emoji`.
 
-- Read the current implementation at the proposed change point and identify the symbols that own the behavior.
-- Find every production callsite of the affected interface, including jobs, routes, scripts, and adapters.
-- Read tests that exercise the current observable contract, failure paths, and prior regressions.
-- Inspect public types, configuration, migrations, commands, and user-facing documentation when the change can affect them.
-- Run a narrow experiment only when source and tests cannot establish a runtime fact; record the command and observed result.
+`lesson` and `guided-plan` also need:
 
-Do not design until every acceptance criterion is tied to current code, a test, an observed command result, or an explicitly labeled gap.
+- one-line `audience` stating what the reader already knows;
+- one to five `outcomes` that say what the reader can explain, predict, compare, trace, review, or do.
 
-### 2. Separate evidence from inference
+**Done when:** one document type clearly matches the reader’s job.
 
-Record the research in the plan itself; do not depend on a supplemental file. Use repository-relative paths plus symbols or line ranges for source evidence, test names for behavioral evidence, and commands plus observed output for experiments.
+## 2. Gather evidence
 
-Under `### Verified facts`, state only facts established by that evidence. Under `### Inferences`, label each assumption and say how implementation will validate or resolve it. A design claim is ready only when it is verified or carries an explicit validation gate.
+For a plan or guided plan, read:
 
-### 3. Choose a deep seam and state invariants
+- the request, issue, or specification;
+- repository instructions;
+- the code that owns the behavior;
+- every production caller;
+- success, failure, and regression tests;
+- public types, configuration, migrations, commands, and user docs that may change.
 
-A **module** is an interface plus its implementation. A **seam** is the location of that interface. Prefer a deep module: callers learn a small interface while validation, ordering, errors, state transitions, and integration details stay behind it. Callers and contract tests should cross the same seam.
+For a lesson, also find trustworthy sources for facts the repository cannot prove.
 
-Choose the seam from the callsite and ownership evidence, not from a hypothetical abstraction. Introduce an adapter seam only where behavior genuinely varies. Name the production callers that will migrate to the preferred interface and the obsolete paths that cutover will remove.
+Run a small experiment only when source and tests cannot answer a runtime question. Record the command and result.
 
-Write explicit invariants for identity, input validity, output shape, ordering, failure behavior, persistence, authorization, and performance wherever they constrain the change. Use a `<Decision>` only for a real unresolved question, and set `owner` to the person or team accountable for resolving it. Compare viable choices in `<Tradeoff>`, then record at least one considered alternative in a top-level `<Rejected>` with the concrete reason it lost.
+Put proven claims under `### Verified facts`. Cite repository paths plus symbols or line ranges. Cite test names for behavior.
 
-### 4. Design observable, reversible phases
+Put assumptions under `### Inferences`. Start each with **Inference:** and say how it will be tested.
 
-Each `<Phase>` must identify the affected implementation and callsites, an observable completion gate, and a rollback action. Prefer gates such as a named contract test, a reproducible command and expected result, a measured invariant, or a verified migration count. “Code complete” is not an observable gate.
+**Done when:** every important claim has evidence or is labeled as an inference.
 
-Sequence phases so the new path is proven behind the chosen interface, production callers are migrated, the cutover is observed, and obsolete code, configuration, and compatibility paths are removed. Keep rollback available until the cutover gate passes; state what restores the last known-good behavior and what data handling rollback requires.
+## 3. Build the plan and learning path
 
-Draw the current behavior and the proposed transition or lifecycle. A diagram must reveal ordering, ownership, state, or failure behavior that prose alone does not make obvious.
+### For `plan`
 
-### 5. Author and lint
+Name:
 
-Copy the template, replace every uppercase placeholder, choose one representative emoji, and keep the component names and prop shapes exact.
+- the interface that owns the change;
+- every caller that moves;
+- every old path that is deleted;
+- important input, output, ordering, failure, persistence, authorization, and performance rules;
+- real decisions, tradeoffs, risks, delivery gates, and rollback.
+
+### For `lesson`
+
+Teach the smallest mental model needed for the outcomes:
+
+1. show why it matters;
+2. explain it with a real diagram, code example, table, or trace;
+3. ask the reader to remember or predict;
+4. reveal Answer and Why;
+5. ask the reader to apply or explain the idea;
+6. end with a recap and next action.
+
+### For `guided-plan`
+
+Do both. Put teaching beside the decision, risk, diagram, or phase that needs it. Do not add a separate textbook appendix.
+
+**Done when:** the reader can say what changes, why it works, how to prove it, and what they should now understand.
+
+## 4. Write reversible phases
+
+Each `<Phase>` needs:
+
+- tasks;
+- an observable **Gate**;
+- a concrete **Rollback**.
+
+Good gates name a test, command, measured rule, count, or visible result. “Code complete” is not a gate.
+
+Prove the new path first, move callers next, and delete old code last.
+
+Use two useful diagrams with different jobs. Show request order, ownership, state, failure, or cutover. Do not add decorative diagrams.
+
+**Done when:** every phase can be proved or rolled back without guessing.
+
+## 5. Add real questions
+
+Use `<Check>` for quizzes:
+
+- `predict` — answer before seeing what happens;
+- `recall` — remember a fact or relationship;
+- `apply` — use the idea on a new case;
+- `reflect` — explain a decision or uncertainty in your own words.
+
+Every `lesson` and `guided-plan` needs:
+
+- at least one `predict` or `recall` Check;
+- at least one `apply` or `reflect` Check.
+
+Each Check needs:
+
+- a unique `id`;
+- a `kind`;
+- a plain-text `prompt` of 40 words or fewer;
+- `**Answer:**`;
+- `**Why:**`;
+- optional `**Next:**`;
+- optional `for="BLOCK_ID"` pointing to another root component in the same document.
+
+Ask something that requires thought. Copying the previous sentence is not a quiz.
+
+**Done when:** questions test both memory and transfer, and every answer explains why.
+
+## 6. Lint, publish, and pull it back
+
+Copy the template below and replace every uppercase placeholder.
 
 Run:
 
@@ -57,177 +130,247 @@ Run:
 plantifiles lint <file>
 ```
 
-Fix every reported error and warning, then repeat until there are no findings. The CLI exits nonzero only when errors exist, so a zero exit does not prove warnings are absent; inspect the findings and score. Scoring starts at 100, subtracts 10 per error and 3 per warning, and floors at 0. The runtime publication gate is exactly `errors === 0 && score >= 70`, so a warning-only document may publish when its score is at least 70. This workflow intentionally requires zero findings.
+Fix every error and warning. Read the output because a zero exit code can still include warnings.
 
-### 6. Publish with provenance
-
-Publish the linted source with the same emoji and the originating prompt:
+Publish:
 
 ```sh
-plantifiles push <file> --workspace <slug> --emoji <emoji> --agent <agent-name> --prompt "<request or planning prompt>"
+plantifiles push <file> --workspace <slug> --emoji <emoji> --agent <agent-name> --prompt "<original request>"
 ```
 
-At login, the CLI records a default workspace only when the author belongs to exactly one. Otherwise the first push requires `--workspace <slug>`; `plantifiles workspaces` lists available slugs. Later pushes of the same file reuse its tracked workspace.
+Find the workspace when needed:
 
-Done means the command returns a URL, that URL opens the published plan, and the published version records the intended source, emoji, agent, and prompt.
+```sh
+plantifiles workspaces
+```
 
-## Grammar and lint contract
+Pull the result once:
 
-All maxima are inclusive:
+```sh
+plantifiles pull <url> -o /tmp/published-plantifile.mdx
+```
 
-- Put exactly one `<TLDR>` first after frontmatter; it may contain at most 60 words.
-- Begin every `##` section with a one-line summary paragraph of at most 30 words.
-- Keep every paragraph to at most 120 words and at most 5 sentences.
-- Include at least one `<Decision>`, `<Phase>`, and `<Diagram>`.
-- Include at least two `<Diagram>` blocks with varied diagram types to avoid the diagram-count warning.
-- Give every `<Decision>` a nonempty `owner` naming its actual decision owner.
-- Give every `<Tradeoff>` at least two direct `<Option>` children and mark exactly one of them `recommended`.
-- Give every `<Risk>` a severity of `low`, `med`, or `high`.
+**Done when:** lint reports `errors 0 warnings 0`, push returns a URL, the page opens, and pulled Markdown contains the full document.
+
+## Document rules
+
+- Put exactly one `<TLDR>` first after frontmatter. Keep it at 60 words or fewer.
+- Start every `##` section with one physical line of summary text, 30 words or fewer.
+- Keep every paragraph at 120 words or fewer and five sentences or fewer.
 - Use headings no deeper than `###`.
-- Keep estimated read time at or below 12 minutes; the linter estimates 200 words per minute.
-- Include a top-level `<Rejected>` naming an alternative and explaining why it lost.
-- Put every block component's children on lines between its opening and closing tags.
+- Keep reading time at 12 minutes or less. Plantifiles counts 200 words per minute.
+- Keep all prompts, answers, evidence, diagrams, code, gates, and rollback in source.
 - Use Markdown, not raw HTML or executable MDX.
+- Put component content on lines between opening and closing tags.
+- Use only the components below. Unknown components, props, and values are errors.
 
-Placement is strict. Place `<TLDR>`, `<Decision>`, `<Tradeoff>`, `<Rejected>`, `<Phase>`, `<Risk>`, `<Diagram>`, `<CodeSketch>`, and `<Callout>` directly at the document root. The sole component nesting relationship is `<Option>` as a direct child of `<Tradeoff>`; `<Option>` is invalid anywhere else.
+For `plan` and `guided-plan`:
 
-Every top-level component may have an optional explicit `id`. Use IDs for blocks whose identity must survive content edits or movement so structural diffs remain deterministic. An ID must be unique across the document and match `^[A-Za-z][A-Za-z0-9_-]*$`: an ASCII letter first, followed only by ASCII letters, digits, `_`, or `-`. Keep an established ID unchanged when editing or moving its block.
+- include Decision, Phase, and Diagram;
+- include one Rejected alternative;
+- use two useful diagrams with different diagram types;
+- give every Decision an owner;
+- give every Phase tasks, Gate, and Rollback;
+- give every Tradeoff at least two Options and exactly one recommendation;
+- give every Risk low, med, or high severity.
 
-## Component vocabulary
+For `lesson` and `guided-plan`:
 
-Use only these custom components and prop shapes:
+- include audience and outcomes;
+- include one retrieval Check and one transfer Check;
+- warn on paragraphs above 60 words;
+- end with outcomes revisited, unresolved uncertainty, and next action.
 
-| Component | Required props | Content |
+Plantifiles starts at 100 points, subtracts 10 per error and 3 per warning, and never goes below 0. Publication requires zero errors and score 70 or higher. This skill requires zero errors and zero warnings.
+
+## Placement and IDs
+
+Put `TLDR`, `Decision`, `Tradeoff`, `Rejected`, `Phase`, `Risk`, `Diagram`, `CodeSketch`, `Callout`, and `Check` at the document root.
+
+`Option` is the only nested component. It must be a direct child of `Tradeoff`.
+
+Every top-level component may have an `id`; Check requires one. IDs must:
+
+- be unique;
+- start with an ASCII letter;
+- contain only ASCII letters, digits, `_`, or `-`;
+- stay unchanged when a block moves or changes.
+
+## Component reference
+
+| Component | Required props | Put inside |
 |---|---|---|
-| `<TLDR>` | — | Prose, at most 60 words |
-| `<Decision>` | `owner` | One unresolved question |
-| `<Tradeoff>` | — | At least two direct `<Option>` children |
+| `<TLDR>` | — | Result summary, at most 60 words |
+| `<Decision>` | `owner` | One real unanswered question |
+| `<Tradeoff>` | — | At least two direct Options |
 | `<Option>` | `name`; exactly one sibling has `recommended` | Pros and cons |
-| `<Rejected>` | `what` | Why the alternative lost |
-| `<Phase>` | `n`, `title` | Prose and a task checklist, including gate and rollback |
+| `<Rejected>` | `what` | Why the option lost |
+| `<Phase>` | `n`, `title` | Tasks, Gate, and Rollback |
 | `<Risk>` | `severity="low|med|high"` | Risk and mitigation |
-| `<Diagram>` | `lang="mermaid|d2"` | Exactly one fenced diagram source block |
-| `<CodeSketch>` | `lang`; optional `file` | Exactly one fenced code block |
+| `<Diagram>` | `lang="mermaid|d2"` | One matching fenced diagram |
+| `<CodeSketch>` | `lang`; optional `file` | One fenced code block |
 | `<Callout>` | `kind="note|warning"` | Supporting context |
+| `<Check>` | `id`, `kind`, `prompt`; optional `for` | Answer, Why, and optional Next |
 
-An optional `id` follows the identity rule above. A `<Diagram>` fence should match its `lang`. Use `flowchart` or `graph` for data and control flow, `sequenceDiagram` for cross-actor ordering and failures, `stateDiagram-v2` for lifecycles, and `erDiagram` for stored relationships. Use `<CodeSketch>` only when a minimal type, payload, table row, or function signature makes an interface invariant precise.
+For diagrams:
 
+- use `sequenceDiagram` for requests, actors, ordering, and failure;
+- use `stateDiagram-v2` for lifecycle and cutover;
+- use `flowchart` or `graph` for data and control flow;
+- use `erDiagram` for stored relationships.
 
-## Complete template
+Use `<CodeSketch>` only when a small type, payload, row, or function signature makes a rule clearer.
 
-Replace every uppercase placeholder with repository evidence and project-specific decisions. Keep the root placement and direct `<Option>` nesting unchanged.
+## Guided-plan template
+
+For `plan`, remove audience, outcomes, and Checks when they add no value. For `lesson`, remove Decision, Phase, and other planning blocks that do not teach an outcome.
 
 `````mdx
 ---
-title: PLAN TITLE
+title: DOCUMENT TITLE
+kind: guided-plan
 emoji: 🧭
+audience: READERS AND WHAT THEY ALREADY KNOW
+outcomes:
+  - Explain FIRST OBSERVABLE OUTCOME
+  - Apply SECOND OBSERVABLE OUTCOME
 ---
-<TLDR id="plan-summary">
-Summarize the intended outcome, chosen seam, proof strategy, and cutover in no more than sixty words.
+<TLDR id="summary">
+State what changes, what the reader will learn, and how success will be proved.
 </TLDR>
 
 ## Evidence
 
-The plan separates verified repository behavior from assumptions that still require validation.
+Show what is true today and what still needs testing.
 
 ### Verified facts
 
-- `PATH:SYMBOL` — `FACT ESTABLISHED BY SOURCE OR TEST`.
-- `CALLSITE_PATH:SYMBOL` — `HOW THIS PRODUCTION CALLER USES THE CURRENT INTERFACE`.
-- `TEST_PATH:TEST_NAME` — `OBSERVABLE CONTRACT OR FAILURE PATH THE TEST DEFENDS`.
+- `PATH:SYMBOL` — FACT PROVED BY CODE.
+- `CALLER_PATH:SYMBOL` — HOW THIS CALLER USES THE INTERFACE.
+- `TEST_PATH:TEST NAME` — BEHAVIOR THIS TEST PROTECTS.
 
 ### Inferences
 
-- **Inference:** `ASSUMPTION`. Validate it with `COMMAND, TEST, OR OWNER DECISION` before `PHASE GATE`.
+- **Inference:** ASSUMPTION. Prove it with TEST, COMMAND, OR OWNER DECISION before PHASE GATE.
+
+<Check id="predict-current-failure" kind="predict" prompt="What breaks if only one side of the interface changes?">
+**Answer:** EXPECTED FAILURE.
+
+**Why:** MECHANISM THAT CAUSES THE FAILURE.
+
+**Next:** WHAT TO INSPECT OR TRY.
+</Check>
 
 <Diagram id="current-flow" lang="mermaid">
 ```mermaid
 sequenceDiagram
-Actor->>CurrentModule: current request
-CurrentModule->>Dependency: current operation
-Dependency-->>CurrentModule: current result or failure
-CurrentModule-->>Actor: observable response
+  Actor->>CurrentModule: current request
+  CurrentModule->>Dependency: current operation
+  Dependency-->>CurrentModule: result or failure
+  CurrentModule-->>Actor: visible response
 ```
 </Diagram>
 
 ## Design
 
-The design concentrates behavior behind one evidence-backed interface and makes its invariants observable to callers and tests.
+Put the behavior behind one interface and state the rules callers can trust.
 
-<Decision id="cutover-decision" owner="@OWNER">
-Should `NAMED CALLERS` cut over after `OBSERVABLE GATE`, or does evidence require a bounded dual-run period?
+<Decision id="open-decision" owner="@OWNER">
+What real question must OWNER answer before cutover?
 </Decision>
 
-<Tradeoff id="cutover-options">
-<Option name="Direct cutover">
-This removes the old path sooner, but it is viable only when contract tests prove every named caller and failure path.
+<Tradeoff id="design-options">
+<Option name="PREFERRED OPTION" recommended>
+Why this option wins and what it costs.
 </Option>
-<Option name="Bounded dual run" recommended>
-This compares behavior before cutover while keeping one interface, with an explicit end condition for deleting the temporary path.
+<Option name="OTHER VIABLE OPTION">
+Why this option could work and what it costs.
 </Option>
 </Tradeoff>
 
-<Rejected id="rejected-compatibility-layer" what="Permanent compatibility layer">
-It preserves two interfaces indefinitely, disperses invariants across callers, and makes every later change repay the migration cost.
+<Rejected id="rejected-option" what="REJECTED OPTION">
+Why this option lost.
 </Rejected>
 
 <CodeSketch id="target-interface" lang="ts" file="TARGET_PATH">
 ```ts
-export type Input = { id: string; payload: unknown };
+export type Input = { id: string };
 export type Result = { id: string; status: "accepted" | "rejected" };
 
 export declare function execute(input: Input): Promise<Result>;
 ```
 </CodeSketch>
 
+<Check id="recall-interface-rule" kind="recall" for="target-interface" prompt="Which rule must every caller be able to trust?">
+**Answer:** THE IMPORTANT INTERFACE RULE.
+
+**Why:** WHY BREAKING IT HURTS CALLERS.
+</Check>
+
 ## Delivery
 
-Each phase names its observable gate and rollback before the next phase can begin.
+Prove the new path, move every caller, then delete the old path.
 
 <Diagram id="cutover-lifecycle" lang="mermaid">
 ```mermaid
 stateDiagram-v2
-[*] --> Existing
-Existing --> Proving: new implementation behind existing interface
-Proving --> Existing: gate fails and rollback runs
-Proving --> Migrating: contract and comparison gates pass
-Migrating --> CutOver: every named caller uses the new path
-CutOver --> [*]: old path and temporary configuration removed
+  [*] --> Existing
+  Existing --> Proving: new behavior behind the interface
+  Proving --> Existing: gate fails
+  Proving --> Migrating: gate passes
+  Migrating --> CutOver: every caller moved
+  CutOver --> [*]: old path deleted
 ```
 </Diagram>
 
 <Phase id="phase-prove" n="1" title="Prove the interface">
-- [ ] Implement the new behavior behind `INTERFACE` without changing caller-visible invariants
-- [ ] Exercise `NAMED CONTRACT TESTS OR REPRODUCTION` across success and failure paths
+- [ ] Add the new behavior behind INTERFACE
+- [ ] Exercise success and failure with NAMED TESTS
 
-**Gate:** `COMMAND OR SCENARIO` produces `EXPECTED OBSERVATION` for every recorded invariant.
+**Gate:** COMMAND OR TEST produces EXPECTED RESULT.
 
-**Rollback:** Route the interface to `LAST KNOWN-GOOD IMPLEMENTATION`; no persistent data has changed incompatibly.
+**Rollback:** Restore LAST WORKING INTERNAL BUILD.
 </Phase>
 
-<Phase id="phase-migrate" n="2" title="Migrate and cut over">
-- [ ] Migrate `EVERY NAMED PRODUCTION CALLER` to the preferred interface
-- [ ] Observe `METRIC, COMPARISON, OR MIGRATION COUNT` before declaring cutover
+<Phase id="phase-migrate" n="2" title="Move every caller">
+- [ ] Move NAMED PRODUCTION CALLERS
+- [ ] Observe METRIC, COMPARISON, OR COUNT
 
-**Gate:** `CUTOVER OBSERVATION` proves all callers use the new path and meet the invariant bounds.
+**Gate:** OBSERVATION proves every caller uses the new path.
 
-**Rollback:** Restore the previous routing and run `DATA RECONCILIATION ACTION` before accepting new work.
+**Rollback:** Restore old routing before accepting new work.
 </Phase>
 
-<Phase id="phase-cleanup" n="3" title="Remove the obsolete path">
-- [ ] Delete the old implementation, temporary adapter, configuration, and dead tests
-- [ ] Update public types and documentation that named the removed path
+<Phase id="phase-cleanup" n="3" title="Delete the old path">
+- [ ] Delete old code, adapters, flags, configuration, and dead tests
+- [ ] Update public types and user docs
 
-**Gate:** Repository reference search finds no production caller of the obsolete interface, and the named contract suite remains green.
+**Gate:** Repository references find no caller of the old interface, and NAMED TESTS pass.
 
-**Rollback:** Revert this cleanup only while the retained cutover evidence remains valid; otherwise return to the migration phase.
+**Rollback:** Revert cleanup only while cutover evidence remains valid.
 </Phase>
 
-<Risk id="risk-output-drift" severity="high">
-The two implementations may diverge silently. Compare canonical outputs at the proving gate and stop cutover on any unexplained mismatch.
+<Check id="apply-new-case" kind="apply" for="phase-prove" prompt="How would you prove the same interface under a different failure?">
+**Answer:** EXPECTED TEST OR OBSERVATION.
+
+**Why:** WHY THAT RESULT PROVES THE RULE.
+
+**Next:** NEXT REAL ACTION.
+</Check>
+
+<Risk id="main-risk" severity="high">
+Name the most likely serious failure and its concrete mitigation.
 </Risk>
 
-<Callout id="rollback-window" kind="warning">
-Keep rollback available until the cutover observation passes; remove it with the obsolete path rather than preserving a permanent second interface.
+<Callout id="rollback-rule" kind="warning">
+Keep rollback until cutover passes. Delete it with the old path instead of keeping two permanent interfaces.
 </Callout>
+
+## Recap
+
+Restate what the reader can now explain and do.
+
+- **Outcomes revisited:** FIRST OUTCOME and SECOND OUTCOME.
+- **Unresolved uncertainty:** OPEN DECISION OR REMAINING GAP.
+- **Next real action:** FIRST DELIVERY STEP.
 `````

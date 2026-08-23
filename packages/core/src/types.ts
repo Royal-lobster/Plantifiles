@@ -11,9 +11,20 @@ export const COMPONENT_NAMES = [
 	"Diagram",
 	"CodeSketch",
 	"Callout",
+	"Check",
 ] as const;
 
 export type ComponentName = (typeof COMPONENT_NAMES)[number];
+
+export type ArtifactProfile = "plan" | "lesson" | "guided-plan";
+
+export type ArtifactMetadata = {
+	title?: string;
+	profile: ArtifactProfile | null;
+	emoji?: string;
+	audience?: string;
+	outcomes: string[];
+};
 
 export type Block = {
 	key: string;
@@ -47,6 +58,7 @@ export type LintReport = {
 
 export type PlanAnalysis = {
 	blocks: Block[];
+	metadata: ArtifactMetadata;
 	report: LintReport;
 	canPersist: boolean;
 	tree?: Root;

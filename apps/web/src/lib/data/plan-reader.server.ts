@@ -1,10 +1,10 @@
-import { type Block, normalize } from "@plantifiles/core";
+import { analyzePlan, type Block, normalize } from "@plantifiles/core";
 import { approval, comment, decision, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
-import type { PlanStatus } from "./plan-types";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
+import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
+import type { PlanStatus } from "./plan-types";
 
 const authorSelection = {
 	id: user.id,
@@ -276,11 +276,17 @@ function yamlString(value: string): string {
 export async function renderPlanMarkdown(document: PlanDocument): Promise<string> {
 	const openDecisions = document.decisions.filter((item) => item.status === "open").length;
 	const canonicalUrl = await publicPlanUrl(document.workspace.slug, document.plan.slug);
+	const analysis = analyzePlan(document.version.source, { emoji: document.plan.emoji ?? undefined });
 	const sourceWithoutFrontmatter = document.version.source.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
 	return [
 		"---",
 		`title: ${yamlString(document.plan.title)}`,
+		...(analysis.metadata.profile ? [`kind: ${analysis.metadata.profile}`] : []),
 		...(document.plan.emoji ? [`emoji: ${yamlString(document.plan.emoji)}`] : []),
+		...(analysis.metadata.audience ? [`audience: ${yamlString(analysis.metadata.audience)}`] : []),
+		...(analysis.metadata.outcomes.length > 0
+			? ["outcomes:", ...analysis.metadata.outcomes.map((outcome) => `  - ${yamlString(outcome)}`)]
+			: []),
 		`version: ${document.version.number}`,
 		`status: ${yamlString(document.plan.status)}`,
 		`url: ${yamlString(canonicalUrl)}`,

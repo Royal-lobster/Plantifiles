@@ -1,6 +1,7 @@
 import { Diagram } from "./plan-diagram";
 import {
 	Callout,
+	Check,
 	CodeSketch,
 	LegacyPrototype,
 	Option,
@@ -58,6 +59,7 @@ const planComponents = {
 	Diagram,
 	CodeSketch,
 	Callout,
+	Check,
 	Prototype: LegacyPrototype,
 };
 

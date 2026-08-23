@@ -1,11 +1,21 @@
 import { Badge } from "@plantifiles/ui/components/badge";
+import { Button } from "@plantifiles/ui/components/button";
 import { Checkbox } from "@plantifiles/ui/components/checkbox";
+import { Textarea } from "@plantifiles/ui/components/textarea";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { AlertTriangle, ChevronRight, Info, Scale, X } from "lucide-react";
-import { Children, type ComponentProps, type ReactNode } from "react";
+import { AlertTriangle, Brain, ChevronRight, Info, Scale, X } from "lucide-react";
+import { Children, type ComponentProps, type ReactNode, useEffect, useId, useState } from "react";
 import { usePlanRender } from "./plan-render-context";
 
 type RiskSeverity = "low" | "med" | "high";
+type CheckKind = "predict" | "recall" | "apply" | "reflect";
+
+const CHECK_LABEL: Record<CheckKind, string> = {
+	predict: "Predict",
+	recall: "Recall",
+	apply: "Apply",
+	reflect: "Reflect",
+};
 
 function PlanParagraph({ node: _node, className, ...props }: ComponentProps<"p"> & { node?: unknown }) {
 	return <p className={cn("text-base text-foreground/90 leading-7", className)} {...props} />;
@@ -231,6 +241,100 @@ function Risk({ severity, children }: { severity: RiskSeverity; children?: React
 	);
 }
 
+function Check({
+	id: _id,
+	kind,
+	prompt,
+	for: _target,
+	blockKey,
+	children,
+}: {
+	id: string;
+	kind: CheckKind;
+	prompt: string;
+	for?: string;
+	blockKey?: string;
+	children?: ReactNode;
+}) {
+	const { contentHashByBlockKey, planSlug, workspaceSlug } = usePlanRender();
+	const feedbackId = useId();
+	const [draft, setDraft] = useState("");
+	const [revealed, setRevealed] = useState(false);
+	const [revisit, setRevisit] = useState(false);
+	const [loaded, setLoaded] = useState(false);
+	const contentHash = blockKey ? contentHashByBlockKey[blockKey] : undefined;
+	const storageKey = `plantifiles:check:${workspaceSlug}:${planSlug}:${blockKey ?? "unknown"}:${contentHash ?? "unknown"}`;
+
+	useEffect(() => {
+		try {
+			const stored = window.localStorage.getItem(storageKey);
+			if (stored) {
+				const value = JSON.parse(stored) as { draft?: unknown; revealed?: unknown; revisit?: unknown };
+				if (typeof value.draft === "string") setDraft(value.draft);
+				if (typeof value.revealed === "boolean") setRevealed(value.revealed);
+				if (typeof value.revisit === "boolean") setRevisit(value.revisit);
+			}
+		} catch {
+			// Private progress is optional; the Check still works without storage.
+		}
+		setLoaded(true);
+	}, [storageKey]);
+
+	useEffect(() => {
+		if (!loaded) return;
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify({ draft, revealed, revisit }));
+		} catch {
+			// Storage failure never blocks reading or revealing authored feedback.
+		}
+	}, [draft, loaded, revealed, revisit, storageKey]);
+
+	return (
+		<section className="surface-card my-6 p-5" aria-labelledby={`${feedbackId}-prompt`}>
+			<div className="flex items-center gap-2">
+				<Brain aria-hidden className="size-4 text-brand-ink" />
+				<p className="label-eyebrow">{CHECK_LABEL[kind]}</p>
+				{revisit && <Badge variant="outline">Revisit</Badge>}
+			</div>
+			<p id={`${feedbackId}-prompt`} className="mt-3 font-medium text-lg leading-7">
+				{prompt}
+			</p>
+			<label className="mt-4 block font-medium text-sm" htmlFor={`${feedbackId}-draft`}>
+				Your private answer <span className="font-normal text-muted-foreground">(optional)</span>
+			</label>
+			<Textarea
+				id={`${feedbackId}-draft`}
+				className="mt-2 min-h-24"
+				value={draft}
+				onChange={(event) => setDraft(event.currentTarget.value)}
+				placeholder="Write enough to commit to an answer before revealing the explanation."
+			/>
+			<div className="mt-4 flex flex-wrap gap-2">
+				{!revealed ? (
+					<Button type="button" size="sm" onClick={() => setRevealed(true)} aria-controls={feedbackId}>
+						Reveal authored answer
+					</Button>
+				) : (
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						aria-pressed={revisit}
+						onClick={() => setRevisit((value) => !value)}
+					>
+						{revisit ? "Remove revisit mark" : "Mark for revisit"}
+					</Button>
+				)}
+			</div>
+			{revealed && (
+				<div id={feedbackId} className="surface-inset mt-4 px-4 py-3" aria-live="polite">
+					{children}
+				</div>
+			)}
+		</section>
+	);
+}
+
 function CodeSketch({ lang: _lang, file, children }: { lang: string; file?: string; children?: ReactNode }) {
 	return (
 		<figure className="overflow-hidden surface-card">
@@ -325,6 +429,7 @@ function PlanTd({ node: _node, className, ...props }: ComponentProps<"td"> & { n
 
 export {
 	Callout,
+	Check,
 	CodeSketch,
 	LegacyPrototype,
 	Option,
