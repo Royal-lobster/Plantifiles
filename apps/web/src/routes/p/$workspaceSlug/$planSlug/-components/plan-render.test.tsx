@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { compilePlan } from "../-data/compile-plan.server";
+import { guidedSections } from "./guided-plan-document";
 import { renderPlan } from "./plan-render";
 import { PlanRenderProvider, planCommentIndex, type ReaderComment } from "./plan-render-context";
 
@@ -50,6 +51,12 @@ export const answer = 42;
 This is a note.
 </Callout>
 
+<Check id="check-one" kind="predict" prompt="What happens next?">
+**Answer:** The safe path wins.
+
+**Why:** It proves the invariant first.
+</Check>
+
 <Prototype title="Historical checkout preview" viewport="mobile">
 \`\`\`html
 <main class="bg-indigo-950 text-white">Confirm order</main>
@@ -84,6 +91,9 @@ describe("runtime plan renderer", () => {
 		expect(html).toContain("View source");
 		expect(html).toContain("src/example.ts");
 		expect(html).toContain('data-block-kind="Phase"');
+		expect(html).toContain("What happens next?");
+		expect(html).toContain("Reveal authored answer");
+		expect(html).not.toContain("The safe path wins.");
 		expect(html).toContain("Historical checkout preview · archived prototype source");
 		expect(html).toContain("Confirm order");
 		expect(html).not.toContain("<iframe");
@@ -97,6 +107,30 @@ describe("runtime plan renderer", () => {
 	it("throws for an unknown lowercase element", async () => {
 		const tree = await compilePlan("<blink>\nNo.\n</blink>");
 		expect(() => renderToStaticMarkup(renderPlan(tree))).toThrow("Unknown MDX element <blink>");
+	});
+});
+
+describe("guided reader projection", () => {
+	it("keeps orientation and each level-two section in source order", async () => {
+		const tree = await compilePlan(`<TLDR id="summary">
+Start here.
+</TLDR>
+
+## Evidence
+
+First section.
+
+## Delivery
+
+Second section.
+`);
+		const sections = guidedSections(tree);
+		expect(sections.map(({ key, title }) => ({ key, title }))).toEqual([
+			{ key: "orientation", title: "Orientation" },
+			{ key: "root:heading2:1", title: "Evidence" },
+			{ key: ":evidence:heading2:1", title: "Delivery" },
+		]);
+		expect(sections).toHaveLength(3);
 	});
 });
 

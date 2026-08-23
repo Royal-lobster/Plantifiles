@@ -66,7 +66,7 @@ export function PlanReviewDocument({
 	}
 
 	return (
-		<section className="mt-10" aria-label="Plan document">
+		<section className="mt-10" aria-label="Plantifile document">
 			{state.message ? (
 				<output className="mb-5 block text-muted-foreground text-sm" aria-live="polite">
 					{state.message}

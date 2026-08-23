@@ -22,8 +22,10 @@ const cli = resolve(process.cwd(), "../cli/dist/index.js");
 function planSource(title: string): string {
 	return `---
 title: ${title}
+kind: plan
+emoji: 🚦
 ---
-<TLDR>
+<TLDR id="summary">
 Ship reversible deploy approvals so production changes carry an explicit reviewer decision before release.
 </TLDR>
 
@@ -35,7 +37,7 @@ Dashboard deploys currently require coordination outside the plan, leaving the a
 Should one approval cover a release or each production environment separately?
 </Decision>
 
-<Tradeoff>
+<Tradeoff id="approval-options">
 <Option name="Release-wide approval" recommended>
 One review keeps the path fast and gives the release a single accountable decision.
 </Option>
@@ -44,11 +46,11 @@ Each environment is explicit, but reviewers repeat the same decision and can lea
 </Option>
 </Tradeoff>
 
-<Rejected what="Approval in chat only">
+<Rejected id="rejected-chat-approval" what="Approval in chat only">
 Chat history is not attached to the plan version and cannot prove which source a reviewer approved.
 </Rejected>
 
-<Diagram lang="mermaid">
+<Diagram id="approval-flow" lang="mermaid">
 \`\`\`mermaid
 graph LR
 A[Plan approved] --> B[Deploy request]
@@ -61,12 +63,25 @@ C --> D[Production]
 
 The first phase records and enforces the approval before any production transition.
 
-<Phase n="1" title="Approval gate">
+<Phase id="phase-approval-gate" n="1" title="Approval gate">
 - [ ] Record reviewer and approved plan version
 - [ ] Block production deploy until approval exists
+
+**Gate:** The deploy route rejects an unapproved version and accepts the approved current version.
+
+**Rollback:** Disable the internal deploy route before accepting another production transition.
 </Phase>
 
-<Risk severity="high">
+<Diagram id="approval-lifecycle" lang="mermaid">
+\`\`\`mermaid
+stateDiagram-v2
+[*] --> Draft
+Draft --> Approved: current version approved
+Approved --> Building: deploy starts
+\`\`\`
+</Diagram>
+
+<Risk id="risk-stale-approval" severity="high">
 A stale approval could release different source. Bind every approval to the immutable plan version.
 </Risk>
 `;

@@ -13,12 +13,14 @@ describe("PlantifilesClient", () => {
 				Response.json({ id: "plan-1", version: 1, url: "https://plans.example/p/demo/plan", changeSummary: null }),
 			);
 
-		await client.createPlan({ workspaceSlug: "demo", title: "Plan", source: "source", force: true });
+		const source = '---\ntitle: Plan\nkind: plan\n---\n<TLDR id="summary">\nPlan.\n</TLDR>';
+		await client.createPlan({ workspaceSlug: "demo", title: "Plan", source, force: true });
 
 		const [url, init] = fetchMock.mock.calls[0] ?? [];
 		expect(url).toBe("https://plans.example/api/plans");
 		expect(new Headers(init?.headers).get("authorization")).toBe("Bearer secret");
 		expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
+		expect(JSON.parse(String(init?.body))).toMatchObject({ source });
 	});
 
 	it("reads the current access token for every request", async () => {

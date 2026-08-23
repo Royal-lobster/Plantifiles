@@ -29,6 +29,7 @@ const COMMENTABLE: Record<string, true> = {
 	Rejected: true,
 	CodeSketch: true,
 	Callout: true,
+	Check: true,
 };
 
 const EMPTY_COMMENTS: readonly ReaderComment[] = [];

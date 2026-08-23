@@ -1,9 +1,9 @@
-import type { LintReport } from "@plantifiles/core";
+import { analyzePlan, type LintReport } from "@plantifiles/core";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { compilePlan } from "./compile-plan.server";
 import { loadPlanReaderData } from "../../../../../lib/data/plan-reader.server";
+import { compilePlan } from "./compile-plan.server";
 
 const planParamsSchema = z.object({
 	workspaceSlug: z.string(),
@@ -20,6 +20,7 @@ export const getPlanReaderData = createServerFn({ method: "GET" })
 			data.planSlug,
 			data.number,
 		);
+		const analysis = analyzePlan(document.version.source, { emoji: document.plan.emoji ?? undefined });
 		const renderTree = await compilePlan(document.version.source);
 		return {
 			plan: {
@@ -29,12 +30,13 @@ export const getPlanReaderData = createServerFn({ method: "GET" })
 				emoji: document.plan.emoji,
 				status: document.plan.status,
 			},
+			metadata: analysis.metadata,
 			workspace: { slug: document.workspace.slug },
 			version: {
 				number: document.version.number,
 				lintReport: document.version.lintReport as LintReport,
 			},
-			blocks: document.blocks.map(({ key, kind }) => ({ key, kind })),
+			blocks: document.blocks.map(({ key, kind, contentHash }) => ({ key, kind, contentHash })),
 			comments: document.comments.map((item) => ({
 				id: item.id,
 				versionId: item.versionId,

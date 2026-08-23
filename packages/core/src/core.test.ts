@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "./diff.js";
-import { analyzePlan } from "./index.js";
 import { EXAMPLE_PLAN } from "./example.js";
+import { analyzePlan } from "./index.js";
 import { normalize } from "./normalize.js";
 
 describe("analyzePlan", () => {

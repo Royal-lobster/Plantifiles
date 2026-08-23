@@ -38,6 +38,7 @@ function blockTitle(node: RootContent): string | undefined {
 	if (component === "Phase") return stringAttribute(node, "title");
 	if (component === "Option") return stringAttribute(node, "name");
 	if (component === "Rejected") return stringAttribute(node, "what");
+	if (component === "Check") return stringAttribute(node, "prompt");
 	if (node.type === "heading") return nodeText(node).trim();
 	if (component === "Decision")
 		return nodeText(node)
