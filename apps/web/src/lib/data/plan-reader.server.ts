@@ -1,9 +1,10 @@
 import { analyzePlan, type Block, normalize } from "@plantifiles/core";
-import { approval, comment, decision, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
+import { approval, comment, decision, membership, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
+import { canMovePlan } from "./move-plan.server";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
 import type { PlanStatus } from "./plan-types";
 
@@ -267,6 +268,12 @@ const planReaderVersionSelection = {
 	createdAt: planVersion.createdAt,
 };
 
+export type PlanReaderViewer = {
+	id: string;
+	/** Whether this viewer may move the plan into another organization. */
+	canMovePlan: boolean;
+};
+
 export async function loadPlanReaderData(
 	request: Request,
 	workspaceSlug: string,
@@ -275,7 +282,7 @@ export async function loadPlanReaderData(
 ): Promise<{
 	document: PlanDocument;
 	versions: PlanReaderVersion[];
-	viewer: { id: string } | null;
+	viewer: PlanReaderViewer | null;
 }> {
 	const document = await loadPlanDocument(request, workspaceSlug, requestedSlug, versionNumber);
 	const [identity, rows] = await Promise.all([
@@ -287,10 +294,24 @@ export async function loadPlanReaderData(
 			.where(eq(planVersion.planId, document.plan.id))
 			.orderBy(desc(planVersion.number)),
 	]);
+	// Only a member holds a role and only the author may move a plan, so an
+	// anonymous read of a public plan pays nothing for this.
+	const roleRows = identity
+		? await getDb()
+				.select({ role: membership.role })
+				.from(membership)
+				.where(and(eq(membership.workspaceId, document.workspace.id), eq(membership.userId, identity.user.id)))
+				.limit(1)
+		: [];
 	return {
 		document,
 		versions: rows.map(({ version, author }) => ({ ...version, author })),
-		viewer: identity ? { id: identity.user.id } : null,
+		viewer: identity
+			? {
+					id: identity.user.id,
+					canMovePlan: canMovePlan(document.plan, identity.user, roleRows[0]?.role ?? null),
+				}
+			: null,
 	};
 }
 

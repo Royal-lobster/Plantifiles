@@ -21,6 +21,7 @@ import { Route as PWorkspaceSlugPlanSlugRouteRouteImport } from './routes/p/$wor
 import { Route as SkillsWritePlanSKILLDotmdRouteImport } from './routes/skills/write-plan/SKILL[.]md'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
 import { Route as ApiPlansIdCommentsRouteImport } from './routes/api/plans/$id/comments'
+import { Route as ApiPlansIdMoveRouteImport } from './routes/api/plans/$id/move'
 import { Route as ApiPlansIdVersionsRouteImport } from './routes/api/plans/$id/versions'
 import { Route as PWorkspaceSlugPlanSlugIndexRouteImport } from './routes/p/$workspaceSlug/$planSlug/index'
 import { Route as PWorkspaceSlugPlanSlugVNumberRouteRouteImport } from './routes/p/$workspaceSlug/$planSlug/v/$number/route'
@@ -87,6 +88,11 @@ const ApiPlansIdCommentsRoute = ApiPlansIdCommentsRouteImport.update({
   path: '/comments',
   getParentRoute: () => ApiPlansIdRouteRoute,
 } as any)
+const ApiPlansIdMoveRoute = ApiPlansIdMoveRouteImport.update({
+  id: '/move',
+  path: '/move',
+  getParentRoute: () => ApiPlansIdRouteRoute,
+} as any)
 const ApiPlansIdVersionsRoute = ApiPlansIdVersionsRouteImport.update({
   id: '/versions',
   path: '/versions',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/api/workspaces/': typeof ApiWorkspacesIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
+  '/api/plans/$id/move': typeof ApiPlansIdMoveRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
   '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/api/workspaces': typeof ApiWorkspacesIndexRoute
   '/w/$slug': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
+  '/api/plans/$id/move': typeof ApiPlansIdMoveRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
   '/p/$workspaceSlug/$planSlug': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/api/workspaces/': typeof ApiWorkspacesIndexRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/api/plans/$id/comments': typeof ApiPlansIdCommentsRoute
+  '/api/plans/$id/move': typeof ApiPlansIdMoveRoute
   '/api/plans/$id/versions': typeof ApiPlansIdVersionsRoute
   '/p/$workspaceSlug/$planSlug/': typeof PWorkspaceSlugPlanSlugIndexRoute
   '/p/$workspaceSlug/$planSlug/v/$number': typeof PWorkspaceSlugPlanSlugVNumberRouteRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/api/workspaces/'
     | '/w/$slug/'
     | '/api/plans/$id/comments'
+    | '/api/plans/$id/move'
     | '/api/plans/$id/versions'
     | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/api/workspaces'
     | '/w/$slug'
     | '/api/plans/$id/comments'
+    | '/api/plans/$id/move'
     | '/api/plans/$id/versions'
     | '/p/$workspaceSlug/$planSlug'
     | '/p/$workspaceSlug/$planSlug/v/$number'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/api/workspaces/'
     | '/w/$slug/'
     | '/api/plans/$id/comments'
+    | '/api/plans/$id/move'
     | '/api/plans/$id/versions'
     | '/p/$workspaceSlug/$planSlug/'
     | '/p/$workspaceSlug/$planSlug/v/$number'
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlansIdCommentsRouteImport
       parentRoute: typeof ApiPlansIdRouteRoute
     }
+    '/api/plans/$id/move': {
+      id: '/api/plans/$id/move'
+      path: '/move'
+      fullPath: '/api/plans/$id/move'
+      preLoaderRoute: typeof ApiPlansIdMoveRouteImport
+      parentRoute: typeof ApiPlansIdRouteRoute
+    }
     '/api/plans/$id/versions': {
       id: '/api/plans/$id/versions'
       path: '/versions'
@@ -335,11 +354,13 @@ declare module '@tanstack/react-router' {
 
 interface ApiPlansIdRouteRouteChildren {
   ApiPlansIdCommentsRoute: typeof ApiPlansIdCommentsRoute
+  ApiPlansIdMoveRoute: typeof ApiPlansIdMoveRoute
   ApiPlansIdVersionsRoute: typeof ApiPlansIdVersionsRoute
 }
 
 const ApiPlansIdRouteRouteChildren: ApiPlansIdRouteRouteChildren = {
   ApiPlansIdCommentsRoute: ApiPlansIdCommentsRoute,
+  ApiPlansIdMoveRoute: ApiPlansIdMoveRoute,
   ApiPlansIdVersionsRoute: ApiPlansIdVersionsRoute,
 }
 

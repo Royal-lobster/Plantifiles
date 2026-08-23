@@ -40,6 +40,42 @@ describe("PlantifilesClient", () => {
 		]);
 	});
 
+	it("posts moves and reads move targets from one plan-scoped path", async () => {
+		const fetchMock = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValueOnce(
+				Response.json([{ id: "ws-2", slug: "other", name: "Other", role: "member", slugTaken: true }]),
+			)
+			.mockResolvedValueOnce(
+				Response.json({
+					id: "plan-1",
+					workspaceSlug: "other",
+					slug: "plan-v2",
+					url: "https://plans.example/p/other/plan-v2",
+					status: "in_review",
+					movedFrom: "demo",
+					clearedApprovals: 1,
+				}),
+			);
+
+		await expect(client.listMoveTargets("plan-1")).resolves.toEqual([
+			{ id: "ws-2", slug: "other", name: "Other", role: "member", slugTaken: true },
+		]);
+		await expect(client.movePlan("plan-1", { workspaceSlug: "other", slug: "plan-v2" })).resolves.toMatchObject({
+			movedFrom: "demo",
+			clearedApprovals: 1,
+		});
+
+		expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
+			["https://plans.example/api/plans/plan-1/move", undefined],
+			["https://plans.example/api/plans/plan-1/move", "POST"],
+		]);
+		expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+			workspaceSlug: "other",
+			slug: "plan-v2",
+		});
+	});
+
 	it("preserves structured and plain-text API failures", async () => {
 		vi.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(Response.json({ message: "No access", code: "forbidden" }, { status: 403 }))

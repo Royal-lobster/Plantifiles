@@ -42,6 +42,7 @@ The equivalent project-scoped `.mcp.json` is:
 
 - `create_plan` — publish a new plan.
 - `update_plan` — publish a new version with optional optimistic concurrency.
+- `move_plan` — move a plan to a different organization after it was published to the wrong one.
 - `get_plan` — return the exact Markdown-with-frontmatter bytes served by the plan URL.
 - `list_plans` — list plans and review state for a workspace.
 - `comment_on_plan` — add a plan or block comment marked as agent-assisted.

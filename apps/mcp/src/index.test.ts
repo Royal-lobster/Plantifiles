@@ -22,6 +22,7 @@ test("serves the Plantifiles tools over stdio", async () => {
 		expect(tools.map(({ name }) => name)).toEqual([
 			"create_plan",
 			"update_plan",
+			"move_plan",
 			"get_plan",
 			"list_plans",
 			"comment_on_plan",

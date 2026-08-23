@@ -19,6 +19,28 @@ export type PublishVersionInput = {
 	force?: boolean | undefined;
 };
 
+export type MovePlanInput = {
+	workspaceSlug: string;
+	/** Only needed when the destination already holds a plan at this slug. */
+	slug?: string | undefined;
+};
+
+export type MovedPlan = {
+	id: string;
+	workspaceSlug: string;
+	slug: string;
+	url: string;
+	status: string;
+	/** The organization the plan left, or `null` when it was already in place. */
+	movedFrom: string | null;
+	clearedApprovals: number;
+};
+
+export type MoveTarget = WorkspaceSummary & {
+	/** The destination already holds a plan at this plan's slug. */
+	slugTaken: boolean;
+};
+
 export type CommentInput = {
 	body: string;
 	blockKey?: string | undefined;
@@ -122,6 +144,17 @@ export class PlantifilesClient {
 			method: "POST",
 			body: JSON.stringify(input),
 		});
+	}
+
+	movePlan(planId: string, input: MovePlanInput): Promise<MovedPlan> {
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`, {
+			method: "POST",
+			body: JSON.stringify(input),
+		});
+	}
+
+	listMoveTargets(planId: string): Promise<MoveTarget[]> {
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`);
 	}
 
 	getPlan(planId: string): Promise<PlanDetail> {

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { CONFIG_PATH, createAuth, loadConfig, resolveConnection, saveConfig } from "@plantifiles/auth";
-import { ApiError, type PlanSummary, PlantifilesClient } from "@plantifiles/api-client";
+import { ApiError, type MovedPlan, type PlanSummary, PlantifilesClient } from "@plantifiles/api-client";
 import { lint } from "@plantifiles/core";
 import { Command } from "commander";
 import { findRepositoryRoot, loadRepositoryState, saveRepositoryState, trackedPath } from "./repository-state.js";
@@ -28,6 +29,11 @@ type PullOptions = {
 
 type StatusOptions = {
 	workspace?: string;
+};
+
+type MoveOptions = {
+	to: string;
+	slug?: string;
 };
 
 function titleFromSource(source: string, file: string): string {
@@ -194,6 +200,65 @@ async function pull(idOrUrl: string, options: PullOptions): Promise<void> {
 	process.stdout.write(detail.version.source);
 }
 
+/**
+ * Recovery path for the easiest mistake to make with `push`: the plan landed in
+ * the wrong organization. Accepts the same file argument as `push` when the plan
+ * is tracked in this repository, so the fix reads like the mistake.
+ */
+async function move(target: string, options: MoveOptions): Promise<void> {
+	const connection = await resolveConnection();
+	const client = new PlantifilesClient(connection);
+	const root = findRepositoryRoot(process.cwd());
+	const state = await loadRepositoryState(root);
+	const tracked = state[trackedPath(root, resolve(target))];
+	if (!tracked && existsSync(resolve(target))) {
+		throw new Error(`${target} has not been pushed from this repository. Pass the plan ID or URL instead.`);
+	}
+	const planId = tracked?.planId ?? (await client.resolvePlan(target)).plan.id;
+	const result = await movePlanOrExplainCollision(client, planId, options);
+
+	// Repoint tracked state so the next `push` follows the plan instead of
+	// republishing it into the organization it was just moved out of.
+	for (const [path, entry] of Object.entries(state)) {
+		if (entry.planId !== planId) continue;
+		state[path] = { planId, url: result.url, workspace: result.workspaceSlug };
+	}
+	await saveRepositoryState(root, state);
+
+	console.log(result.url);
+	console.log(
+		result.movedFrom
+			? `Moved from ${result.movedFrom} to ${result.workspaceSlug}.`
+			: `Already in ${result.workspaceSlug}.`,
+	);
+	if (result.clearedApprovals > 0) {
+		const plural = result.clearedApprovals === 1 ? "approval" : "approvals";
+		console.log(`Cleared ${result.clearedApprovals} ${plural}; ${result.workspaceSlug} must approve v-current again.`);
+	}
+}
+
+/**
+ * A collision is the one move failure the caller can fix from here, so it gets a
+ * sentence naming the flag instead of the raw 409 body every other error prints.
+ */
+async function movePlanOrExplainCollision(
+	client: PlantifilesClient,
+	planId: string,
+	options: MoveOptions,
+): Promise<MovedPlan> {
+	try {
+		return await client.movePlan(planId, { workspaceSlug: options.to, slug: options.slug });
+	} catch (error) {
+		const body = error instanceof ApiError ? error.body : null;
+		if (body && typeof body === "object" && "error" in body && body.error === "slug_conflict") {
+			throw new Error(
+				`${"message" in body ? String(body.message) : "The destination slug is taken."} Retry with --slug <slug>.`,
+			);
+		}
+		throw error;
+	}
+}
+
 async function lintFile(file: string): Promise<void> {
 	const report = lint(await readFile(resolve(file), "utf8"));
 	for (const finding of report.findings) {
@@ -287,6 +352,18 @@ async function main(): Promise<void> {
 		.argument("<id-or-url>", "plan ID or URL")
 		.option("-o, --output <file>", "write source to a file instead of stdout")
 		.action(pull);
+
+	program
+		.command("move")
+		.description("Move a plan to a different organization")
+		.argument("<file-or-id-or-url>", "tracked plan file, plan ID, or plan URL")
+		.requiredOption("--to <slug>", "organization the plan should end up in")
+		.option("--slug <slug>", "new plan slug; only needed when the destination already has that slug")
+		.addHelpText(
+			"after",
+			"\nApprovals on the current version are cleared, because they were granted by the previous organization.\nA tracked file's next push follows the plan to its new organization.",
+		)
+		.action(move);
 
 	program
 		.command("lint")
