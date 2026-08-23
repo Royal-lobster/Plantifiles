@@ -17,6 +17,8 @@ export type DashboardPlan = {
 	approvals: number;
 	readTimeMinutes: number;
 	authorName: string;
+	creatorName: string;
+	creatorImage: string | null;
 	mine: boolean;
 	needsMyReview: boolean;
 };

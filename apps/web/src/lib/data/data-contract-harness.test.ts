@@ -338,6 +338,7 @@ describe("publication and review contracts", () => {
 		const harness = (context as TestContext & { harness: ContractHarness }).harness;
 		await harness.seedUser("user-member", "Member");
 		await harness.seedMembership("user-member", "member");
+		await harness.run("update user set image = ? where id = 'user-owner'", "https://images.example/owner.png");
 		const published = await createPlan(harness.request, {
 			workspaceSlug: "demo",
 			title: "Viewer contract",
@@ -347,11 +348,22 @@ describe("publication and review contracts", () => {
 		await advancePlanStatus(harness.request, published.id);
 
 		const [asCreator] = await listPlans(harness.request, "demo");
-		expect(asCreator).toMatchObject({ status: "in_review", mine: true, needsMyReview: false });
+		expect(asCreator).toMatchObject({
+			status: "in_review",
+			creatorName: "Owner",
+			creatorImage: "https://images.example/owner.png",
+			mine: true,
+			needsMyReview: false,
+		});
 
 		harness.setIdentity("user-member");
 		const [asReviewer] = await listPlans(harness.request, "demo");
-		expect(asReviewer).toMatchObject({ mine: false, needsMyReview: true });
+		expect(asReviewer).toMatchObject({
+			creatorName: "Owner",
+			creatorImage: "https://images.example/owner.png",
+			mine: false,
+			needsMyReview: true,
+		});
 		const versionRows = await harness.all<{ versionId: string }>(
 			"select current_version_id as versionId from plan where id = ?",
 			published.id,

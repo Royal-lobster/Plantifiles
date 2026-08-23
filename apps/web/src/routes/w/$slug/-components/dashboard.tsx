@@ -187,6 +187,7 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 						{plan.emoji ?? "📝"}
 					</span>
 					<h2 className="truncate font-medium text-sm">{plan.title}</h2>
+					{plan.mine ? null : <CreatorAvatar name={plan.creatorName} image={plan.creatorImage} />}
 					{plan.needsMyReview ? (
 						<span className="shrink-0 font-mono text-[11px] text-warning">needs your review</span>
 					) : null}
@@ -206,6 +207,24 @@ function PlanEntry({ plan, workspaceSlug }: { plan: DashboardPlan; workspaceSlug
 			</span>
 			<span className="hidden font-mono text-muted-foreground text-xs sm:block">v{plan.version}</span>
 		</Link>
+	);
+}
+function CreatorAvatar({ name, image }: { name: string; image: string | null }) {
+	const label = `Created by ${name}`;
+
+	return (
+		<span
+			role="img"
+			aria-label={label}
+			title={label}
+			className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-ink/15 font-semibold text-[10px] text-brand-ink ring-1 ring-foreground/10"
+		>
+			{image ? (
+				<img src={image} alt="" className="size-full object-cover" />
+			) : (
+				<span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
+			)}
+		</span>
 	);
 }
 

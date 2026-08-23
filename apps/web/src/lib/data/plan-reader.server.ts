@@ -1,10 +1,13 @@
 import { analyzePlan, type Block, normalize } from "@plantifiles/core";
 import { approval, comment, decision, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
 import type { PlanStatus } from "./plan-types";
+
+const creator = alias(user, "creator");
 
 const authorSelection = {
 	id: user.id,
@@ -97,6 +100,8 @@ export type PlanListItem = {
 	approvals: number;
 	readTimeMinutes: number;
 	authorName: string;
+	creatorName: string;
+	creatorImage: string | null;
 	mine: boolean;
 	needsMyReview: boolean;
 };
@@ -138,6 +143,8 @@ export async function listPlans(
 			)`,
 			readTimeMinutes: sql<number>`coalesce(json_extract(${planVersion.lintReport}, '$.readTimeMinutes'), 0)`,
 			authorName: user.name,
+			creatorName: creator.name,
+			creatorImage: creator.image,
 			createdById: plan.createdById,
 			authorId: planVersion.authorId,
 			approvedByMe: sql<number>`exists(
@@ -148,6 +155,7 @@ export async function listPlans(
 		.from(plan)
 		.innerJoin(planVersion, eq(plan.currentVersionId, planVersion.id))
 		.innerJoin(user, eq(planVersion.authorId, user.id))
+		.innerJoin(creator, eq(plan.createdById, creator.id))
 		.where(
 			status
 				? and(eq(plan.workspaceId, targetWorkspace.id), eq(plan.status, status))
