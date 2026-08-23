@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type ReaderDecision = { key: string; status: "open" | "resolved"; resolution: string | null };
 type ReaderComment = {
@@ -13,6 +13,7 @@ type ReaderComment = {
 	createdAt: string;
 	author: { id: string; name: string; image: string | null };
 };
+type ReaderViewer = { id: string; name: string; image: string | null };
 type CreateCommentValue = { blockKey?: string; parentId?: string; body: string; agentAssisted?: boolean };
 type ReviewResult = { status: string; reason: string | null };
 type PlanBlockSummary = { key: string; kind: string; contentHash: string };
@@ -33,7 +34,14 @@ type PlanRenderContextValue = {
 	/** Phase blocks that are followed by another phase, which draw the spine on. */
 	phaseContinues: Record<string, true>;
 	contentHashByBlockKey: Record<string, string>;
-	viewerId: string | null;
+	/** Block kinds by key, so the composer can name the block it is anchored to. */
+	kindByBlockKey: Record<string, string>;
+	/** True while the reader is pointing at blocks to comment on, rather than reading. */
+	commentMode: boolean;
+	/** The one block whose composer popover is open. Only one can be open at a time. */
+	activeBlockKey: string | null;
+	setActiveBlockKey: (key: string | null) => void;
+	viewer: ReaderViewer | null;
 	isCurrentVersion: boolean;
 	versionNumberById: Record<string, number>;
 	workspaceSlug: string;
@@ -55,22 +63,25 @@ function planBlockIndex(blocks: PlanBlockSummary[]): {
 	figureNumbers: Record<string, number>;
 	phaseContinues: Record<string, true>;
 	contentHashByBlockKey: Record<string, string>;
+	kindByBlockKey: Record<string, string>;
 } {
 	const figureNumbers: Record<string, number> = {};
 	const selectedBlockKeys: Record<string, true> = {};
 	const phaseContinues: Record<string, true> = {};
 	const contentHashByBlockKey: Record<string, string> = {};
+	const kindByBlockKey: Record<string, string> = {};
 	let figure = 1;
 	blocks.forEach((block, index) => {
 		selectedBlockKeys[block.key] = true;
 		contentHashByBlockKey[block.key] = block.contentHash;
+		kindByBlockKey[block.key] = block.kind;
 		if (block.kind === "Diagram") {
 			figureNumbers[block.key] = figure;
 			figure += 1;
 		}
 		if (block.kind === "Phase" && blocks[index + 1]?.kind === "Phase") phaseContinues[block.key] = true;
 	});
-	return { contentHashByBlockKey, figureNumbers, phaseContinues, selectedBlockKeys };
+	return { contentHashByBlockKey, figureNumbers, kindByBlockKey, phaseContinues, selectedBlockKeys };
 }
 
 /**
@@ -125,7 +136,8 @@ function PlanRenderProvider({
 	decisions,
 	comments,
 	selectedVersionNumber,
-	viewerId,
+	viewer,
+	commentMode,
 	isCurrentVersion,
 	versionNumberById,
 	workspaceSlug,
@@ -139,7 +151,8 @@ function PlanRenderProvider({
 	decisions: ReaderDecision[];
 	comments: ReaderComment[];
 	selectedVersionNumber: number;
-	viewerId: string | null;
+	viewer: ReaderViewer | null;
+	commentMode: boolean;
 	isCurrentVersion: boolean;
 	versionNumberById: Record<string, number>;
 	workspaceSlug: string;
@@ -148,7 +161,13 @@ function PlanRenderProvider({
 	onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>;
 	onResolveDecision?: (key: string, resolution: string) => Promise<ReviewResult>;
 }) {
-	const { contentHashByBlockKey, figureNumbers, phaseContinues, selectedBlockKeys } = useMemo(
+	const [activeBlockKey, setActiveBlockKey] = useState<string | null>(null);
+	/* Leaving comment mode dismisses the open composer, so re-entering it starts
+	   from a clean document instead of reopening the last block's popover. */
+	useEffect(() => {
+		if (!commentMode) setActiveBlockKey(null);
+	}, [commentMode]);
+	const { contentHashByBlockKey, figureNumbers, kindByBlockKey, phaseContinues, selectedBlockKeys } = useMemo(
 		() => planBlockIndex(blocks),
 		[blocks],
 	);
@@ -166,7 +185,11 @@ function PlanRenderProvider({
 			figureNumbers,
 			phaseContinues,
 			contentHashByBlockKey,
-			viewerId,
+			kindByBlockKey,
+			viewer,
+			commentMode,
+			activeBlockKey,
+			setActiveBlockKey,
 			isCurrentVersion,
 			versionNumberById,
 			workspaceSlug,
@@ -183,8 +206,11 @@ function PlanRenderProvider({
 			repliesByParentId,
 			figureNumbers,
 			contentHashByBlockKey,
+			kindByBlockKey,
 			phaseContinues,
-			viewerId,
+			viewer,
+			commentMode,
+			activeBlockKey,
 			isCurrentVersion,
 			versionNumberById,
 			workspaceSlug,
@@ -197,5 +223,5 @@ function PlanRenderProvider({
 	return <PlanRenderContext.Provider value={value}>{children}</PlanRenderContext.Provider>;
 }
 
-export type { CreateCommentValue, ReaderComment, ReviewResult };
+export type { CreateCommentValue, ReaderComment, ReaderViewer, ReviewResult };
 export { PlanRenderProvider, planCommentIndex, usePlanRender };

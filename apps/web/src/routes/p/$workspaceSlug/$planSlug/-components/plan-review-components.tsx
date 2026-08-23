@@ -1,10 +1,10 @@
 import { Badge } from "@plantifiles/ui/components/badge";
 import { Button } from "@plantifiles/ui/components/button";
+import { Popover, PopoverAnchor, PopoverContent } from "@plantifiles/ui/components/popover";
 import { Textarea } from "@plantifiles/ui/components/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@plantifiles/ui/components/tooltip";
 import { cn } from "@plantifiles/ui/lib/utils";
-import { Bot, Check, CheckCircle2, CircleDot, HelpCircle, MessageSquare, Plus, Reply } from "lucide-react";
-import type { ComponentProps, FormEvent, ReactNode } from "react";
+import { Bot, Check, CheckCircle2, CircleDot, HelpCircle, MessageSquare, Reply } from "lucide-react";
+import type { ComponentProps, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useId, useState } from "react";
 import { StateLabel } from "#/components/state-label";
 import type { ReaderComment } from "./plan-render-context";
@@ -16,36 +16,132 @@ type PlanBlockProps = ComponentProps<"div"> & {
 	"data-block-key"?: string;
 };
 
-/* Only blocks that carry a claim take comments. Prose does not: a hover-only
-   affordance on every paragraph reserved an invisible row above each one, which
-   read as a stray gap, and reviewers argue with claims rather than sentences. */
-const COMMENTABLE: Record<string, true> = {
-	TLDR: true,
-	Decision: true,
-	Tradeoff: true,
-	Risk: true,
-	Diagram: true,
-	Phase: true,
-	Rejected: true,
-	CodeSketch: true,
-	Callout: true,
-	Check: true,
-};
-
 const EMPTY_COMMENTS: readonly ReaderComment[] = [];
 
 /**
- * Block affordances sit inline, right-aligned, above their block. They used to
- * swing into a left gutter, which pushed labels outside the column and left the
- * page ragged on one side; one column with even edges reads better.
+ * Block marks sit inline, right-aligned, above their block. They used to swing
+ * into a left gutter, which pushed labels outside the column and left the page
+ * ragged on one side; one column with even edges reads better.
  */
-function BlockMargin({ spaced, children }: { spaced: boolean; children: ReactNode }) {
-	return <div className={cn("flex flex-wrap items-center justify-end gap-2", spaced && "mb-1.5")}>{children}</div>;
+function BlockMargin({ children }: { children: ReactNode }) {
+	return <div className="mb-1.5 flex flex-wrap items-center justify-end gap-2">{children}</div>;
+}
+
+function AuthorAvatar({ name, image, className }: { name: string; image: string | null; className?: string }) {
+	if (image) return <img src={image} alt="" className={cn("size-5 shrink-0 rounded-full object-cover", className)} />;
+	return (
+		<span
+			className={cn(
+				"flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-ink/15 font-semibold text-[10px] text-brand-ink",
+				className,
+			)}
+		>
+			{name.slice(0, 1).toUpperCase()}
+		</span>
+	);
+}
+
+/**
+ * In comment mode the whole block becomes one target: point at it, click, and
+ * the composer opens against it. A per-block button used to sit in the margin
+ * of every commentable block, which reserved a row above each one and read as a
+ * stray gap; nothing is reserved now, so every block can take a comment.
+ *
+ * The target is only an anchor, never its own popover: one Radix layer per
+ * block meant clicking block B while A was open let A's dismissal race B's
+ * trigger, and the reviewer landed on nothing and had to click twice.
+ */
+function CommentTarget({
+	blockKey,
+	kind,
+	children,
+}: {
+	blockKey: string;
+	kind: string | undefined;
+	children: ReactNode;
+}) {
+	const context = usePlanRender();
+	const active = context.activeBlockKey === blockKey;
+	const target = (
+		<div className="relative">
+			{children}
+			<button
+				type="button"
+				data-comment-target=""
+				aria-label={`Comment on ${kind ?? "block"}`}
+				aria-expanded={active}
+				onClick={() => context.setActiveBlockKey(blockKey)}
+				className={cn(
+					"-inset-x-2 -inset-y-1 absolute z-10 cursor-crosshair rounded-xl transition-colors",
+					active
+						? "bg-brand-ink/[0.06] ring-2 ring-brand-ink/60"
+						: "hover:bg-brand-ink/[0.04] hover:ring-2 hover:ring-brand-ink/40",
+				)}
+			/>
+		</div>
+	);
+	return active ? <PopoverAnchor asChild>{target}</PopoverAnchor> : target;
+}
+
+/**
+ * One composer for the whole document, re-anchored to whichever block is being
+ * commented on. Pointer and focus escapes into another target keep it open so
+ * that target's click can move it, rather than closing it out from under the
+ * reviewer; everything else — Escape, a click into the prose — dismisses.
+ */
+function CommentLayer({ children }: { children: ReactNode }) {
+	const context = usePlanRender();
+	const blockKey = context.activeBlockKey;
+	const viewer = context.viewer;
+	const kind = blockKey ? context.kindByBlockKey[blockKey] : undefined;
+	return (
+		<Popover
+			open={blockKey !== null}
+			onOpenChange={(next) => {
+				if (!next) context.setActiveBlockKey(null);
+			}}
+		>
+			{children}
+			{blockKey !== null && (
+				<PopoverContent
+					side="bottom"
+					align="start"
+					collisionPadding={16}
+					className="space-y-3"
+					onInteractOutside={(event) => {
+						/* A press on another target must move the composer, not dismiss it
+						   out from under the click that is about to re-anchor it. */
+						if (event.target instanceof Element && event.target.closest("[data-comment-target]"))
+							event.preventDefault();
+					}}
+				>
+					{viewer && (
+						<div className="flex items-center gap-2 text-xs">
+							<AuthorAvatar name={viewer.name} image={viewer.image} />
+							<span className="truncate font-medium">{viewer.name}</span>
+						</div>
+					)}
+					{/* A new anchor is a new draft: keying on the block discards whatever
+					    was half-typed against the previous one. */}
+					<CommentComposer
+						key={blockKey}
+						label={`Comment on ${kind ?? "block"}`}
+						placeholder="Add a comment"
+						submitLabel="Comment"
+						autoFocus
+						onSubmit={async (body) => {
+							await context.onCreateComment?.({ blockKey, body });
+							context.setActiveBlockKey(null);
+						}}
+					/>
+				</PopoverContent>
+			)}
+		</Popover>
+	);
 }
 
 function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProps) {
 	const context = usePlanRender();
-	const [composing, setComposing] = useState(false);
 	const kind = typeof props["data-block-kind"] === "string" ? props["data-block-kind"] : undefined;
 	const key = typeof props["data-block-key"] === "string" ? props["data-block-key"] : undefined;
 	if (!key)
@@ -57,23 +153,16 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 	const threads = context.rootsByBlockKey.get(key) ?? EMPTY_COMMENTS;
 	const openThreads = threads.reduce((count, item) => count + (item.resolvedAt ? 0 : 1), 0);
 	const canComment = Boolean(
-		kind &&
-			COMMENTABLE[kind] &&
-			context.viewerId &&
-			context.isCurrentVersion &&
-			context.selectedBlockKeys[key] &&
-			context.onCreateComment,
+		context.viewer && context.isCurrentVersion && context.selectedBlockKeys[key] && context.onCreateComment,
 	);
 	const figure = context.figureNumbers[key];
 	// The Decision card header already carries an OPEN/RESOLVED pill, so the old
 	// margin label only said it twice.
-	const marks = Boolean(figure !== undefined || threads.length > 0);
-	const hasMargin = marks || canComment;
-	const spaced = marks || canComment;
+	const marks = figure !== undefined || threads.length > 0;
 	return (
-		<div className={cn("group/plan-block relative scroll-mt-20", className)} {...props}>
-			{hasMargin && (
-				<BlockMargin spaced={spaced}>
+		<div className={cn("scroll-mt-20", className)} {...props}>
+			{marks && (
+				<BlockMargin>
 					{figure !== undefined && (
 						<a
 							href={`#${encodeURIComponent(key)}`}
@@ -89,27 +178,16 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 							{openThreads > 0 ? `${openThreads} open` : `${threads.length}`}
 						</span>
 					)}
-					{canComment && (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									type="button"
-									variant="quiet"
-									size="icon-xs"
-									className="opacity-70 transition-opacity hover:opacity-100"
-									aria-label={`Comment on ${kind ?? "block"}`}
-									onClick={() => setComposing((value) => !value)}
-								>
-									<Plus />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent side="left">Comment</TooltipContent>
-						</Tooltip>
-					)}
 				</BlockMargin>
 			)}
-			{children}
-			{(threads.length > 0 || composing) && (
+			{context.commentMode && canComment ? (
+				<CommentTarget blockKey={key} kind={kind}>
+					{children}
+				</CommentTarget>
+			) : (
+				children
+			)}
+			{threads.length > 0 && (
 				<section
 					aria-label={`${kind ?? "Block"} comments`}
 					className="mt-4 space-y-3 border-brand-ink/25 border-l-2 pl-4"
@@ -117,39 +195,36 @@ function PlanBlock({ node: _node, className, children, ...props }: PlanBlockProp
 					{threads.map((thread) => (
 						<CommentThread key={thread.id} comment={thread} />
 					))}
-					{composing && context.onCreateComment && (
-						<CommentComposer
-							label={`Comment on ${kind ?? "block"}`}
-							onCancel={() => setComposing(false)}
-							onSubmit={async (body) => {
-								await context.onCreateComment?.({ blockKey: key, body });
-								setComposing(false);
-							}}
-						/>
-					)}
 				</section>
 			)}
 		</div>
 	);
 }
 
+/**
+ * One field, one button. The composer is dismissed by whatever opened it — the
+ * popover closes on Escape or an outside click, the reply toggle closes itself
+ * — so a second, competing action would only crowd the send.
+ */
 function CommentComposer({
 	label,
+	placeholder,
+	submitLabel,
+	autoFocus,
 	onSubmit,
-	onCancel,
 }: {
 	label: string;
+	placeholder: string;
+	submitLabel: string;
+	autoFocus?: boolean;
 	onSubmit: (body: string) => Promise<void>;
-	onCancel: () => void;
 }) {
 	const [body, setBody] = useState("");
 	const [busy, setBusy] = useState(false);
-	const inputId = useId();
 	const errorId = useId();
 	const [error, setError] = useState("");
-	async function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-		if (!body.trim()) return;
+	async function send() {
+		if (!body.trim() || busy) return;
 		setBusy(true);
 		setError("");
 		try {
@@ -161,18 +236,26 @@ function CommentComposer({
 			setBusy(false);
 		}
 	}
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		await send();
+	}
+	function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+		if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+		event.preventDefault();
+		void send();
+	}
 	return (
-		<form className="surface-card space-y-3 p-5" onSubmit={submit}>
-			<label className="label-eyebrow" htmlFor={inputId}>
-				{label}
-			</label>
+		<form className="space-y-2" onSubmit={submit}>
 			<Textarea
-				id={inputId}
 				value={body}
+				aria-label={label}
 				aria-invalid={Boolean(error)}
 				aria-describedby={error ? errorId : undefined}
+				autoFocus={autoFocus}
 				onChange={(event) => setBody(event.target.value)}
-				placeholder="Leave a review comment"
+				onKeyDown={onKeyDown}
+				placeholder={placeholder}
 				className="min-h-20"
 			/>
 			{error && (
@@ -180,12 +263,9 @@ function CommentComposer({
 					{error}
 				</p>
 			)}
-			<div className="flex justify-end gap-2">
-				<Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-					Cancel
-				</Button>
+			<div className="flex justify-end">
 				<Button type="submit" size="sm" disabled={busy || !body.trim()}>
-					{busy ? "Saving…" : "Comment"}
+					{busy ? "Saving…" : submitLabel}
 				</Button>
 			</div>
 		</form>
@@ -198,7 +278,7 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const replies = context.repliesByParentId.get(root.id) ?? EMPTY_COMMENTS;
-	const canReply = Boolean(context.viewerId && context.isCurrentVersion && !root.resolvedAt && context.onCreateComment);
+	const canReply = Boolean(context.viewer && context.isCurrentVersion && !root.resolvedAt && context.onCreateComment);
 	async function toggleResolved() {
 		if (!context.onResolveComment) return;
 		setBusy(true);
@@ -218,9 +298,7 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 		>
 			<div className="flex items-start justify-between gap-3">
 				<div className="flex min-w-0 items-center gap-2 text-xs">
-					<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-ink/15 font-semibold text-[10px] text-brand-ink">
-						{root.author.name.slice(0, 1).toUpperCase()}
-					</span>
+					<AuthorAvatar name={root.author.name} image={root.author.image} />
 					<span className="truncate font-medium">{root.author.name}</span>
 					<time className="font-mono text-muted-foreground" dateTime={root.createdAt}>
 						{root.createdAt.slice(0, 10)}
@@ -255,7 +333,7 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 				</article>
 			))}
 			{error && <p className="text-destructive text-xs">{error}</p>}
-			{context.viewerId && context.isCurrentVersion && (
+			{context.viewer && context.isCurrentVersion && (
 				<div className="flex gap-1">
 					{canReply && (
 						<Button type="button" variant="quiet" size="xs" onClick={() => setReplying((value) => !value)}>
@@ -270,7 +348,9 @@ function CommentThread({ comment: root }: { comment: ReaderComment }) {
 			{replying && context.onCreateComment && (
 				<CommentComposer
 					label={`Reply to ${root.author.name}`}
-					onCancel={() => setReplying(false)}
+					placeholder="Reply"
+					submitLabel="Reply"
+					autoFocus
 					onSubmit={async (body) => {
 						await context.onCreateComment?.({ parentId: root.id, body });
 						setReplying(false);
@@ -320,7 +400,7 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 	const record = context.decisions.find((item) => item.key === blockKey);
 	const status = record?.status ?? "open";
 	const canResolve = Boolean(
-		context.viewerId && context.isCurrentVersion && status === "open" && blockKey && context.onResolveDecision,
+		context.viewer && context.isCurrentVersion && status === "open" && blockKey && context.onResolveDecision,
 	);
 	async function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -405,4 +485,4 @@ function Decision({ owner, blockKey, children }: { owner: string; blockKey?: str
 	);
 }
 
-export { Decision, DetachedCommentThreads, PlanBlock };
+export { CommentLayer, Decision, DetachedCommentThreads, PlanBlock };

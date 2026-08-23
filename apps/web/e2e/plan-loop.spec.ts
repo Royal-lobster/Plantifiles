@@ -207,10 +207,17 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		expect(markdownBody).toContain(`title: "${title}"`);
 		expect(markdownBody).toContain('<Decision owner="@demo" id="approval-scope">');
 
+		/* Comment mode turns every block into a target: arm it once, point at the
+		   block, and the composer opens against it. */
+		await page.getByRole("button", { name: "Comment mode" }).click();
 		await page.getByRole("button", { name: "Comment on TLDR" }).click();
-		await page.getByPlaceholder("Leave a review comment").fill("Keep the approval bound to this exact plan version.");
+		await page.getByPlaceholder("Add a comment").fill("Keep the approval bound to this exact plan version.");
 		await page.getByRole("button", { name: "Comment", exact: true }).click();
 		await expect(page.getByText("Keep the approval bound to this exact plan version.")).toBeVisible();
+		/* The tool stays armed for a second comment, so reading and acting on the
+		   document again means putting it away. */
+		await page.getByRole("button", { name: "Comment mode" }).click();
+		await expect(page.getByRole("button", { name: "Comment on TLDR" })).toHaveCount(0);
 		await page.getByRole("button", { name: "Submit for review" }).click();
 		await expect(page.getByText(/^in review$/i)).toBeVisible();
 		await page.getByRole("button", { name: "Resolve decision" }).click();

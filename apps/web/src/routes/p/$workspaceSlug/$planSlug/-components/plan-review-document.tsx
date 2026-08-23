@@ -4,7 +4,7 @@ import { type ReactNode, useMemo, useReducer } from "react";
 import type { PlanReaderData } from "../-data/plan-reader";
 import { createCommentForPage, resolveDecisionForPage, setCommentResolvedForPage } from "../-data/plan-review";
 import { type CreateCommentValue, PlanRenderProvider, type ReviewResult } from "./plan-render-context";
-import { DetachedCommentThreads } from "./plan-review-components";
+import { CommentLayer, DetachedCommentThreads } from "./plan-review-components";
 
 type ReviewState = { message: string; reloadNeeded: boolean };
 type ReviewAction = { type: "saved"; message: string } | { type: "refreshFailed"; message: string };
@@ -24,10 +24,12 @@ function reviewReducer(_state: ReviewState, action: ReviewAction): ReviewState {
 export function PlanReviewDocument({
 	data,
 	isCurrentVersion,
+	commentMode,
 	children,
 }: {
 	data: PlanReaderData;
 	isCurrentVersion: boolean;
+	commentMode: boolean;
 	children: ReactNode;
 }) {
 	const router = useRouter();
@@ -78,7 +80,8 @@ export function PlanReviewDocument({
 					comments={data.comments}
 					selectedVersionNumber={data.version.number}
 					blocks={data.blocks}
-					viewerId={state.reloadNeeded ? null : (data.viewer?.id ?? null)}
+					viewer={state.reloadNeeded ? null : data.viewer}
+					commentMode={commentMode}
 					isCurrentVersion={isCurrentVersion}
 					versionNumberById={versionNumberById}
 					workspaceSlug={data.workspace.slug}
@@ -87,7 +90,7 @@ export function PlanReviewDocument({
 					onResolveComment={handleResolveComment}
 					onResolveDecision={handleResolveDecision}
 				>
-					{children}
+					<CommentLayer>{children}</CommentLayer>
 					<DetachedCommentThreads />
 				</PlanRenderProvider>
 			</div>

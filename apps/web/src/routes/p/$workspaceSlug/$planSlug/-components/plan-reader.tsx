@@ -1,8 +1,9 @@
 import { Button } from "@plantifiles/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plantifiles/ui/components/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@plantifiles/ui/components/tooltip";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
-import { History } from "lucide-react";
+import { History, MessageSquarePlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { StatusChip } from "#/components/status-chip";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
@@ -28,6 +29,10 @@ function PlanReader({ data }: PlanReaderProps) {
 	const [readerMode, setReaderMode] = useState<"document" | "guided">(supportsGuided ? "guided" : "document");
 	const openDecisions = data.decisions.filter((item) => item.status === "open").length;
 	const firstOpenDecision = data.decisions.find((item) => item.status === "open")?.key;
+	/* Comment mode turns the document into one big target: every block takes a
+	   click, so nothing has to advertise itself while the plan is being read. */
+	const [commentMode, setCommentMode] = useState(false);
+	const canComment = Boolean(data.viewer && isCurrentVersion);
 
 	async function selectVersion(value: string) {
 		const number = Number(value);
@@ -98,6 +103,22 @@ function PlanReader({ data }: PlanReaderProps) {
 						)}
 					</div>
 					<div className="ml-auto flex shrink-0 items-center gap-2">
+						{canComment && (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant={commentMode ? "default" : "outline"}
+										size="icon-sm"
+										aria-label="Comment mode"
+										aria-pressed={commentMode}
+										onClick={() => setCommentMode((value) => !value)}
+									>
+										<MessageSquarePlus />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom">{commentMode ? "Stop commenting" : "Comment on a block"}</TooltipContent>
+							</Tooltip>
+						)}
 						<PlanStatusAction data={data} isCurrentVersion={isCurrentVersion} />
 						<PlanActionsMenu
 							planId={data.plan.id}
@@ -134,7 +155,7 @@ function PlanReader({ data }: PlanReaderProps) {
 			)}
 
 			{/* One column, flush with the nav and the title. */}
-			<PlanReviewDocument data={data} isCurrentVersion={isCurrentVersion}>
+			<PlanReviewDocument data={data} isCurrentVersion={isCurrentVersion} commentMode={commentMode}>
 				{readerMode === "guided" && supportsGuided ? <GuidedPlanDocument data={data} /> : renderedDocument}
 			</PlanReviewDocument>
 
