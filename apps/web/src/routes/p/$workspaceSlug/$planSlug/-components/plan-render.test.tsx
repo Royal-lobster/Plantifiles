@@ -1,3 +1,4 @@
+import { analyzePlan } from "@plantifiles/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { compilePlan } from "../-data/compile-plan.server";
@@ -71,7 +72,8 @@ describe("runtime plan renderer", () => {
 				decisions={[]}
 				comments={[]}
 				selectedVersionNumber={1}
-				viewerId={null}
+				viewer={null}
+				commentMode={false}
 				isCurrentVersion
 				versionNumberById={{}}
 				workspaceSlug="demo"
@@ -131,6 +133,48 @@ Second section.
 			{ key: ":evidence:heading2:1", title: "Delivery" },
 		]);
 		expect(sections).toHaveLength(3);
+	});
+});
+
+describe("plan reader comment targets", () => {
+	const viewer = { id: "user-1", name: "Reviewer", image: null };
+	const source = `<TLDR>
+A concise summary.
+</TLDR>
+
+Plain prose carries a claim too.
+`;
+
+	async function markup(commentMode: boolean): Promise<string> {
+		const { blocks } = analyzePlan(source);
+		return renderToStaticMarkup(
+			<PlanRenderProvider
+				blocks={blocks.map(({ key, kind, contentHash }) => ({ key, kind, contentHash }))}
+				decisions={[]}
+				comments={[]}
+				selectedVersionNumber={1}
+				viewer={viewer}
+				commentMode={commentMode}
+				isCurrentVersion
+				versionNumberById={{}}
+				workspaceSlug="demo"
+				planSlug="example"
+				onCreateComment={async () => {}}
+			>
+				{renderPlan(await compilePlan(source))}
+			</PlanRenderProvider>,
+		);
+	}
+
+	/* Reading the plan must cost nothing: the affordance only exists once the
+	   reviewer arms the tool, which is also why prose can now take a comment. */
+	it("arms a target on every block only while comment mode is on", async () => {
+		const reading = await markup(false);
+		expect(reading).not.toContain("Comment on");
+
+		const commenting = await markup(true);
+		expect(commenting).toContain('aria-label="Comment on TLDR"');
+		expect(commenting).toContain('aria-label="Comment on Paragraph"');
 	});
 });
 

@@ -270,6 +270,9 @@ const planReaderVersionSelection = {
 
 export type PlanReaderViewer = {
 	id: string;
+	/** The composer greets the reviewer by name, so the payload carries the identity, not just its id. */
+	name: string;
+	image: string | null;
 	/** Whether this viewer may move the plan into another organization. */
 	canMovePlan: boolean;
 };
@@ -309,6 +312,8 @@ export async function loadPlanReaderData(
 		viewer: identity
 			? {
 					id: identity.user.id,
+					name: identity.user.name,
+					image: identity.user.image,
 					canMovePlan: canMovePlan(document.plan, identity.user, roleRows[0]?.role ?? null),
 				}
 			: null,
