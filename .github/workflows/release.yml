@@ -39,18 +39,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # changesets/action does not configure npm auth itself, so the registry token
-      # has to be in place before the publish script runs.
-      - name: Authenticate with npm
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [[ -z "$NPM_TOKEN" ]]; then
-            echo "::error::NPM_TOKEN repository secret is missing; plantifiles cannot be published."
-            exit 1
-          fi
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+      # Trusted publishing is minted through npm's OIDC flow, which needs
+      # npm >= 11.5.1; Node 22 still ships npm 10.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
 
       # With pending changesets this opens or refreshes the version pull request.
       # Merging that pull request removes them, and the next run publishes instead.
@@ -62,4 +54,5 @@ jobs:
           commit-message: "chore: version packages"
           pr-title: "chore: version packages"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
