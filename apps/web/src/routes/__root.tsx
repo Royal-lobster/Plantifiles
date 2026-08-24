@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
+import { getRuntimeConfig } from "#/lib/integrations/runtime.server";
 import appCss from "../styles.css?url";
 import { AppShell } from "./__root/-components/app-shell";
 import { THEME_PREPAINT_SCRIPT } from "./__root/-components/theme-config";
@@ -36,18 +37,31 @@ const CLERK_APPEARANCE = {
 } satisfies NonNullable<ComponentProps<typeof ClerkProvider>["appearance"]>;
 
 export const Route = createRootRoute({
-	head: () => ({
-		meta: [
-			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{ title: "Plantifiles" },
-			{ name: "description", content: "Agent-native plans, reviewed in place." },
-		],
-		links: [
-			{ rel: "stylesheet", href: appCss },
-			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-		],
-	}),
+	head: async () => {
+		// Scrapers ignore relative og:image URLs, so the image is anchored to the
+		// same PUBLIC_URL the CLI callback and plan links already use.
+		const { PUBLIC_URL } = await getRuntimeConfig();
+		const imageUrl = `${PUBLIC_URL.replace(/\/$/, "")}/og.png`;
+		return {
+			meta: [
+				{ charSet: "utf-8" },
+				{ name: "viewport", content: "width=device-width, initial-scale=1" },
+				{ title: "Plantifiles" },
+				{ name: "description", content: "Agent-native plans, reviewed in place." },
+				{ property: "og:title", content: "Plantifiles" },
+				{ property: "og:description", content: "Agent-native plans, reviewed in place." },
+				{ property: "og:image", content: imageUrl },
+				{ property: "og:image:width", content: "1200" },
+				{ property: "og:image:height", content: "630" },
+				{ name: "twitter:card", content: "summary_large_image" },
+				{ name: "twitter:image", content: imageUrl },
+			],
+			links: [
+				{ rel: "stylesheet", href: appCss },
+				{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+			],
+		};
+	},
 	shellComponent: RootDocument,
 	errorComponent: AppError,
 	notFoundComponent: NotFound,
