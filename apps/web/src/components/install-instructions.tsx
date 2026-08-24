@@ -52,10 +52,10 @@ function CopyButton({ label, text }: { label: string; text: string }) {
 
 function CopyRow({ label, command }: { label: string; command: string }) {
 	return (
-		<div>
+		<div className="flex min-w-0 flex-col gap-1.5">
 			<div className="label-eyebrow">{label}</div>
-			<div className="surface-inset mt-1.5 flex items-center gap-3 p-2 pl-4">
-				<code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs">{command}</code>
+			<div className="surface-inset flex items-center gap-3 p-2 pl-4">
+				<code className="min-w-0 flex-1 font-mono text-xs/5 break-words whitespace-pre-wrap">{command}</code>
 				<CopyButton label={label} text={command} />
 			</div>
 		</div>
@@ -106,10 +106,9 @@ export function InstallInstructions({ className }: { className?: string }) {
 					</pre>
 				) : null}
 			</TabsContent>
-
-			<TabsContent value="human" className="grid gap-3 sm:grid-cols-2">
+			<TabsContent value="human" className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
 				<CopyRow label="Install the CLI" command="npm install -g plantifiles" />
-				<CopyRow label="Install the write-plan skill (global)" command={SKILL_INSTALL} />
+				<CopyRow label="Install the write-plan skill" command={SKILL_INSTALL} />
 				<CopyRow label="Sign in" command="plantifiles login" />
 				<CopyRow label="Publish a plan" command={PUSH_EXAMPLE_SHORT} />
 				<p className="text-muted-foreground text-xs leading-5 sm:col-span-2">

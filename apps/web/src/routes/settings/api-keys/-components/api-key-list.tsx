@@ -10,6 +10,7 @@ import {
 	AlertDialogTrigger,
 } from "@plantifiles/ui/components/alert-dialog";
 import { Button, buttonVariants } from "@plantifiles/ui/components/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@plantifiles/ui/components/empty";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, Trash2 } from "lucide-react";
@@ -82,11 +83,15 @@ export function ApiKeyList({ apiKeys }: { apiKeys: ApiKeyListItem[] }) {
 
 	if (apiKeys.length === 0) {
 		return (
-			<div className="px-5 py-8 text-center">
-				<KeyRound className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
-				<p className="mt-2 font-medium text-sm">No API keys yet</p>
-				<p className="mt-1 text-muted-foreground text-xs">Create one above to connect a pipeline.</p>
-			</div>
+			<Empty className="px-5 py-8">
+				<EmptyHeader>
+					<EmptyMedia variant="icon">
+						<KeyRound aria-hidden="true" />
+					</EmptyMedia>
+					<EmptyTitle>No API keys yet</EmptyTitle>
+					<EmptyDescription>Create one above to connect a pipeline.</EmptyDescription>
+				</EmptyHeader>
+			</Empty>
 		);
 	}
 

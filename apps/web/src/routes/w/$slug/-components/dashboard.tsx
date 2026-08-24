@@ -1,5 +1,6 @@
 import { Button } from "@plantifiles/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@plantifiles/ui/components/dialog";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@plantifiles/ui/components/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
@@ -162,8 +163,12 @@ export function Dashboard() {
 					</div>
 
 					{visiblePlans.length === 0 ? (
-						<output className="block py-16 text-center text-muted-foreground text-sm" aria-live="polite">
-							{normalizedQuery || mineOnly ? "No plans match these filters." : VIEW_EMPTY_COPY[view]}
+						<output aria-live="polite">
+							<Empty>
+								<EmptyTitle>
+									{normalizedQuery || mineOnly ? "No plans match these filters." : VIEW_EMPTY_COPY[view]}
+								</EmptyTitle>
+							</Empty>
 						</output>
 					) : (
 						<ul className="space-y-1">
@@ -249,13 +254,20 @@ function CreatorAvatar({ name, image }: { name: string; image: string | null }) 
 
 function EmptyState() {
 	return (
-		<div className="mt-10">
-			<h2 className="font-display font-medium text-2xl">Nothing has been proposed yet.</h2>
-			<p className="mt-3 max-w-xl text-muted-foreground leading-7">
-				Publishing is the CLI's job. Set it up here, or hand the setup to the agent session that writes your plans.
-			</p>
-			<InstallInstructions className="mt-6" />
-		</div>
+		<Empty className="mt-10">
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<Terminal aria-hidden="true" />
+				</EmptyMedia>
+				<EmptyTitle role="heading" aria-level={2}>Nothing has been proposed yet.</EmptyTitle>
+				<EmptyDescription>
+					Publishing is the CLI's job. Set it up here, or hand the setup to the agent session that writes your plans.
+				</EmptyDescription>
+			</EmptyHeader>
+			<EmptyContent className="mt-6 max-w-xl items-start text-left">
+				<InstallInstructions />
+			</EmptyContent>
+		</Empty>
 	);
 }
 
