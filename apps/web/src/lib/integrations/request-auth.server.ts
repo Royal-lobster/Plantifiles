@@ -1,5 +1,5 @@
 import { auth, clerkClient } from "@clerk/tanstack-react-start/server";
-import { user } from "@plantifiles/db/schema";
+import type { user } from "@plantifiles/db/schema";
 import { resolveClerkOrganizationMembership, resolveClerkUser } from "#/lib/data/clerk-projection.server";
 import { getRuntimeConfig } from "./runtime.server";
 

@@ -1,9 +1,8 @@
-import { approval, membership, plan, workspace } from "@plantifiles/db/schema";
+import { approval, type membership, plan, workspace } from "@plantifiles/db/schema";
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm";
 import { slugify } from "#/lib/helpers/plan-slug";
-import { type RequestIdentity, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getBindings, getDb } from "#/lib/integrations/runtime.server";
-import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
+import { assertWorkspaceAccess, publicPlanUrl, requireWritablePlanAccess } from "./plan-access.server";
 import type { PlanStatus } from "./plan-types";
 import { listWorkspacesForUser, type WorkspaceSummary } from "./workspaces.server";
 
@@ -48,13 +47,6 @@ export class PlanSlugConflictError extends Error {
 	}
 }
 
-type MoveAccess = {
-	identity: RequestIdentity;
-	plan: typeof plan.$inferSelect;
-	workspace: typeof workspace.$inferSelect;
-	role: MembershipRole;
-};
-
 /**
  * A move takes the plan out of the organization that currently owns it, so only
  * the person who published it there may take it away — an organization owner
@@ -71,21 +63,12 @@ export function canMovePlan(
 	return target.createdById === viewer.id;
 }
 
-async function requireMoveAccess(request: Request, planId: string): Promise<MoveAccess> {
-	const identity = await requireIdentity(request, "plantifiles:write");
-	const rows = await getDb()
-		.select({ plan, workspace, role: membership.role })
-		.from(plan)
-		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
-		.innerJoin(membership, and(eq(membership.workspaceId, workspace.id), eq(membership.userId, identity.user.id)))
-		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
-		.limit(1);
-	const access = rows[0];
-	if (!access) throw new Response("Forbidden", { status: 403 });
-	if (!canMovePlan(access.plan, identity.user, access.role)) {
+async function requireMoveAccess(request: Request, planId: string) {
+	const access = await requireWritablePlanAccess(request, planId);
+	if (!canMovePlan(access.plan, access.identity.user, access.role)) {
 		throw new Response("Only the author of a plan can move it to another organization.", { status: 403 });
 	}
-	return { ...access, identity };
+	return access;
 }
 
 /**

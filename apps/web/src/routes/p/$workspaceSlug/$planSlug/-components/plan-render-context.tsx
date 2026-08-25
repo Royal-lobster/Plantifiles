@@ -223,5 +223,5 @@ function PlanRenderProvider({
 	return <PlanRenderContext.Provider value={value}>{children}</PlanRenderContext.Provider>;
 }
 
-export type { CreateCommentValue, ReaderComment, ReaderViewer, ReviewResult };
+export type { CreateCommentValue, ReaderComment, ReviewResult };
 export { PlanRenderProvider, planCommentIndex, usePlanRender };

@@ -22,7 +22,7 @@ const PROFILES: Record<ArtifactProfile, true> = {
 	"guided-plan": true,
 };
 
-export type MetadataIssue = {
+type MetadataIssue = {
 	rule: string;
 	message: string;
 	line: number;
