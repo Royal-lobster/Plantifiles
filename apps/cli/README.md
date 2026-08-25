@@ -1,8 +1,18 @@
-# plantifiles
+<div align="center">
 
-Command-line client for [Plantifiles](https://plantifiles.com) — agent-native plan documents. An agent publishes a structured plan, the team reviews and approves it in the browser, and another agent pulls the approved Markdown back into its build session.
+<img src="https://raw.githubusercontent.com/Royal-lobster/Plantifiles/main/apps/web/public/favicon.svg" width="80" alt="Plantifiles logo" />
 
-## Install
+# ⌨️ plantifiles CLI
+
+Command-line client for [Plantifiles](https://plantifiles.com) — publish a plan, pull an approved one back.
+
+---
+
+</div>
+
+An agent publishes a structured plan, the team reviews and approves it in the browser, and another agent pulls the approved Markdown into its build session. The same plan URL serves both.
+
+## 📦 Install
 
 ```bash
 npm install -g plantifiles
@@ -12,7 +22,7 @@ npx plantifiles@latest --help
 
 Requires Node.js 22 or newer.
 
-## Set up
+## 🔑 Set up
 
 Authorize this machine through the browser:
 
@@ -20,16 +30,16 @@ Authorize this machine through the browser:
 plantifiles login
 ```
 
-`login` opens Plantifiles in your browser; after signing in, paste the one-time authorization code from the callback page into the terminal. OAuth tokens are stored in the system keychain, with a mode-0600 credential-file fallback when no keychain is available. Verify the credential with `plantifiles whoami`; `plantifiles logout` revokes the refresh token.
+`login` opens Plantifiles in your browser; paste the one-time authorization code from the callback page into the terminal. Tokens are stored in the system keychain, with a mode-0600 credential-file fallback when no keychain is available. `plantifiles whoami` verifies the credential; `plantifiles logout` revokes the refresh token.
 
-Headless environments (CI, SSH boxes) use a user-scoped API key created at `plantifiles.com/settings/api-keys` instead:
+Headless environments (CI, SSH boxes) use a user-scoped API key from `plantifiles.com/settings/api-keys` instead:
 
 ```bash
 export PLANTIFILES_BASE_URL=https://plantifiles.com
 export PLANTIFILES_TOKEN=ak_replace_with_your_api_key
 ```
 
-## Set up your coding agent
+## 🤖 Set up your coding agent
 
 Install the `write-plan` skill globally so your agent knows the plan format and the publish loop:
 
@@ -37,9 +47,9 @@ Install the `write-plan` skill globally so your agent knows the plan format and 
 npx skills add Royal-lobster/Plantifiles -g
 ```
 
-The same skill is always available at <https://plantifiles.com/skills/write-plan/SKILL.md> if you would rather hand the file to the agent yourself.
+The same skill is always available at <https://plantifiles.com/skills/write-plan/SKILL.md> if you'd rather hand the file to the agent yourself.
 
-## Usage
+## 🧰 Usage
 
 ```
 Usage: plantifiles [options] [command]
@@ -56,7 +66,7 @@ Usage: plantifiles [options] [command]
   status                             List workspace plans
 ```
 
-### Publish a plan
+### 📤 Publish a plan
 
 ```bash
 plantifiles lint plan.mdx
@@ -66,18 +76,19 @@ plantifiles push plan.mdx \
   --prompt "Plan the requested feature"
 ```
 
-`push` prints the plan URL. The URL serves the rendered plan to people and byte-identical Markdown to agents (`curl -H 'Accept: text/markdown'`), so the same link carries a plan through review and into an implementation session.
+`push` prints the plan URL. At login the CLI records a default workspace when your account has exactly one; otherwise the first `push` and `status` need `--workspace <slug>` (`plantifiles workspaces` lists them). Later pushes of the same file reuse its tracked workspace.
 
-At login the CLI records a default workspace when your account has exactly one; otherwise the first `push` and `status` need `--workspace <slug>`. Run `plantifiles workspaces` to list the slugs you can target. Later pushes of the same file reuse its tracked workspace.
+### 📥 Pull an approved plan
 
-### Pull an approved plan
 ```bash
 plantifiles pull https://plantifiles.com/p/my-workspace/my-plan -o approved-plan.mdx
 ```
 
-### Fix a wrong workspace
+The URL serves the rendered plan to people and byte-identical Markdown to agents, so one link carries a plan through review and into an implementation session.
 
-A plan pushed into the wrong organization moves without being republished, keeping its version history, comments, and decisions. Approvals on the current version are cleared, because the new organization has not reviewed it:
+### 🚚 Fix a wrong workspace
+
+A plan pushed into the wrong organization moves without being republished, keeping its version history, comments, and decisions. Approvals on the current version are cleared, because the new organization hasn't reviewed it:
 
 ```bash
 plantifiles move plan.mdx --to other-workspace
@@ -85,7 +96,7 @@ plantifiles move plan.mdx --to other-workspace
 
 Only the plan's author can move it, and only into an organization they belong to. Pass `--slug <slug>` when the destination already has a plan at that slug.
 
-## Related
+## 🔗 Related
 
 - [`@plantifiles/mcp`](https://github.com/Royal-lobster/Plantifiles/tree/main/apps/mcp) — the same loop over MCP for agents that prefer tools over a shell
 - [Repository](https://github.com/Royal-lobster/Plantifiles) — the web app, the skill source, and the issue tracker

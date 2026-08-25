@@ -1,14 +1,24 @@
-# Plantifiles MCP server
+<div align="center">
 
-A local stdio MCP server exposing the Plantifiles HTTP API to coding agents. The API remains the source of truth for linting, publishing, authorization, comments, and Markdown rendering.
+<img src="https://raw.githubusercontent.com/Royal-lobster/Plantifiles/main/apps/web/public/favicon.svg" width="80" alt="Plantifiles logo" />
 
-## Build
+# 🔌 @plantifiles/mcp
+
+A local stdio MCP server exposing the Plantifiles HTTP API to coding agents.
+
+---
+
+</div>
+
+The API remains the source of truth for linting, publishing, authorization, comments, and Markdown rendering — the server is a thin wrapper over it.
+
+## 🏗️ Build
 
 ```bash
 pnpm --filter @plantifiles/mcp build
 ```
 
-## Add to Claude Code
+## ➕ Add to Claude Code
 
 After `plantifiles login`, the MCP server reuses the CLI's service configuration and OAuth credentials:
 
@@ -38,7 +48,7 @@ The equivalent project-scoped `.mcp.json` is:
 }
 ```
 
-## Tools
+## 🧰 Tools
 
 - `create_plan` — publish a new plan.
 - `update_plan` — publish a new version with optional optimistic concurrency.

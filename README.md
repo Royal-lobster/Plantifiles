@@ -1,8 +1,29 @@
-# Plantifiles
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/Royal-lobster/Plantifiles/main/apps/web/public/favicon.svg" width="88" alt="Plantifiles logo" />
+
+# 🌱 Plantifiles
 
 Agent-native plan documents. An agent publishes a structured plan, the team reviews and approves it in the browser, and another agent pulls the approved Markdown back into its build session.
 
-## Prerequisites
+---
+
+</div>
+
+## 📦 Apps and packages
+
+| Path | What it is |
+| --- | --- |
+| [`apps/web`](./apps/web) | The app: dashboard, review shell, plan reader |
+| [`apps/cli`](./apps/cli) | The `plantifiles` command-line client, published to npm |
+| [`apps/mcp`](./apps/mcp) | The same loop as an MCP server over stdio |
+| [`packages/core`](./packages/core) | The plan format: parsing, linting, structural diffing |
+| [`packages/auth`](./packages/auth) | OAuth login and credential storage for CLI and MCP |
+| [`packages/api-client`](./packages/api-client) | Typed HTTP client for the Plantifiles API |
+| [`packages/db`](./packages/db) | Drizzle schema and D1 client |
+| [`packages/ui`](./packages/ui) | Shared React components |
+
+## 📋 Prerequisites
 
 - Node.js 22 or newer
 - pnpm 11.17.0 through Corepack
@@ -10,7 +31,7 @@ Agent-native plan documents. An agent publishes a structured plan, the team revi
 - A Clerk application with Organizations enabled
 - Optional: a Slack app for link unfurls
 
-## Local setup
+## 🛠️ Local setup
 
 ```bash
 pnpm install --frozen-lockfile
@@ -27,46 +48,27 @@ chmod 600 apps/web/.dev.vars
 pnpm dev
 ```
 
-`pnpm dev` runs the `dev` Cloudflare environment (`CLOUDFLARE_ENV=dev`), so local dev and
-`dev.plantifiles.com` resolve the same `wrangler.jsonc` block: the same `VARS_ENV=dev` vars
-profile and the same `plantifiles-dev` D1 binding, one locally and one remote. Nothing about
-the environment is configured twice.
+`pnpm dev` runs the `dev` Cloudflare environment, so local dev and `dev.plantifiles.com` share one `wrangler.jsonc` block: same vars profile, same D1 binding. SSR runs inside workerd and inherits nothing from your shell, which is why `VARS_KEY` has to live in `.dev.vars`. `vars` uses one master key for every environment, so treat that file as a production credential: mode 600, never copied off the machine, and rotate with `vars rotate` (plus the Clerk secrets) if it leaks.
 
-`.dev.vars` carries the single secret and is gitignored; hosted environments get the same
-value from `wrangler secret put VARS_KEY`. It is required because SSR runs inside workerd
-under `@cloudflare/vite-plugin`, whose environment is assembled from `wrangler.jsonc` plus
-`.dev.vars` — a parent process's variables are not inherited, so wrapping the dev command in
-`vars run` leaves `getVars` in `apps/web/src/start.ts` with no `VARS_KEY` and every route 500s.
+Open <http://localhost:3000> and sign in through Clerk. The local database starts empty; the first signed-in request projects your Clerk user, Organization, and membership into it. There is no seeded identity and no local-only auth branch — local runs take the same path as production.
 
-`vars` uses one master key for every environment, so the value in `.dev.vars` decrypts the
-production ciphertexts in the same bundle, not just the `dev` block. Treat that file as a
-production credential: keep it mode 600, never copy it off the machine, and rotate
-`vars rotate` plus the Clerk secrets if it leaks. Per-environment keys would remove the
-overlap and are the real fix.
+## 🔁 Demo loop
 
-Open <http://localhost:3000> and sign in through Clerk. Local runs use the Clerk development
-instance and the real session, Organization, and workspace-projection path that production
-uses; there is no seeded identity and no local-only authentication branch. The local database
-starts empty, and the first signed-in request projects your Clerk user, Organization, and
-membership into it.
-
-## Demo loop
-
-Build the command-line client and authorize this machine. `login` opens Clerk in the browser; after signing in, copy the one-time authorization code from the Plantifiles callback page into the terminal:
+Build the CLI and authorize this machine. `login` opens Clerk in the browser; paste the one-time code from the callback page back into the terminal:
 
 ```bash
 pnpm --filter plantifiles build
 node apps/cli/dist/index.js login --base-url http://localhost:3000
 ```
 
-OAuth access and refresh tokens are stored in the system keychain, with a mode-0600 credential-file fallback when no keychain is available. `plantifiles logout` revokes the refresh token. CI and other headless environments use a user-scoped Clerk API key created at `/settings/api-keys`:
+Tokens go in the system keychain, with a mode-0600 file fallback where no keychain exists. Headless environments use a Clerk API key from `/settings/api-keys` instead:
 
 ```bash
 export PLANTIFILES_BASE_URL=http://localhost:3000
 export PLANTIFILES_TOKEN=ak_replace_with_your_clerk_api_key
 ```
 
-Download `skills/write-plan/SKILL.md` from `/skills/write-plan/SKILL.md`, give it to a coding agent, and publish the resulting plan with provenance:
+Give [`skills/write-plan/SKILL.md`](./skills/write-plan/SKILL.md) to a coding agent, then publish the plan it writes:
 
 ```bash
 node apps/cli/dist/index.js lint plan.mdx
@@ -76,38 +78,32 @@ node apps/cli/dist/index.js push plan.mdx \
   --prompt "Plan the requested feature"
 ```
 
-At login, the CLI records a default only when your account has exactly one workspace. Otherwise the first `push` and `status` require `--workspace <slug>`; run `node apps/cli/dist/index.js workspaces` to list the slugs you can target. Later pushes of the same file reuse its tracked workspace.
+At login the CLI records a default workspace when your account has exactly one; otherwise `push` and `status` need `--workspace <slug>` (`workspaces` lists them). Later pushes of the same file reuse its tracked workspace.
 
-A plan pushed into the wrong organization moves without being republished, taking its
-version history, comments, and decisions with it. Approvals on the current version are
-cleared, because the new organization has not reviewed it, and the file's next `push`
-follows the plan:
-
-```bash
-node apps/cli/dist/index.js move plan.mdx --to <workspace-slug>
-```
-
-Only the plan's author can move it, and only into an organization they belong to. Pass
-`--slug <slug>` when the destination already has a plan at that slug; the plan page's
-actions menu offers the same move, names the collision before you commit to it, and
-previews the resulting URL. The old URL stops resolving after a move.
-
-Open the printed URL. Confirm the plan appears in the dashboard, review it in the shared shell, add comments, resolve every decision, and approve the current version. The same URL serves Markdown to agents:
+Open the printed URL, review, comment, resolve every decision, approve. The same URL serves Markdown to agents:
 
 ```bash
 curl -H 'Accept: text/markdown' http://localhost:3000/p/<workspace-slug>/<plan-slug>
 node apps/cli/dist/index.js pull http://localhost:3000/p/<workspace-slug>/<plan-slug> -o approved-plan.mdx
 ```
 
-Edit `plan.mdx` and run the same `push` command to create version 2. The reader shows the structural summary and a block-level diff. In a separate agent session, pull the approved URL and implement one checklist item from its `<Phase>` blocks.
+Edit `plan.mdx` and push again for version 2 — the reader shows a block-level diff. In another agent session, pull the approved URL and build from it.
 
-The MCP server exposes the same loop over stdio. Build it with `pnpm --filter @plantifiles/mcp build`; its exact Claude Code configuration and tool list are in [`apps/mcp/README.md`](apps/mcp/README.md).
+Pushed into the wrong organization? `move` takes the plan with its history, comments, and decisions, no republish needed. Approvals on the current version are cleared, because the new org hasn't reviewed it:
 
-## Workspaces and members
+```bash
+node apps/cli/dist/index.js move plan.mdx --to <workspace-slug>
+```
 
-Every Plantifiles workspace maps to a Clerk Organization. Use Clerk's organization switcher to select or create one, invite members, and manage member/admin roles. Plantifiles projects that organization membership into D1 so plans, reviews, OAuth sessions, and user-scoped API keys keep stable local authorship.
+Only the author can move a plan, and only into an org they belong to. Pass `--slug <slug>` if the destination already has a plan at that slug — the plan page's actions menu does the same thing and previews the collision. The old URL stops resolving after a move.
 
-## Slack unfurls
+The MCP server exposes the same loop over stdio: [`apps/mcp`](./apps/mcp).
+
+## 👥 Workspaces and members
+
+Every workspace maps to a Clerk Organization. Use Clerk's switcher to create one, invite members, and manage member/admin roles. Membership is projected into D1 so plans, reviews, OAuth sessions, and user-scoped API keys keep stable local authorship.
+
+## 💬 Slack unfurls
 
 Create a Slack app with:
 
@@ -117,7 +113,7 @@ Create a Slack app with:
 - OAuth redirect URL `${PUBLIC_URL}/api/slack/callback`
 - the hostname from `PUBLIC_URL` as an app unfurl domain
 
-## Verification
+## ✅ Verification
 
 ```bash
 pnpm test
@@ -127,39 +123,31 @@ pnpm build
 pnpm --dir apps/web exec wrangler deploy --dry-run
 ```
 
-The Playwright smoke starts the local Worker, applies D1 migrations, verifies the hosted OAuth callback, publishes through the CLI's deterministic local credential adapter, checks the dashboard and reader, fetches Markdown, comments, resolves, approves, pushes a second version, verifies the structural diff, and confirms CLI pull byte parity.
+The Playwright smoke runs the whole loop against a local Worker: hosted OAuth callback, publish, review, comment, resolve, approve, a second version with a structural diff, and CLI pull byte parity.
 
-## Deployment
+## 🚀 Deployment
 
-Runtime configuration is generated from `apps/web/config.vars` with `pnpm --filter @plantifiles/web vars:gen`. Commit `config.generated.ts`: it contains public configuration and encrypted per-environment ciphertexts, never decrypted private values. Production and dev select their profiles through `VARS_ENV` in `apps/web/wrangler.jsonc`.
-
-Install `VARS_KEY` once as the only configuration secret on each Worker:
+Runtime configuration is generated from `apps/web/config.vars` with `pnpm --filter @plantifiles/web vars:gen`. Commit `config.generated.ts`: it holds public config and encrypted ciphertexts, never decrypted secrets. Environments pick their profile through `VARS_ENV` in `wrangler.jsonc`. `VARS_KEY` is the only Worker secret:
 
 ```bash
 pnpm --dir apps/web exec wrangler secret put VARS_KEY
 pnpm --dir apps/web exec wrangler secret put VARS_KEY --env dev
 ```
 
-Clerk keys are managed inside the vars bundle and must not be added as separate Worker or GitHub Actions secrets. Wrangler preserves installed Worker secrets across deploys.
+Clerk keys live inside the vars bundle — don't add them as separate Worker or GitHub Actions secrets.
 
-The CLI's OAuth client ID lives in the vars bundle alongside the Clerk keys, so no additional
-Worker secret is required. Each environment needs one public Clerk OAuth application with PKCE
-required, opaque access tokens, a `${PUBLIC_URL}/cli/callback` redirect URI, and the scopes
-`profile email offline_access plantifiles:read plantifiles:write`. Clerk rejects an authorization
-request for any scope the application does not declare, and it defers that check until after
-sign-in, so a missing scope surfaces as a failed callback rather than a rejected URL. Clerk user
-API keys must be enabled on the instance for `/settings/api-keys` to issue credentials.
+The CLI's OAuth client ID is in the vars bundle too. Each environment needs one public Clerk OAuth application: PKCE required, opaque access tokens, a `${PUBLIC_URL}/cli/callback` redirect URI, and the scopes `profile email offline_access plantifiles:read plantifiles:write`. Clerk only checks declared scopes after sign-in, so a missing scope surfaces as a failed callback rather than a rejected URL. User API keys must be enabled on the Clerk instance for `/settings/api-keys` to work.
 
-GitHub Actions builds, applies D1 migrations, and deploys on updates to `main`. The workflow requires the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; the API token needs Workers edit and D1 edit access.
+GitHub Actions builds, applies migrations, and deploys on updates to `main`. It needs the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets (Workers edit + D1 edit).
 
-For a manual production deployment:
+Manual production deploy:
 
 ```bash
 pnpm db:migrate:remote
 pnpm --filter @plantifiles/web run deploy
 ```
 
-Build, migrate, and deploy the dev Worker with its dev D1 database and custom domain:
+Dev Worker with its own D1 database and domain:
 
 ```bash
 pnpm --filter @plantifiles/web migrate:dev
