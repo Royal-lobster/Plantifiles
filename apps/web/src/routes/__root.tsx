@@ -9,6 +9,7 @@ import {
 	Scripts,
 	useRouter,
 } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
 import { getRuntimeConfig } from "#/lib/integrations/runtime.server";
@@ -35,13 +36,16 @@ const CLERK_APPEARANCE = {
 		borderRadius: "1rem",
 	},
 } satisfies NonNullable<ComponentProps<typeof ClerkProvider>["appearance"]>;
+const getSocialImageUrl = createServerFn({ method: "GET" }).handler(async (): Promise<string> => {
+	const { PUBLIC_URL } = await getRuntimeConfig();
+	return `${PUBLIC_URL.replace(/\/$/, "")}/og.png`;
+});
 
 export const Route = createRootRoute({
 	head: async () => {
-		// Scrapers ignore relative og:image URLs, so the image is anchored to the
-		// same PUBLIC_URL the CLI callback and plan links already use.
-		const { PUBLIC_URL } = await getRuntimeConfig();
-		const imageUrl = `${PUBLIC_URL.replace(/\/$/, "")}/og.png`;
+		// Scrapers ignore relative og:image URLs, so resolve the image from the
+		// server-side PUBLIC_URL through an RPC boundary safe for client navigation.
+		const imageUrl = await getSocialImageUrl();
 		return {
 			meta: [
 				{ charSet: "utf-8" },
