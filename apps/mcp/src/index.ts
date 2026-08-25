@@ -11,8 +11,15 @@ function toolError(caught: unknown) {
 	return { isError: true as const, content: [{ type: "text" as const, text: `${message}${detail}` }] };
 }
 
-function textResult(value: unknown) {
-	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] };
+async function runTool(
+	operation: () => Promise<unknown>,
+	serialize: (value: unknown) => string = (value) => JSON.stringify(value, null, 2) ?? "null",
+) {
+	try {
+		return { content: [{ type: "text" as const, text: serialize(await operation()) }] };
+	} catch (caught) {
+		return toolError(caught);
+	}
 }
 
 async function main() {
@@ -37,13 +44,7 @@ async function main() {
 				force: z.boolean().optional(),
 			}),
 		},
-		async (input) => {
-			try {
-				return textResult(await api.createPlan(input));
-			} catch (caught) {
-				return toolError(caught);
-			}
-		},
+		(input) => runTool(() => api.createPlan(input)),
 	);
 
 	server.registerTool(
@@ -62,13 +63,7 @@ async function main() {
 				force: z.boolean().optional(),
 			}),
 		},
-		async ({ planId, ...input }) => {
-			try {
-				return textResult(await api.createVersion(planId, input));
-			} catch (error) {
-				return toolError(error);
-			}
-		},
+		({ planId, ...input }) => runTool(() => api.createVersion(planId, input)),
 	);
 
 	server.registerTool(
@@ -86,13 +81,7 @@ async function main() {
 					.describe("New plan slug; only needed when the destination already has a plan at the current slug."),
 			}),
 		},
-		async ({ planId, ...input }) => {
-			try {
-				return textResult(await api.movePlan(planId, input));
-			} catch (caught) {
-				return toolError(caught);
-			}
-		},
+		({ planId, ...input }) => runTool(() => api.movePlan(planId, input)),
 	);
 
 	server.registerTool(
@@ -101,13 +90,7 @@ async function main() {
 			description: "Get the exact Markdown-with-frontmatter representation served by a plan URL.",
 			inputSchema: z.object({ idOrUrl: z.string().min(1) }),
 		},
-		async ({ idOrUrl }) => {
-			try {
-				return { content: [{ type: "text" as const, text: await api.getPlanMarkdown(idOrUrl) }] };
-			} catch (caught) {
-				return toolError(caught);
-			}
-		},
+		({ idOrUrl }) => runTool(() => api.getPlanMarkdown(idOrUrl), String),
 	);
 
 	server.registerTool(
@@ -116,13 +99,7 @@ async function main() {
 			description: "List plans and review state for a Plantifiles workspace.",
 			inputSchema: z.object({ workspaceSlug: z.string().min(1), status: z.string().min(1).optional() }),
 		},
-		async ({ workspaceSlug, status }) => {
-			try {
-				return textResult(await api.listPlans(workspaceSlug, status));
-			} catch (caught) {
-				return toolError(caught);
-			}
-		},
+		({ workspaceSlug, status }) => runTool(() => api.listPlans(workspaceSlug, status)),
 	);
 
 	server.registerTool(
@@ -136,13 +113,7 @@ async function main() {
 				parentId: z.string().min(1).optional(),
 			}),
 		},
-		async ({ planId, ...input }) => {
-			try {
-				return textResult(await api.commentOnPlan(planId, input));
-			} catch (caught) {
-				return toolError(caught);
-			}
-		},
+		({ planId, ...input }) => runTool(() => api.commentOnPlan(planId, input)),
 	);
 
 	await server.connect(new StdioServerTransport());

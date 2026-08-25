@@ -1,25 +1,10 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { type ReactNode, useMemo, useReducer } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { PlanReaderData } from "../-data/plan-reader";
 import { createCommentForPage, resolveDecisionForPage, setCommentResolvedForPage } from "../-data/plan-review";
 import { type CreateCommentValue, PlanRenderProvider, type ReviewResult } from "./plan-render-context";
 import { CommentLayer, DetachedCommentThreads } from "./plan-review-components";
-
-type ReviewState = { message: string; reloadNeeded: boolean };
-type ReviewAction = { type: "saved"; message: string } | { type: "refreshFailed"; message: string };
-
-function reviewReducer(_state: ReviewState, action: ReviewAction): ReviewState {
-	switch (action.type) {
-		case "saved":
-			return { message: action.message, reloadNeeded: false };
-		case "refreshFailed":
-			return {
-				message: `${action.message} The change was saved, but this view could not refresh; reload the page to see the latest data.`,
-				reloadNeeded: true,
-			};
-	}
-}
 
 export function PlanReviewDocument({
 	data,
@@ -36,7 +21,8 @@ export function PlanReviewDocument({
 	const createComment = useServerFn(createCommentForPage);
 	const setCommentResolved = useServerFn(setCommentResolvedForPage);
 	const resolveDecision = useServerFn(resolveDecisionForPage);
-	const [state, dispatch] = useReducer(reviewReducer, { message: "", reloadNeeded: false });
+	const [message, setMessage] = useState("");
+	const [reloadNeeded, setReloadNeeded] = useState(false);
 	const versionNumberById = useMemo(
 		() => Object.fromEntries(data.versions.map((version) => [version.id, version.number])),
 		[data.versions],
@@ -45,9 +31,13 @@ export function PlanReviewDocument({
 	async function refresh(message: string) {
 		try {
 			await router.invalidate();
-			dispatch({ type: "saved", message });
+			setMessage(message);
+			setReloadNeeded(false);
 		} catch {
-			dispatch({ type: "refreshFailed", message });
+			setMessage(
+				`${message} The change was saved, but this view could not refresh; reload the page to see the latest data.`,
+			);
+			setReloadNeeded(true);
 		}
 	}
 
@@ -69,9 +59,9 @@ export function PlanReviewDocument({
 
 	return (
 		<section className="mt-10" aria-label="Plantifile document">
-			{state.message ? (
+			{message ? (
 				<output className="mb-5 block text-muted-foreground text-sm" aria-live="polite">
-					{state.message}
+					{message}
 				</output>
 			) : null}
 			<div className="relative min-w-0 space-y-7">
@@ -80,7 +70,7 @@ export function PlanReviewDocument({
 					comments={data.comments}
 					selectedVersionNumber={data.version.number}
 					blocks={data.blocks}
-					viewer={state.reloadNeeded ? null : data.viewer}
+					viewer={reloadNeeded ? null : data.viewer}
 					commentMode={commentMode}
 					isCurrentVersion={isCurrentVersion}
 					versionNumberById={versionNumberById}

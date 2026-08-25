@@ -1,8 +1,7 @@
 import { comment, plan, planBlock } from "@plantifiles/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
-import { assertWorkspaceAccess } from "./plan-access.server";
+import { requireWritablePlanAccess } from "./plan-access.server";
 
 export type CreateCommentInput = {
 	blockKey?: string | undefined;
@@ -12,12 +11,11 @@ export type CreateCommentInput = {
 };
 
 export async function createComment(request: Request, planId: string, input: CreateCommentInput) {
-	const identity = await requireIdentity(request, "plantifiles:write");
 	const db = getDb();
 	const plans = await db.select().from(plan).where(eq(plan.id, planId)).limit(1);
 	const target = plans[0];
 	if (!target?.currentVersionId) throw new Response("Plan not found", { status: 404 });
-	await assertWorkspaceAccess(target.workspaceId, identity.user.id);
+	const { identity } = await requireWritablePlanAccess(request, planId);
 
 	if (input.blockKey) {
 		const blocks = await db

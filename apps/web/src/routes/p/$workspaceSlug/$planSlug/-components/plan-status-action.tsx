@@ -3,7 +3,7 @@ import { cn } from "@plantifiles/ui/lib/utils";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight } from "lucide-react";
-import { useReducer, useRef } from "react";
+import { useRef, useState } from "react";
 import type { PlanReaderData } from "../-data/plan-reader";
 import { advancePlanStatusForPage, approveCurrentVersionForPage } from "../-data/plan-review";
 
@@ -12,35 +12,15 @@ const NEXT_STATUS_LABEL: Record<"approved" | "draft", string> = {
 	approved: "Archive",
 };
 
-type StatusState = { busy: boolean; message: string; refreshFailed: boolean };
-type StatusAction =
-	| { type: "started" }
-	| { type: "saved"; message: string }
-	| { type: "refreshFailed"; message: string }
-	| { type: "failed"; message: string };
-
-function statusReducer(state: StatusState, action: StatusAction): StatusState {
-	switch (action.type) {
-		case "started":
-			return { ...state, busy: true, message: "" };
-		case "saved":
-			return { busy: false, message: action.message, refreshFailed: false };
-		case "refreshFailed":
-			return { busy: false, message: action.message, refreshFailed: true };
-		case "failed":
-			return { ...state, busy: false, message: action.message };
-	}
-}
-
 export function PlanStatusAction({ data, isCurrentVersion }: { data: PlanReaderData; isCurrentVersion: boolean }) {
 	const router = useRouter();
 	const approveVersion = useServerFn(approveCurrentVersionForPage);
 	const advanceStatus = useServerFn(advancePlanStatusForPage);
-	const [state, dispatch] = useReducer(statusReducer, { busy: false, message: "", refreshFailed: false });
+	const [busy, setBusy] = useState(false);
+	const [statusMessage, setStatusMessage] = useState("");
+	const [refreshFailed, setRefreshFailed] = useState(false);
 	const inFlight = useRef(false);
-	const canAdvance = Boolean(
-		data.viewer && isCurrentVersion && data.plan.status !== "archived" && !state.refreshFailed,
-	);
+	const canAdvance = Boolean(data.viewer && isCurrentVersion && data.plan.status !== "archived" && !refreshFailed);
 	const nextLabel =
 		data.plan.status === "archived" || data.plan.status === "in_review"
 			? undefined
@@ -49,7 +29,8 @@ export function PlanStatusAction({ data, isCurrentVersion }: { data: PlanReaderD
 	async function run() {
 		if (inFlight.current) return;
 		inFlight.current = true;
-		dispatch({ type: "started" });
+		setBusy(true);
+		setStatusMessage("");
 		try {
 			const result =
 				data.plan.status === "in_review"
@@ -58,41 +39,42 @@ export function PlanStatusAction({ data, isCurrentVersion }: { data: PlanReaderD
 			const message = result.reason ?? `Plan is now ${result.status.replace("_", " ")}.`;
 			try {
 				await router.invalidate();
-				dispatch({ type: "saved", message });
+				setBusy(false);
+				setStatusMessage(message);
+				setRefreshFailed(false);
 			} catch {
-				dispatch({
-					type: "refreshFailed",
-					message: `${message} The change was saved, but this view could not refresh; reload the page to see the latest data.`,
-				});
+				setBusy(false);
+				setStatusMessage(
+					`${message} The change was saved, but this view could not refresh; reload the page to see the latest data.`,
+				);
+				setRefreshFailed(true);
 			}
 		} catch (error) {
-			dispatch({
-				type: "failed",
-				message: error instanceof Error ? error.message : "Could not update plan status.",
-			});
+			setBusy(false);
+			setStatusMessage(error instanceof Error ? error.message : "Could not update plan status.");
 		} finally {
 			inFlight.current = false;
 		}
 	}
 
-	if (!canAdvance && !state.message) return null;
+	if (!canAdvance && !statusMessage) return null;
 	return (
 		<div className="flex max-w-sm flex-col items-end gap-2">
 			{canAdvance ? (
-				<Button size="sm" onClick={() => void run()} disabled={state.busy}>
-					{data.plan.status === "in_review" ? (state.busy ? "Approving…" : "Approve current version") : nextLabel}
+				<Button size="sm" onClick={() => void run()} disabled={busy}>
+					{data.plan.status === "in_review" ? (busy ? "Approving…" : "Approve current version") : nextLabel}
 					<ArrowRight />
 				</Button>
 			) : null}
-			{state.message ? (
+			{statusMessage ? (
 				<output
 					className={cn(
 						"text-right text-sm",
-						state.message.includes("block") ? "text-warning" : "text-muted-foreground",
+						statusMessage.includes("block") ? "text-warning" : "text-muted-foreground",
 					)}
 					aria-live="polite"
 				>
-					{state.message}
+					{statusMessage}
 				</output>
 			) : null}
 		</div>

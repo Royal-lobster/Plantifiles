@@ -1,7 +1,14 @@
 import { Button } from "@plantifiles/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@plantifiles/ui/components/dialog";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@plantifiles/ui/components/empty";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@plantifiles/ui/components/input-group";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@plantifiles/ui/components/empty";
+import { Input } from "@plantifiles/ui/components/input";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Search, Terminal } from "lucide-react";
@@ -136,17 +143,19 @@ export function Dashboard() {
 					</nav>
 
 					<div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-						<InputGroup className="h-9 flex-1 sm:max-w-xs">
-							<InputGroupAddon>
-								<Search />
-							</InputGroupAddon>
-							<InputGroupInput
+						<div className="relative flex-1 sm:max-w-xs">
+							<Search
+								aria-hidden="true"
+								className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+							/>
+							<Input
+								className="pl-9"
 								aria-label="Filter by title or emoji"
 								value={query}
 								onChange={(event) => setQuery(event.currentTarget.value)}
 								placeholder="Filter title or emoji"
 							/>
-						</InputGroup>
+						</div>
 						<button
 							type="button"
 							aria-pressed={mineOnly}
@@ -259,7 +268,9 @@ function EmptyState() {
 				<EmptyMedia variant="icon">
 					<Terminal aria-hidden="true" />
 				</EmptyMedia>
-				<EmptyTitle role="heading" aria-level={2}>Nothing has been proposed yet.</EmptyTitle>
+				<EmptyTitle role="heading" aria-level={2}>
+					Nothing has been proposed yet.
+				</EmptyTitle>
 				<EmptyDescription>
 					Publishing is the CLI's job. Set it up here, or hand the setup to the agent session that writes your plans.
 				</EmptyDescription>
