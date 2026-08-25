@@ -25,7 +25,7 @@ export type LocalUser = {
 	image: string | null;
 };
 
-export type ProjectedWorkspace = {
+type ProjectedWorkspace = {
 	id: string;
 	slug: string;
 	name: string;
@@ -45,7 +45,7 @@ export type ClerkOrganizationMembershipProjection = {
 	organizationName?: string;
 };
 
-export type ClerkOrganizationProjection = {
+type ClerkOrganizationProjection = {
 	clerkOrganizationId: string;
 	slug: string;
 	name?: string;
@@ -170,7 +170,7 @@ async function findWorkspaceByClerkId(db: Database, clerkOrganizationId: string)
  * Organization (`clerk_organization_id IS NULL`). A slug already held by a
  * different Organization is refused rather than stolen.
  */
-export async function resolveClerkOrganization(
+async function resolveClerkOrganization(
 	input: ClerkOrganizationProjection,
 	db: Database = getDb(),
 ): Promise<ProjectedWorkspace> {
@@ -235,7 +235,7 @@ export async function resolveClerkOrganization(
 	}
 }
 
-export function mapClerkOrganizationRole(role: string): "owner" | "member" {
+function mapClerkOrganizationRole(role: string): "owner" | "member" {
 	if (role === "org:admin") return "owner";
 	if (role === "org:member") return "member";
 	throw new Error(`Unsupported Clerk Organization role: ${role}.`);

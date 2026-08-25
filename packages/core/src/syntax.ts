@@ -87,12 +87,6 @@ export function stringAttribute(node: Node, name: string): string | undefined {
 	return typeof attribute?.value === "string" ? attribute.value : undefined;
 }
 
-export function booleanAttribute(node: Node, name: string): boolean {
-	if (!isMdxJsxNode(node)) return false;
-	const attribute = node.attributes.find((item): item is MdxAttribute => isMdxAttribute(item) && item.name === name);
-	return attribute?.value === null || attribute?.value === true;
-}
-
 export function rootContent(tree: Root): RootContent[] {
 	return tree.children.filter((node) => node.type !== "yaml");
 }

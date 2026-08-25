@@ -23,4 +23,4 @@ function StatusChip({ status, className }: { status: PlanStatus; className?: str
 	);
 }
 
-export { PLAN_STATUS_PRESENTATION, StatusChip };
+export { StatusChip };

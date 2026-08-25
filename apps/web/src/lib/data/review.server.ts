@@ -1,18 +1,11 @@
-import { approval, comment, decision, membership, plan, planBlock, workspace } from "@plantifiles/db/schema";
-import { and, count, eq, isNotNull } from "drizzle-orm";
-import { requireIdentity } from "#/lib/integrations/request-auth.server";
+import { approval, comment, decision, type membership, plan, planBlock } from "@plantifiles/db/schema";
+import { and, count, eq } from "drizzle-orm";
+import { requireWritablePlanAccess } from "./plan-access.server";
 import { getDb } from "#/lib/integrations/runtime.server";
 
 type PlanStatus = typeof plan.$inferSelect.status;
 type MembershipRole = typeof membership.$inferSelect.role;
 const APPROVAL_THRESHOLD = 1;
-
-type ReviewAccess = {
-	identity: Awaited<ReturnType<typeof requireIdentity>>;
-	plan: typeof plan.$inferSelect;
-	workspace: typeof workspace.$inferSelect;
-	role: MembershipRole;
-};
 
 const NEXT_STATUS: Record<PlanStatus, PlanStatus | null> = {
 	draft: "in_review",
@@ -20,20 +13,6 @@ const NEXT_STATUS: Record<PlanStatus, PlanStatus | null> = {
 	approved: "archived",
 	archived: null,
 };
-
-async function requireReviewAccess(request: Request, planId: string): Promise<ReviewAccess> {
-	const identity = await requireIdentity(request, "plantifiles:write");
-	const rows = await getDb()
-		.select({ plan, workspace, role: membership.role })
-		.from(plan)
-		.innerJoin(workspace, eq(plan.workspaceId, workspace.id))
-		.innerJoin(membership, and(eq(membership.workspaceId, workspace.id), eq(membership.userId, identity.user.id)))
-		.where(and(eq(plan.id, planId), isNotNull(workspace.clerkOrganizationId)))
-		.limit(1);
-	const access = rows[0];
-	if (!access) throw new Response("Forbidden", { status: 403 });
-	return { ...access, identity };
-}
 
 function requireOwner(role: MembershipRole): void {
 	if (role !== "owner") throw new Response("Owner access required.", { status: 403 });
@@ -87,7 +66,7 @@ export async function resolveComment(request: Request, commentId: string, resolv
 	const rows = await getDb().select().from(comment).where(eq(comment.id, commentId)).limit(1);
 	const target = rows[0];
 	if (!target || target.parentId) throw new Response("Comment thread not found.", { status: 404 });
-	await requireReviewAccess(request, target.planId);
+	await requireWritablePlanAccess(request, target.planId);
 	await getDb()
 		.update(comment)
 		.set({ resolvedAt: resolved ? new Date() : null })
@@ -96,7 +75,7 @@ export async function resolveComment(request: Request, commentId: string, resolv
 }
 
 export async function resolveDecision(request: Request, planId: string, key: string, resolution: string) {
-	const access = await requireReviewAccess(request, planId);
+	const access = await requireWritablePlanAccess(request, planId);
 	const rows = await getDb()
 		.select()
 		.from(decision)
@@ -118,7 +97,7 @@ export async function resolveDecision(request: Request, planId: string, key: str
 }
 
 export async function approveCurrentVersion(request: Request, planId: string) {
-	const access = await requireReviewAccess(request, planId);
+	const access = await requireWritablePlanAccess(request, planId);
 	if (!access.plan.currentVersionId) throw new Response("The plan has no current version.", { status: 400 });
 	await getDb()
 		.insert(approval)
@@ -133,7 +112,7 @@ export async function approveCurrentVersion(request: Request, planId: string) {
 }
 
 export async function advancePlanStatus(request: Request, planId: string) {
-	const access = await requireReviewAccess(request, planId);
+	const access = await requireWritablePlanAccess(request, planId);
 	requireOwner(access.role);
 	const next = NEXT_STATUS[access.plan.status];
 	if (!next) return { status: access.plan.status, reason: "Archived is the final lifecycle state." };

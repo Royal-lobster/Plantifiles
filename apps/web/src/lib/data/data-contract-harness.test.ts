@@ -519,14 +519,19 @@ describe("organization move contracts", () => {
 		await publishInDemo(harness);
 
 		const asAuthor = await loadPlanReaderData(harness.request, "demo", "movable-plan");
-		expect(asAuthor.viewer).toEqual({ id: "user-owner", canMovePlan: true });
+		expect(asAuthor.viewer).toEqual({ id: "user-owner", name: "Owner", image: null, canMovePlan: true });
 
 		harness.setIdentity("user-member");
 		const asMember = await loadPlanReaderData(harness.request, "demo", "movable-plan");
-		expect(asMember.viewer).toEqual({ id: "user-member", canMovePlan: false });
+		expect(asMember.viewer).toEqual({ id: "user-member", name: "user-member", image: null, canMovePlan: false });
 
 		harness.setIdentity("user-second-owner");
 		const asOtherOwner = await loadPlanReaderData(harness.request, "demo", "movable-plan");
-		expect(asOtherOwner.viewer).toEqual({ id: "user-second-owner", canMovePlan: false });
+		expect(asOtherOwner.viewer).toEqual({
+			id: "user-second-owner",
+			name: "user-second-owner",
+			image: null,
+			canMovePlan: false,
+		});
 	});
 });
