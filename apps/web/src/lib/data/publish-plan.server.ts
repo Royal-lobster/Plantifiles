@@ -1,3 +1,4 @@
+import type { PublishPlanInput, PublishVersionInput } from "@plantifiles/api-contract";
 import { analyzePlan, type Block, diff, normalize, type PlanAnalysis } from "@plantifiles/core";
 import { plan, planVersion, workspace } from "@plantifiles/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
@@ -8,25 +9,6 @@ import { requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getBindings, getDb } from "#/lib/integrations/runtime.server";
 
 const MAX_SOURCE_BYTES = 1_000_000;
-
-export type PublishPlanInput = {
-	workspaceSlug: string;
-	slug?: string | undefined;
-	title: string;
-	source: string;
-	emoji?: string | undefined;
-	agentName?: string | undefined;
-	agentPrompt?: string | undefined;
-	force?: boolean | undefined;
-};
-
-export type PublishVersionInput = {
-	source: string;
-	emoji?: string | undefined;
-	agentName?: string | undefined;
-	agentPrompt?: string | undefined;
-	force?: boolean | undefined;
-};
 
 function assertPublishableSource(source: string, emoji: string | null, force = false): PlanAnalysis {
 	if (new TextEncoder().encode(source).byteLength > MAX_SOURCE_BYTES) {

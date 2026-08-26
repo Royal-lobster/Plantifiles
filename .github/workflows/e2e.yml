@@ -1,0 +1,43 @@
+name: End-to-end tests
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Clerk-backed Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@v1
+        with:
+          version: 11.17.0
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @plantifiles/web exec playwright install --with-deps chromium
+
+      - name: Run local Clerk-backed end-to-end tests
+        env:
+          VARS_KEY: ${{ secrets.VARS_KEY }}
+        run: pnpm test:e2e -- --workers=1

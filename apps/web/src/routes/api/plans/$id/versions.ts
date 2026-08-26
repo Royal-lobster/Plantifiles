@@ -1,17 +1,8 @@
+import { publishVersionInputSchema } from "@plantifiles/api-contract";
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
 import { errorResponse, readJson } from "#/lib/helpers/http";
-import { planEmojiSchema } from "#/lib/helpers/plan-emoji";
 import { getVersionHistory } from "#/lib/data/plan-reader.server";
 import { createPlanVersion } from "#/lib/data/publish-plan.server";
-
-const publishVersionSchema = z.object({
-	source: z.string(),
-	emoji: planEmojiSchema.optional(),
-	agentName: z.string().min(1).optional(),
-	agentPrompt: z.string().optional(),
-	force: z.boolean().optional(),
-});
 
 export const Route = createFileRoute("/api/plans/$id/versions")({
 	server: {
@@ -25,7 +16,7 @@ export const Route = createFileRoute("/api/plans/$id/versions")({
 			},
 			POST: async ({ request, params }) => {
 				try {
-					const input = publishVersionSchema.safeParse(await readJson(request));
+					const input = publishVersionInputSchema.safeParse(await readJson(request));
 					if (!input.success) {
 						return Response.json({ error: "invalid_request", issues: input.error.issues }, { status: 400 });
 					}

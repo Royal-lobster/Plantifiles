@@ -1,3 +1,4 @@
+import type { MoveTarget } from "@plantifiles/api-contract";
 import { Button } from "@plantifiles/ui/components/button";
 import {
 	Dialog,
@@ -13,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useId, useReducer, useRef } from "react";
-import type { MoveTarget } from "#/lib/data/move-plan.server";
 import { slugify } from "#/lib/helpers/plan-slug";
 import { listMoveTargetsForPage, movePlanForPage } from "../-data/plan-move";
 

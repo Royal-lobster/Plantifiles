@@ -5,8 +5,9 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import type { MovedPlan, PlanSummary } from "@plantifiles/api-contract";
 import { CONFIG_PATH, createAuth, loadConfig, resolveConnection, saveConfig } from "@plantifiles/auth";
-import { ApiError, type MovedPlan, type PlanSummary, PlantifilesClient } from "@plantifiles/api-client";
+import { ApiError, PlantifilesClient } from "@plantifiles/api-client";
 import { lint } from "@plantifiles/core";
 import { Command } from "commander";
 import { findRepositoryRoot, loadRepositoryState, saveRepositoryState, trackedPath } from "./repository-state.js";
@@ -311,7 +312,18 @@ async function status(options: StatusOptions): Promise<void> {
 	const connection = await resolveConnection();
 	const workspace = options.workspace ?? connection.defaultWorkspace;
 	if (!workspace) throw new Error("No workspace to list. Pass --workspace <slug>.");
-	const plans = await new PlantifilesClient(connection).listPlans(workspace);
+	const client = new PlantifilesClient(connection);
+	const plans: PlanSummary[] = [];
+	let cursor: string | undefined;
+	do {
+		const page = await client.listPlans({
+			workspaceSlug: workspace,
+			limit: 100,
+			...(cursor ? { cursor } : {}),
+		});
+		plans.push(...page.items);
+		cursor = page.nextCursor ?? undefined;
+	} while (cursor);
 	console.log(plans.length > 0 ? renderStatusTable(plans) : `No plans in ${workspace}.`);
 }
 

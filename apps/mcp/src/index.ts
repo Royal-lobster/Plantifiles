@@ -1,4 +1,12 @@
 #!/usr/bin/env node
+import {
+	commentInputSchema,
+	listPlansInputSchema,
+	movePlanInputSchema,
+	planEmojiSchema,
+	publishPlanInputSchema,
+	publishVersionInputSchema,
+} from "@plantifiles/api-contract";
 import { resolveConnection } from "@plantifiles/auth";
 import { ApiError, PlantifilesClient } from "@plantifiles/api-client";
 import { McpServer } from "@modelcontextprotocol/server";
@@ -30,18 +38,10 @@ async function main() {
 		"create_plan",
 		{
 			description: "Publish a new linted Plantifiles plan and return its canonical URL.",
-			inputSchema: z.object({
-				workspaceSlug: z.string().min(1),
-				slug: z.string().min(1).optional(),
-				title: z.string().min(1),
-				source: z.string(),
-				emoji: z
-					.string()
+			inputSchema: publishPlanInputSchema.extend({
+				emoji: planEmojiSchema
 					.optional()
 					.describe("Pick one representative emoji for the plan's subject, such as 🧾 for billing."),
-				agentName: z.string().min(1).optional(),
-				agentPrompt: z.string().optional(),
-				force: z.boolean().optional(),
 			}),
 		},
 		(input) => runTool(() => api.createPlan(input)),
@@ -51,16 +51,11 @@ async function main() {
 		"update_plan",
 		{
 			description: "Publish a new version of an existing Plantifiles plan.",
-			inputSchema: z.object({
+			inputSchema: publishVersionInputSchema.extend({
 				planId: z.string().min(1),
-				source: z.string(),
-				emoji: z
-					.string()
+				emoji: planEmojiSchema
 					.optional()
 					.describe("Pick one representative emoji for the plan's subject; it replaces the current emoji."),
-				agentName: z.string().min(1).optional(),
-				agentPrompt: z.string().optional(),
-				force: z.boolean().optional(),
 			}),
 		},
 		({ planId, ...input }) => runTool(() => api.createVersion(planId, input)),
@@ -71,7 +66,7 @@ async function main() {
 		{
 			description:
 				"Move a plan to a different organization, for when it was published to the wrong one. Approvals on the current version are cleared because they belonged to the previous organization.",
-			inputSchema: z.object({
+			inputSchema: movePlanInputSchema.extend({
 				planId: z.string().min(1),
 				workspaceSlug: z.string().min(1).describe("Slug of the organization the plan should end up in."),
 				slug: z
@@ -97,21 +92,16 @@ async function main() {
 		"list_plans",
 		{
 			description: "List plans and review state for a Plantifiles workspace.",
-			inputSchema: z.object({ workspaceSlug: z.string().min(1), status: z.string().min(1).optional() }),
+			inputSchema: listPlansInputSchema,
 		},
-		({ workspaceSlug, status }) => runTool(() => api.listPlans(workspaceSlug, status)),
+		(input) => runTool(() => api.listPlans(input)),
 	);
 
 	server.registerTool(
 		"comment_on_plan",
 		{
 			description: "Add an agent-assisted plan or block comment to the current plan version.",
-			inputSchema: z.object({
-				planId: z.string().min(1),
-				body: z.string().trim().min(1).max(10_000),
-				blockKey: z.string().min(1).optional(),
-				parentId: z.string().min(1).optional(),
-			}),
+			inputSchema: commentInputSchema.extend({ planId: z.string().min(1) }),
 		},
 		({ planId, ...input }) => runTool(() => api.commentOnPlan(planId, input)),
 	);

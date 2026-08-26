@@ -30,6 +30,9 @@ importers:
       '@plantifiles/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@plantifiles/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@plantifiles/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -60,6 +63,9 @@ importers:
       '@plantifiles/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@plantifiles/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@plantifiles/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -94,6 +100,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
+      '@plantifiles/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@plantifiles/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -223,10 +232,27 @@ importers:
         version: 4.120.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)
 
   packages/api-client:
+    dependencies:
+      '@plantifiles/api-contract':
+        specifier: workspace:*
+        version: link:../api-contract
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/api-contract:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -296,6 +322,9 @@ importers:
       drizzle-kit:
         specifier: 0.31.10
         version: 0.31.10
+      miniflare:
+        specifier: 5.20260804.0-alpha
+        version: 5.20260804.0-alpha(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       typescript:
         specifier: ^6.0.2
         version: 6.0.3

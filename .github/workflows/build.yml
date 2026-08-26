@@ -1,6 +1,7 @@
 name: Build and deploy
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -14,8 +15,49 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build and deploy
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@v1
+        with:
+          version: 11.17.0
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint source with Biome
+        run: pnpm exec biome lint .
+
+      - name: Lint, typecheck, and build workspaces
+        run: pnpm exec turbo lint typecheck build --concurrency=3
+
+      - name: Test workspaces
+        run: pnpm exec turbo test --concurrency=3 -- --maxWorkers=4
+
+      - name: Validate the Cloudflare deployment bundle
+        run: pnpm --dir apps/web exec wrangler deploy --dry-run
+
+  e2e:
+    name: End-to-end
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    uses: ./.github/workflows/e2e.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -34,9 +76,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace
-        run: pnpm build
-
       - name: Check Cloudflare deployment credentials
         id: cloudflare
         env:
@@ -49,6 +88,17 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Cloudflare deployment skipped until repository secrets are configured."
           fi
+
+      - name: Build the production deployment bundle
+        if: steps.cloudflare.outputs.configured == 'true'
+        run: pnpm exec turbo build --concurrency=3
+
+      - name: Record the pre-migration D1 recovery bookmark
+        if: steps.cloudflare.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --dir apps/web exec wrangler d1 time-travel info plantifiles
 
       - name: Apply production database migrations
         if: steps.cloudflare.outputs.configured == 'true'

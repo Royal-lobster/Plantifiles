@@ -1,5 +1,6 @@
+import { planEmojiSchema } from "@plantifiles/api-contract";
 import { describe, expect, it } from "vitest";
-import { planEmojiSchema, resolvePlanEmoji } from "./plan-emoji";
+import { resolvePlanEmoji } from "./plan-emoji";
 
 const SOURCE_WITH_EMOJI = `---
 title: Billing migration

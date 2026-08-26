@@ -1,9 +1,27 @@
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@plantifiles/ui/components/dialog";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Maximize2 } from "lucide-react";
+import type { Mermaid } from "mermaid";
 import type { ReactElement, ReactNode } from "react";
 import { isValidElement, useEffect, useId, useMemo, useRef, useState } from "react";
 import { usePlanRender } from "./plan-render-context";
+
+let mermaidPromise: Promise<Mermaid> | undefined;
+
+function loadMermaid(): Promise<Mermaid> | undefined {
+	if (import.meta.env.SSR) return undefined;
+	// The public package entry is Mermaid's core build: it keeps each diagram
+	// implementation behind its own dynamic import. Share that browser-only
+	// boundary across the inline figure and the lightbox.
+	mermaidPromise ??= import("mermaid").then(
+		({ default: mermaid }) => mermaid,
+		(error: unknown) => {
+			mermaidPromise = undefined;
+			throw error;
+		},
+	);
+	return mermaidPromise;
+}
 
 function reactNodeText(node: ReactNode): string {
 	if (typeof node === "string" || typeof node === "number") return String(node);
@@ -51,11 +69,9 @@ function MermaidFigure({ chart, className }: { chart: string; className?: string
 		if (rootClassSignature === undefined) return;
 		let active = true;
 		void (async () => {
-			if (import.meta.env.SSR) return;
 			try {
-				// Mermaid touches window/document at import time and must never reach the
-				// Worker's SSR pass, so the specifier stays dynamic on purpose.
-				const mermaid = (await import("mermaid")).default;
+				const mermaid = await loadMermaid();
+				if (!mermaid) return;
 				const styles = getComputedStyle(document.documentElement);
 				const theme = rootClassSignature.split(/\s+/).includes("dark") ? "dark" : "light";
 				const token = (name: string) => mermaidColor(styles.getPropertyValue(name).trim());

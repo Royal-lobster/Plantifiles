@@ -1,5 +1,5 @@
+import type { PlanStatus } from "@plantifiles/api-contract";
 import { Archive, CheckCircle2, Eye, type LucideIcon, PencilLine } from "lucide-react";
-import type { PlanStatus } from "#/lib/data/plan-types";
 import { StateLabel } from "./state-label";
 
 /**

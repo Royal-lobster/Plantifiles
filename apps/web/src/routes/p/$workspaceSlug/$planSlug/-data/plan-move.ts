@@ -1,12 +1,8 @@
+import { type MovedPlan, movePlanInputSchema } from "@plantifiles/api-contract";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import {
-	listMoveTargets,
-	type MovedPlan,
-	movePlan,
-	PlanSlugConflictError,
-} from "../../../../../lib/data/move-plan.server";
+import { listMoveTargets, movePlan, PlanSlugConflictError } from "../../../../../lib/data/move-plan.server";
 
 /**
  * A slug collision comes back as a reason rather than an exception, the way
@@ -21,13 +17,7 @@ export const listMoveTargetsForPage = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => listMoveTargets(getRequest(), data.planId));
 
 export const movePlanForPage = createServerFn({ method: "POST" })
-	.validator(
-		z.object({
-			planId: z.string().min(1),
-			workspaceSlug: z.string().min(1),
-			slug: z.string().min(1).optional(),
-		}),
-	)
+	.validator(movePlanInputSchema.extend({ planId: z.string().min(1) }))
 	.handler(async ({ data }): Promise<MovePlanResult> => {
 		try {
 			return { moved: await movePlan(getRequest(), data.planId, data), conflict: null };

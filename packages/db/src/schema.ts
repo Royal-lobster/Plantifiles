@@ -51,6 +51,7 @@ export const plan = sqliteTable(
 	(table) => [
 		unique("plan_workspace_slug").on(table.workspaceId, table.slug),
 		index("plan_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
+		index("plan_workspace_updated_id_idx").on(table.workspaceId, table.updatedAt, table.id),
 		check("plan_status_ck", sql`${table.status} in ('draft','in_review','approved','archived')`),
 		check("plan_visibility_ck", sql`${table.visibility} in ('private','workspace','public')`),
 	],

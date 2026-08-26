@@ -15,6 +15,9 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "tsc -p tsconfig.json --noEmit"
 	},
+	"dependencies": {
+		"@plantifiles/api-contract": "workspace:*"
+	},
 	"devDependencies": {
 		"@types/node": "^24.0.0",
 		"typescript": "^6.0.2",

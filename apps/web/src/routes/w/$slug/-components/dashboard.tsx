@@ -11,11 +11,12 @@ import {
 import { Input } from "@plantifiles/ui/components/input";
 import { cn } from "@plantifiles/ui/lib/utils";
 import { getRouteApi, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Search, Terminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InstallInstructions } from "../../../../components/install-instructions";
 import { StatusChip } from "../../../../components/status-chip";
-import type { DashboardPlan } from "../-data/dashboard";
+import { getDashboardData, type DashboardPlan } from "../-data/dashboard";
 
 const route = getRouteApi("/w/$slug/");
 
@@ -46,13 +47,23 @@ function matchesView(plan: DashboardPlan, view: DashboardView): boolean {
 }
 
 export function Dashboard() {
-	const { plans } = route.useLoaderData();
+	const initialPage = route.useLoaderData();
 	const { slug } = route.useParams();
 	const search = route.useSearch();
 	const navigate = route.useNavigate();
+	const loadDashboardPage = useServerFn(getDashboardData);
+	const [plans, setPlans] = useState(initialPage.plans);
+	const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [loadError, setLoadError] = useState<string>();
 	const [installOpen, setInstallOpen] = useState(false);
 	const [query, setQuery] = useState(search.q ?? "");
 	const pendingQueryRef = useRef<string | undefined | null>(null);
+	useEffect(() => {
+		setPlans(initialPage.plans);
+		setNextCursor(initialPage.nextCursor);
+		setLoadError(undefined);
+	}, [initialPage.nextCursor, initialPage.plans]);
 	useEffect(() => {
 		if (pendingQueryRef.current !== null && pendingQueryRef.current === search.q) {
 			pendingQueryRef.current = null;
@@ -69,6 +80,20 @@ export function Dashboard() {
 		}, 150);
 		return () => window.clearTimeout(timer);
 	}, [navigate, query, search.q]);
+	async function loadMorePlans() {
+		if (!nextCursor || loadingMore) return;
+		setLoadingMore(true);
+		setLoadError(undefined);
+		try {
+			const page = await loadDashboardPage({ data: { slug, cursor: nextCursor } });
+			setPlans((current) => [...current, ...page.plans]);
+			setNextCursor(page.nextCursor);
+		} catch (error) {
+			setLoadError(error instanceof Error ? error.message : "Could not load more plans.");
+		} finally {
+			setLoadingMore(false);
+		}
+	}
 	const view: DashboardView = search.view ?? "active";
 	const mineOnly = search.mine === true;
 	const normalizedQuery = query.trim().toLowerCase();
@@ -99,7 +124,8 @@ export function Dashboard() {
 			<header className="flex items-baseline gap-3 border-b border-foreground/[0.08] pb-4">
 				<h1 className="font-medium text-2xl tracking-tight">Plans</h1>
 				<span className="font-mono text-muted-foreground text-xs">
-					{counts[view]} {counts[view] === 1 ? "plan" : "plans"}
+					{counts[view]}
+					{nextCursor ? "+" : ""} {counts[view] === 1 && !nextCursor ? "plan" : "plans"}
 				</span>
 				<Button variant="quiet" size="sm" className="ml-auto self-center" onClick={() => setInstallOpen(true)}>
 					<Terminal aria-hidden="true" />
@@ -150,10 +176,10 @@ export function Dashboard() {
 							/>
 							<Input
 								className="pl-9"
-								aria-label="Filter by title or emoji"
+								aria-label="Filter loaded plans by title or emoji"
 								value={query}
 								onChange={(event) => setQuery(event.currentTarget.value)}
-								placeholder="Filter title or emoji"
+								placeholder={nextCursor ? "Filter loaded plans" : "Filter title or emoji"}
 							/>
 						</div>
 						<button
@@ -188,6 +214,18 @@ export function Dashboard() {
 							))}
 						</ul>
 					)}
+					{nextCursor ? (
+						<div className="mt-4 flex flex-col items-center gap-2">
+							<Button variant="quiet" onClick={loadMorePlans} disabled={loadingMore}>
+								{loadingMore ? "Loading…" : "Load more plans"}
+							</Button>
+							{loadError ? (
+								<p role="alert" className="text-destructive text-sm">
+									{loadError}
+								</p>
+							) : null}
+						</div>
+					) : null}
 				</>
 			)}
 			{installOpen ? (

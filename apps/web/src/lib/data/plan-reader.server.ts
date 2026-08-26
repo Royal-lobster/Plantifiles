@@ -1,12 +1,12 @@
+import type { PlanStatus } from "@plantifiles/api-contract";
 import { analyzePlan, type Block, normalize } from "@plantifiles/core";
 import { approval, comment, decision, membership, plan, planVersion, user, workspace } from "@plantifiles/db/schema";
-import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { authenticateRequest, requireIdentity } from "#/lib/integrations/request-auth.server";
 import { getDb } from "#/lib/integrations/runtime.server";
 import { canMovePlan } from "./move-plan.server";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
-import type { PlanStatus } from "./plan-types";
 
 const creator = alias(user, "creator");
 
@@ -107,11 +107,51 @@ export type PlanListItem = {
 	needsMyReview: boolean;
 };
 
+export type PlanListPage = {
+	items: PlanListItem[];
+	nextCursor: string | null;
+};
+
+export type PlanListOptions = {
+	status?: PlanStatus;
+	cursor?: string;
+	limit?: number;
+};
+
+const DEFAULT_PLAN_PAGE_SIZE = 50;
+const MAX_PLAN_PAGE_SIZE = 100;
+
+function parsePlanCursor(cursor: string): { updatedAt: Date; id: string } {
+	try {
+		const parsed: unknown = JSON.parse(atob(cursor));
+		if (
+			!Array.isArray(parsed) ||
+			parsed.length !== 2 ||
+			typeof parsed[0] !== "number" ||
+			!Number.isSafeInteger(parsed[0]) ||
+			typeof parsed[1] !== "string" ||
+			!parsed[1]
+		) {
+			throw new Error("invalid cursor payload");
+		}
+		const updatedAt = new Date(parsed[0]);
+		if (Number.isNaN(updatedAt.getTime())) throw new Error("invalid cursor timestamp");
+		return { updatedAt, id: parsed[1] };
+	} catch {
+		throw new Response("Invalid plan cursor.", { status: 400 });
+	}
+}
+
+function planCursor(item: Pick<PlanListItem, "id" | "updatedAt">): string {
+	return btoa(JSON.stringify([item.updatedAt.getTime(), item.id]));
+}
+
 export async function listPlans(
 	request: Request,
 	workspaceSlug: string,
-	status?: typeof plan.$inferSelect.status,
-): Promise<PlanListItem[]> {
+	options: PlanListOptions = {},
+): Promise<PlanListPage> {
+	const startedAt = performance.now();
 	const identity = await requireIdentity(request, "plantifiles:read");
 	const db = getDb();
 	const workspaceRows = await db
@@ -123,6 +163,8 @@ export async function listPlans(
 	if (!targetWorkspace) throw new Response("Workspace not found", { status: 404 });
 	await assertWorkspaceAccess(targetWorkspace.id, identity.user.id);
 
+	const limit = Math.min(Math.max(options.limit ?? DEFAULT_PLAN_PAGE_SIZE, 1), MAX_PLAN_PAGE_SIZE);
+	const cursor = options.cursor ? parsePlanCursor(options.cursor) : undefined;
 	const viewerId = identity.user.id;
 	const rows = await db
 		.select({
@@ -158,12 +200,18 @@ export async function listPlans(
 		.innerJoin(user, eq(planVersion.authorId, user.id))
 		.innerJoin(creator, eq(plan.createdById, creator.id))
 		.where(
-			status
-				? and(eq(plan.workspaceId, targetWorkspace.id), eq(plan.status, status))
-				: eq(plan.workspaceId, targetWorkspace.id),
+			and(
+				eq(plan.workspaceId, targetWorkspace.id),
+				options.status ? eq(plan.status, options.status) : undefined,
+				cursor
+					? or(lt(plan.updatedAt, cursor.updatedAt), and(eq(plan.updatedAt, cursor.updatedAt), lt(plan.id, cursor.id)))
+					: undefined,
+			),
 		)
-		.orderBy(desc(plan.updatedAt));
-	return rows.map(({ createdById, authorId, approvedByMe, ...item }) => {
+		.orderBy(desc(plan.updatedAt), desc(plan.id))
+		.limit(limit + 1);
+	const hasNextPage = rows.length > limit;
+	const items = rows.slice(0, limit).map(({ createdById, authorId, approvedByMe, ...item }) => {
 		const mine = createdById === viewerId || authorId === viewerId;
 		return {
 			...item,
@@ -171,6 +219,18 @@ export async function listPlans(
 			needsMyReview: item.status === "in_review" && !mine && !approvedByMe,
 		};
 	});
+	const lastItem = items.at(-1);
+	console.info("plans.list", {
+		durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+		workspaceId: targetWorkspace.id,
+		rows: items.length,
+		pageSize: limit,
+		hasNextPage,
+	});
+	return {
+		items,
+		nextCursor: hasNextPage && lastItem ? planCursor(lastItem) : null,
+	};
 }
 
 export async function loadPlanDocument(

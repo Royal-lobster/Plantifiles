@@ -187,8 +187,11 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		await dashboardRow.click();
 
 		await expect(page.getByRole("heading", { name: title })).toBeVisible();
+		const planHeader = page.getByRole("article", { name: title }).locator("header");
 		await expect(page.getByRole("banner").getByRole("link", { name: "Plantifiles home" })).toBeVisible();
-		await expect(page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]')).toBeVisible();
+		const diagrams = page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]');
+		await expect(diagrams).toHaveCount(2);
+		for (const diagram of await diagrams.all()) await expect(diagram).toBeVisible();
 		/* The toggle's accessible name is the control's state, so the locator has to
 		   match either name or it stops resolving the moment the theme flips. */
 		const themeToggle = page.getByRole("banner").getByRole("button", { name: /Use (dark|light) theme/ });
@@ -219,13 +222,13 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		await page.getByRole("button", { name: "Comment mode" }).click();
 		await expect(page.getByRole("button", { name: "Comment on TLDR" })).toHaveCount(0);
 		await page.getByRole("button", { name: "Submit for review" }).click();
-		await expect(page.getByText(/^in review$/i)).toBeVisible();
+		await expect(planHeader.getByText(/^in review$/i)).toBeVisible();
 		await page.getByRole("button", { name: "Resolve decision" }).click();
 		await page.getByLabel("Resolution").fill("Use one release-wide approval bound to the immutable version.");
 		await page.getByRole("button", { name: "Save resolution" }).click();
 		await expect(page.getByText(/^resolved$/i)).toBeVisible();
 		await page.getByRole("button", { name: "Approve current version" }).click();
-		await expect(page.getByText(/^approved$/i)).toBeVisible();
+		await expect(planHeader.getByText(/^approved$/i)).toBeVisible();
 
 		const revision = source
 			.replace(
@@ -248,7 +251,7 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 
 		await page.goto(planUrl);
 		await expect(page.getByText("v2", { exact: true })).toBeVisible();
-		await expect(page.getByText(/^in review$/i)).toBeVisible();
+		await expect(planHeader.getByText(/^in review$/i)).toBeVisible();
 		await expect(page.locator("html")).toHaveClass(/dark/);
 		await expect(page.getByText("Modified TLDR", { exact: false })).toBeVisible();
 		await expect(page.getByText("Added Risk", { exact: false })).toBeVisible();

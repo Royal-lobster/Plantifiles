@@ -5,6 +5,33 @@ const client = new PlantifilesClient({ getAccessToken: () => "secret", baseUrl: 
 
 afterEach(() => vi.restoreAllMocks());
 
+const PLAN_DETAIL = {
+	plan: { id: "plan-1", slug: "target", title: "Target", status: "draft" },
+	workspace: { slug: "demo" },
+	version: { number: 1, source: "source" },
+} as const;
+
+const PLAN_SUMMARY = {
+	id: "plan-1",
+	slug: "target",
+	emoji: null,
+	title: "Target",
+	status: "draft",
+	version: 1,
+	agentName: null,
+	openDecisions: 0,
+	approvals: 0,
+	readTimeMinutes: 1,
+	updatedAt: "2026-08-25T00:00:00.000Z",
+} as const;
+
+const OTHER_PLAN_SUMMARY = {
+	...PLAN_SUMMARY,
+	id: "plan-other",
+	slug: "other",
+	title: "Other",
+} as const;
+
 describe("PlantifilesClient", () => {
 	it("uses one authenticated JSON transport for publication", async () => {
 		const fetchMock = vi
@@ -29,7 +56,7 @@ describe("PlantifilesClient", () => {
 			baseUrl: "https://plans.example",
 			getAccessToken: () => tokens.shift() ?? "missing",
 		});
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({}));
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json(PLAN_DETAIL));
 
 		await freshClient.getPlan("one");
 		await freshClient.getPlan("two");
@@ -97,19 +124,15 @@ describe("PlantifilesClient", () => {
 	it("resolves configured plan URLs and rejects foreign services", async () => {
 		const fetchMock = vi
 			.spyOn(globalThis, "fetch")
-			.mockResolvedValueOnce(Response.json([{ id: "plan-1", slug: "target" }]))
-			.mockResolvedValueOnce(
-				Response.json({
-					plan: { id: "plan-1", slug: "target", title: "Target", status: "draft" },
-					workspace: { slug: "demo" },
-					version: { number: 1, source: "source" },
-				}),
-			);
+			.mockResolvedValueOnce(Response.json({ items: [OTHER_PLAN_SUMMARY], nextCursor: "next-page" }))
+			.mockResolvedValueOnce(Response.json({ items: [PLAN_SUMMARY], nextCursor: null }))
+			.mockResolvedValueOnce(Response.json(PLAN_DETAIL));
 
 		const detail = await client.resolvePlan("https://plans.example/p/demo/target/v/2");
 		expect(detail.plan.id).toBe("plan-1");
 		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-			"https://plans.example/api/plans?workspace=demo",
+			"https://plans.example/api/plans?workspace=demo&limit=100",
+			"https://plans.example/api/plans?workspace=demo&cursor=next-page&limit=100",
 			"https://plans.example/api/plans/plan-1",
 		]);
 		await expect(client.getPlanMarkdown("https://other.example/p/demo/target")).rejects.toThrow(

@@ -1,0 +1,1 @@
+CREATE INDEX `plan_workspace_updated_id_idx` ON `plan` (`workspace_id`,`updated_at`,`id`);

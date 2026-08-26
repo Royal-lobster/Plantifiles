@@ -1,85 +1,29 @@
+import {
+	commentInputSchema,
+	type CommentInput,
+	listPlansInputSchema,
+	type ListPlansInput,
+	movePlanInputSchema,
+	type MovePlanInput,
+	moveTargetListSchema,
+	type MoveTarget,
+	movedPlanSchema,
+	type MovedPlan,
+	planDetailSchema,
+	type PlanDetail,
+	planPageSchema,
+	type PlanPage,
+	publishPlanInputSchema,
+	type PublishPlanInput,
+	publishedPlanSchema,
+	type PublishedPlan,
+	publishVersionInputSchema,
+	type PublishVersionInput,
+	workspaceSummaryListSchema,
+	type WorkspaceSummary,
+} from "@plantifiles/api-contract";
+
 export type PlantifilesClientConfig = { getAccessToken(): string | Promise<string>; baseUrl: string };
-
-export type PublishPlanInput = {
-	workspaceSlug: string;
-	slug?: string | undefined;
-	title: string;
-	source: string;
-	emoji?: string | undefined;
-	agentName?: string | undefined;
-	agentPrompt?: string | undefined;
-	force?: boolean | undefined;
-};
-
-export type PublishVersionInput = {
-	source: string;
-	emoji?: string | undefined;
-	agentName?: string | undefined;
-	agentPrompt?: string | undefined;
-	force?: boolean | undefined;
-};
-
-export type MovePlanInput = {
-	workspaceSlug: string;
-	/** Only needed when the destination already holds a plan at this slug. */
-	slug?: string | undefined;
-};
-
-export type MovedPlan = {
-	id: string;
-	workspaceSlug: string;
-	slug: string;
-	url: string;
-	status: string;
-	/** The organization the plan left, or `null` when it was already in place. */
-	movedFrom: string | null;
-	clearedApprovals: number;
-};
-
-export type MoveTarget = WorkspaceSummary & {
-	/** The destination already holds a plan at this plan's slug. */
-	slugTaken: boolean;
-};
-
-export type CommentInput = {
-	body: string;
-	blockKey?: string | undefined;
-	parentId?: string | undefined;
-};
-
-export type PublishedPlan = {
-	id: string;
-	version: number;
-	url: string;
-	changeSummary: string | null;
-};
-
-export type PlanDetail = {
-	plan: { id: string; slug: string; title: string; status: string };
-	workspace: { slug: string };
-	version: { number: number; source: string };
-};
-
-export type PlanSummary = {
-	id: string;
-	slug: string;
-	emoji: string | null;
-	title: string;
-	status: string;
-	version: number;
-	agentName: string | null;
-	openDecisions: number;
-	approvals: number;
-	readTimeMinutes: number;
-	updatedAt: string;
-};
-
-export type WorkspaceSummary = {
-	id: string;
-	slug: string;
-	name: string;
-	role: "owner" | "member";
-};
 
 export class ApiError extends Error {
 	readonly status: number;
@@ -125,62 +69,77 @@ export class PlantifilesClient {
 		throw new ApiError(response.status, body);
 	}
 
-	async #json<T>(path: string, init: RequestInit = {}): Promise<T> {
+	async #json<T>(path: string, schema?: { parse(value: unknown): T }, init: RequestInit = {}): Promise<T> {
 		const response = await this.#response(path, init);
 		if (response.status === 204) return undefined as T;
-		return response.json() as Promise<T>;
+		const body: unknown = await response.json();
+		return schema ? schema.parse(body) : (body as T);
 	}
 
 	listWorkspaces(): Promise<WorkspaceSummary[]> {
-		return this.#json("/api/workspaces");
+		return this.#json("/api/workspaces", workspaceSummaryListSchema);
 	}
 
 	createPlan(input: PublishPlanInput): Promise<PublishedPlan> {
-		return this.#json("/api/plans", { method: "POST", body: JSON.stringify(input) });
+		return this.#json("/api/plans", publishedPlanSchema, {
+			method: "POST",
+			body: JSON.stringify(publishPlanInputSchema.parse(input)),
+		});
 	}
 
 	createVersion(planId: string, input: PublishVersionInput): Promise<PublishedPlan> {
-		return this.#json(`/api/plans/${encodeURIComponent(planId)}/versions`, {
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/versions`, publishedPlanSchema, {
 			method: "POST",
-			body: JSON.stringify(input),
+			body: JSON.stringify(publishVersionInputSchema.parse(input)),
 		});
 	}
 
 	movePlan(planId: string, input: MovePlanInput): Promise<MovedPlan> {
-		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`, {
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`, movedPlanSchema, {
 			method: "POST",
-			body: JSON.stringify(input),
+			body: JSON.stringify(movePlanInputSchema.parse(input)),
 		});
 	}
 
 	listMoveTargets(planId: string): Promise<MoveTarget[]> {
-		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`);
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/move`, moveTargetListSchema);
 	}
 
 	getPlan(planId: string): Promise<PlanDetail> {
-		return this.#json(`/api/plans/${encodeURIComponent(planId)}`);
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}`, planDetailSchema);
 	}
 
-	listPlans(workspaceSlug: string, status?: string): Promise<PlanSummary[]> {
-		const query = new URLSearchParams({ workspace: workspaceSlug });
-		if (status) query.set("status", status);
-		return this.#json(`/api/plans?${query}`);
+	listPlans(input: ListPlansInput): Promise<PlanPage> {
+		const parsed = listPlansInputSchema.parse(input);
+		const query = new URLSearchParams({ workspace: parsed.workspaceSlug });
+		if (parsed.status) query.set("status", parsed.status);
+		if (parsed.cursor) query.set("cursor", parsed.cursor);
+		if (parsed.limit) query.set("limit", String(parsed.limit));
+		return this.#json(`/api/plans?${query}`, planPageSchema);
 	}
 
 	commentOnPlan(planId: string, input: CommentInput): Promise<unknown> {
-		return this.#json(`/api/plans/${encodeURIComponent(planId)}/comments`, {
+		return this.#json(`/api/plans/${encodeURIComponent(planId)}/comments`, undefined, {
 			method: "POST",
-			body: JSON.stringify({ ...input, agentAssisted: true }),
+			body: JSON.stringify({ ...commentInputSchema.parse(input), agentAssisted: true }),
 		});
 	}
 
 	async resolvePlan(idOrUrl: string): Promise<PlanDetail> {
 		if (!/^https?:\/\//.test(idOrUrl)) return this.getPlan(idOrUrl);
 		const { workspace, slug } = this.#parsePlanUrl(idOrUrl);
-		const listed = await this.listPlans(workspace);
-		const plan = listed.find((item) => item.slug === slug);
-		if (!plan) throw new Error(`No plan named ${slug} exists in workspace ${workspace}.`);
-		return this.getPlan(plan.id);
+		let cursor: string | undefined;
+		do {
+			const page = await this.listPlans({
+				workspaceSlug: workspace,
+				limit: 100,
+				...(cursor ? { cursor } : {}),
+			});
+			const plan = page.items.find((item) => item.slug === slug);
+			if (plan) return this.getPlan(plan.id);
+			cursor = page.nextCursor ?? undefined;
+		} while (cursor);
+		throw new Error(`No plan named ${slug} exists in workspace ${workspace}.`);
 	}
 
 	async getPlanMarkdown(idOrUrl: string): Promise<string> {

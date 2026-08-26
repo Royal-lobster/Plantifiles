@@ -1,13 +1,7 @@
+import type { WorkspaceSummary } from "@plantifiles/api-contract";
 import { membership, workspace } from "@plantifiles/db/schema";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { getDb } from "#/lib/integrations/runtime.server";
-
-export type WorkspaceSummary = {
-	id: string;
-	slug: string;
-	name: string;
-	role: "owner" | "member";
-};
 
 /**
  * List only Clerk-linked Organization projections. Transition-era memberships

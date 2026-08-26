@@ -11,6 +11,7 @@ Plantifiles is a pnpm workspace built around a TanStack Start application on Clo
 | `apps/mcp` | MCP server over stdio |
 | `packages/core` | Parsing, linting, metadata, normalization, and structural diffs |
 | `packages/auth` | Clerk OAuth and credential storage for CLI and MCP clients |
+| `packages/api-contract` | Shared Zod schemas and types for the HTTP interface |
 | `packages/api-client` | Typed client for the Plantifiles HTTP interface |
 | `packages/db` | Drizzle schema, D1 client, and migrations |
 | `packages/ui` | Shared React primitives |
@@ -127,6 +128,8 @@ The Playwright suite runs against a local Worker with one worker process. It cov
 
 Keep tests attached to observable behavior. Do not add tests that only assert implementation structure or source text.
 
+Pull requests and `main` updates run the `Verify` job in `.github/workflows/build.yml`. Configure the default branch to require the `Verify` status check before merging. A `main` update then runs the Clerk-backed Playwright workflow before the production deployment job. The same E2E workflow runs nightly and can be started manually.
+
 ## Runtime configuration
 
 Runtime configuration is generated from `apps/web/config.vars`:
@@ -152,18 +155,53 @@ Each environment needs a public Clerk OAuth application with:
 - `profile email offline_access plantifiles:read plantifiles:write` scopes
 - user API keys enabled for `/settings/api-keys`
 
+## Database migration safety
+
+The production workflow applies migrations before it deploys the new Worker. Every migration must therefore remain compatible with both the currently deployed Worker and the incoming Worker.
+
+Use expand-and-contract changes:
+
+1. **Expand:** add nullable columns, new tables, or new indexes. Do not rename or drop anything the current Worker reads.
+2. **Migrate:** deploy code that tolerates both representations and backfill existing rows when needed.
+3. **Contract:** remove old reads and writes in a later deployment. Drop obsolete schema only after the previous Worker can no longer receive traffic.
+
+Do not combine a destructive rename or drop, a new `NOT NULL` constraint, and the code cutover in one deployment. Generate migrations with `pnpm db:generate`, review the SQL, and run the D1 migration tests before committing it.
+
+Before a manual production migration, record a D1 Time Travel bookmark:
+
+```bash
+pnpm --dir apps/web exec wrangler d1 time-travel info plantifiles
+```
+
+If application code fails but stored data is sound, revert the application change on `main`; the additive migration stays in place and the deployment workflow restores the previous compatible behavior. Do not restore D1 merely to roll back code.
+
+If a migration or new Worker corrupts stored data, stop further deployments, restore the compatible Worker first, then restore the database with the bookmark printed before the migration:
+
+```bash
+pnpm --dir apps/web exec wrangler d1 time-travel restore plantifiles --bookmark <bookmark>
+```
+
+D1 Time Travel acts on the remote database and restoration is destructive. Confirm the database name and recovery point before running it.
+
 ## Deployment
 
-GitHub Actions builds, applies migrations, and deploys updates to `main`. Configure these repository secrets:
+GitHub Actions verifies pull requests, records a D1 recovery bookmark, applies migrations, and deploys verified `main` updates. Configure these repository secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN` with Workers edit and D1 edit permissions
+- `VARS_KEY` for the Clerk-backed E2E workflow
 
-Manual production deployment:
+For a manual production deployment, finish verification and build the exact bundle before changing the database:
 
 ```bash
+pnpm test
+pnpm lint
+pnpm typecheck
+pnpm --filter @plantifiles/web build
+pnpm --dir apps/web exec wrangler deploy --dry-run
+pnpm --dir apps/web exec wrangler d1 time-travel info plantifiles
 pnpm db:migrate:remote
-pnpm --filter @plantifiles/web deploy
+pnpm --dir apps/web exec wrangler deploy
 ```
 
 Deploy the development Worker and its D1 migrations with:

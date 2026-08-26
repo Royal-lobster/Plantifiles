@@ -362,7 +362,9 @@ describe("publication and review contracts", () => {
 		});
 		await advancePlanStatus(harness.request, published.id);
 
-		const [asCreator] = await listPlans(harness.request, "demo");
+		const {
+			items: [asCreator],
+		} = await listPlans(harness.request, "demo");
 		expect(asCreator).toMatchObject({
 			status: "in_review",
 			creatorName: "Owner",
@@ -372,7 +374,9 @@ describe("publication and review contracts", () => {
 		});
 
 		harness.setIdentity("user-member");
-		const [asReviewer] = await listPlans(harness.request, "demo");
+		const {
+			items: [asReviewer],
+		} = await listPlans(harness.request, "demo");
 		expect(asReviewer).toMatchObject({
 			creatorName: "Owner",
 			creatorImage: "https://images.example/owner.png",
@@ -390,8 +394,37 @@ describe("publication and review contracts", () => {
 			published.id,
 			versionId,
 		);
-		const [afterApproval] = await listPlans(harness.request, "demo");
+		const {
+			items: [afterApproval],
+		} = await listPlans(harness.request, "demo");
 		expect(afterApproval).toMatchObject({ mine: false, needsMyReview: false });
+	});
+
+	it("paginates plans without duplicates across equal timestamps", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		for (const title of ["Alpha plan", "Beta plan", "Gamma plan"]) {
+			await createPlan(harness.request, {
+				workspaceSlug: "demo",
+				title,
+				source: VALID_PLAN.replace("Contract plan", title),
+				force: true,
+			});
+		}
+
+		const first = await listPlans(harness.request, "demo", { limit: 2 });
+		expect(first.items).toHaveLength(2);
+		if (!first.nextCursor) throw new Error("first page did not return a cursor");
+		const second = await listPlans(harness.request, "demo", { limit: 2, cursor: first.nextCursor });
+		expect(second.items).toHaveLength(1);
+		expect(second.nextCursor).toBeNull();
+		expect(new Set([...first.items, ...second.items].map((item) => item.id))).toHaveProperty("size", 3);
+	});
+
+	it("rejects malformed plan cursors", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await expect(listPlans(harness.request, "demo", { cursor: "not-a-cursor" })).rejects.toMatchObject({
+			status: 400,
+		});
 	});
 });
 

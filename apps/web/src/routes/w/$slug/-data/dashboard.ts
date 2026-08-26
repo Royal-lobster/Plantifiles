@@ -1,8 +1,8 @@
+import type { PlanStatus } from "@plantifiles/api-contract";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { listPlans } from "#/lib/data/plan-reader.server";
-import type { PlanStatus } from "#/lib/data/plan-types";
 
 export type DashboardPlan = {
 	id: string;
@@ -25,13 +25,18 @@ export type DashboardPlan = {
 
 export type DashboardData = {
 	plans: DashboardPlan[];
+	nextCursor: string | null;
 };
 
 export const getDashboardData = createServerFn({ method: "GET" })
-	.validator(z.object({ slug: z.string().min(1) }))
+	.validator(z.object({ slug: z.string().min(1), cursor: z.string().min(1).optional() }))
 	.handler(async ({ data }): Promise<DashboardData> => {
-		const plans = await listPlans(getRequest(), data.slug);
+		const page = await listPlans(getRequest(), data.slug, {
+			limit: 50,
+			...(data.cursor ? { cursor: data.cursor } : {}),
+		});
 		return {
-			plans: plans.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })),
+			plans: page.items.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })),
+			nextCursor: page.nextCursor,
 		};
 	});

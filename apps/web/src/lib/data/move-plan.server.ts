@@ -1,33 +1,12 @@
+import type { MovedPlan, MovePlanInput, MoveTarget } from "@plantifiles/api-contract";
 import { approval, type membership, plan, workspace } from "@plantifiles/db/schema";
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm";
 import { slugify } from "#/lib/helpers/plan-slug";
 import { getBindings, getDb } from "#/lib/integrations/runtime.server";
 import { assertWorkspaceAccess, publicPlanUrl, requireWritablePlanAccess } from "./plan-access.server";
-import type { PlanStatus } from "./plan-types";
-import { listWorkspacesForUser, type WorkspaceSummary } from "./workspaces.server";
+import { listWorkspacesForUser } from "./workspaces.server";
 
 type MembershipRole = typeof membership.$inferSelect.role;
-
-export type MovePlanInput = {
-	workspaceSlug: string;
-	slug?: string | undefined;
-};
-
-export type MovedPlan = {
-	id: string;
-	workspaceSlug: string;
-	slug: string;
-	url: string;
-	status: PlanStatus;
-	/** The organization the plan left, or `null` when it was already in place. */
-	movedFrom: string | null;
-	clearedApprovals: number;
-};
-
-export type MoveTarget = WorkspaceSummary & {
-	/** The destination already holds a plan at this plan's slug, so the move needs a new one. */
-	slugTaken: boolean;
-};
 
 /**
  * A destination collision is an expected outcome, not a fault: the caller picks
