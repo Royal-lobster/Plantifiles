@@ -71,27 +71,32 @@ export function ApiKeyList({ apiKeys }: { apiKeys: ApiKeyListItem[] }) {
 		setFeedback(feedback);
 	}
 
+	const feedbackPanel = feedback ? (
+		<div className="border-b border-foreground/[0.06] px-5 py-3 text-right">
+			<ApiKeyFeedback feedback={feedback} />
+		</div>
+	) : null;
+
 	if (apiKeys.length === 0) {
 		return (
-			<Empty className="px-5 py-8">
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<KeyRound aria-hidden="true" />
-					</EmptyMedia>
-					<EmptyTitle>No API keys yet</EmptyTitle>
-					<EmptyDescription>Create one above to connect a pipeline.</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
+			<>
+				{feedbackPanel}
+				<Empty className="px-5 py-8">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<KeyRound aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle>No API keys yet</EmptyTitle>
+						<EmptyDescription>Create one above to connect a pipeline.</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
+			</>
 		);
 	}
 
 	return (
 		<>
-			{feedback ? (
-				<div className="border-b border-foreground/[0.06] px-5 py-3 text-right">
-					<ApiKeyFeedback feedback={feedback} />
-				</div>
-			) : null}
+			{feedbackPanel}
 			{apiKeys.map((apiKey, index) => (
 				<Fragment key={apiKey.id}>
 					{index > 0 ? <SettingsRowDivider /> : null}
