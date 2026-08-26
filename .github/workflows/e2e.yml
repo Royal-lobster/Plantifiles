@@ -37,7 +37,15 @@ jobs:
       - name: Install Chromium
         run: pnpm --filter @plantifiles/web exec playwright install --with-deps chromium
 
+      - name: Configure the local Worker secret
+        working-directory: apps/web
+        env:
+          VARS_KEY: ${{ secrets.VARS_KEY }}
+        run: |
+          printf 'VARS_KEY=%s\n' "$VARS_KEY" > .dev.vars
+          chmod 600 .dev.vars
+
       - name: Run local Clerk-backed end-to-end tests
         env:
           VARS_KEY: ${{ secrets.VARS_KEY }}
-        run: pnpm test:e2e -- --workers=1
+        run: pnpm test:e2e
