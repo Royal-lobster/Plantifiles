@@ -29,6 +29,7 @@ export const getPlanReaderData = createServerFn({ method: "GET" })
 				title: document.plan.title,
 				emoji: document.plan.emoji,
 				status: document.plan.status,
+				visibility: document.plan.visibility,
 			},
 			metadata: analysis.metadata,
 			workspace: { slug: document.workspace.slug },

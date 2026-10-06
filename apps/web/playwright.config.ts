@@ -1,9 +1,12 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
 const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000").origin;
 
 export default defineConfig({
 	testDir: "./e2e",
+	outputDir: join(tmpdir(), "plantifiles-playwright-results"),
 	globalSetup: "./e2e/clerk-fixture.ts",
 	globalTeardown: "./e2e/global-teardown.ts",
 	fullyParallel: false,
@@ -16,7 +19,8 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: "pnpm --dir ../.. db:migrate:local && pnpm dev",
+		command:
+			"pnpm --dir ../.. db:migrate:local && if command -v devcap >/dev/null 2>&1; then devcap pnpm dev; else pnpm dev; fi",
 		url: origin,
 		reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "true",
 		timeout: 120_000,

@@ -5,12 +5,14 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
 import { listMoveTargets, movePlan } from "./move-plan.server";
 import { listPlans, loadPlanDocument, loadPlanReaderData, renderPlanMarkdown } from "./plan-reader.server";
+import { updatePlanSharing } from "./plan-sharing.server";
 import { createPlan, createPlanVersion } from "./publish-plan.server";
 import { advancePlanStatus, approveCurrentVersion, resolveDecision } from "./review.server";
 
 const runtime = vi.hoisted(() => ({
 	bindings: null as null | { DB: D1Database },
 	failNextBatch: false,
+	anonymous: false,
 	identity: {
 		user: { id: "user-owner", name: "Owner", email: "owner@example.com", image: null },
 		method: "oauth" as const,
@@ -58,8 +60,11 @@ vi.mock("#/lib/integrations/runtime.server", () => ({
 }));
 
 vi.mock("#/lib/integrations/request-auth.server", () => ({
-	authenticateRequest: async () => runtime.identity,
-	requireIdentity: async () => runtime.identity,
+	authenticateRequest: async () => (runtime.anonymous ? null : runtime.identity),
+	requireIdentity: async () => {
+		if (runtime.anonymous) throw new Response("Unauthorized", { status: 401 });
+		return runtime.identity;
+	},
 	requireSessionIdentity: async () => ({ ...runtime.identity, method: "session" as const }),
 }));
 
@@ -67,6 +72,7 @@ type ContractHarness = {
 	db: D1Database;
 	request: Request;
 	setIdentity(userId: string): void;
+	setAnonymous(): void;
 	seedUser(userId: string, name?: string): Promise<void>;
 	seedWorkspace(workspaceId: string, slug: string, name: string): Promise<void>;
 	seedMembership(userId: string, role?: "owner" | "member", workspaceId?: string): Promise<void>;
@@ -106,6 +112,7 @@ beforeEach(async (context: TestContext & { harness?: ContractHarness }) => {
 	await applyMigrations(db);
 	runtime.bindings = { DB: db };
 	runtime.failNextBatch = false;
+	runtime.anonymous = false;
 	// Identity is module state in the mocked auth module, so a test that ends as
 	// somebody else must not decide who the next test runs as.
 	runtime.identity = {
@@ -117,7 +124,11 @@ beforeEach(async (context: TestContext & { harness?: ContractHarness }) => {
 	const harness: ContractHarness = {
 		db,
 		request: new Request("https://plans.example/api"),
+		setAnonymous() {
+			runtime.anonymous = true;
+		},
 		setIdentity(userId) {
+			runtime.anonymous = false;
 			runtime.identity = {
 				user: { id: userId, name: userId, email: `${userId}@example.com`, image: null },
 				method: "oauth",
@@ -552,11 +563,23 @@ describe("organization move contracts", () => {
 		await publishInDemo(harness);
 
 		const asAuthor = await loadPlanReaderData(harness.request, "demo", "movable-plan");
-		expect(asAuthor.viewer).toEqual({ id: "user-owner", name: "Owner", image: null, canMovePlan: true });
+		expect(asAuthor.viewer).toEqual({
+			id: "user-owner",
+			name: "Owner",
+			image: null,
+			canMovePlan: true,
+			canManageSharing: true,
+		});
 
 		harness.setIdentity("user-member");
 		const asMember = await loadPlanReaderData(harness.request, "demo", "movable-plan");
-		expect(asMember.viewer).toEqual({ id: "user-member", name: "user-member", image: null, canMovePlan: false });
+		expect(asMember.viewer).toEqual({
+			id: "user-member",
+			name: "user-member",
+			image: null,
+			canMovePlan: false,
+			canManageSharing: false,
+		});
 
 		harness.setIdentity("user-second-owner");
 		const asOtherOwner = await loadPlanReaderData(harness.request, "demo", "movable-plan");
@@ -565,6 +588,75 @@ describe("organization move contracts", () => {
 			name: "user-second-owner",
 			image: null,
 			canMovePlan: false,
+			canManageSharing: true,
 		});
+	});
+});
+
+describe("plan sharing", () => {
+	it("enables anonymous reads per plan and revokes current and historical access", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		const published = await createPlan(harness.request, {
+			workspaceSlug: "demo",
+			title: "Shared plan",
+			source: VALID_PLAN,
+			force: true,
+		});
+		await createPlan(harness.request, {
+			workspaceSlug: "demo",
+			title: "Other plan",
+			force: true,
+			source: VALID_PLAN.replace("Contract plan", "Other plan"),
+		});
+		await createPlanVersion(harness.request, published.id, {
+			source: VALID_PLAN.replace("explicit, atomic", "explicit, reversible"),
+			force: true,
+		});
+		harness.setAnonymous();
+		await expect(loadPlanDocument(harness.request, "demo", "shared-plan")).rejects.toMatchObject({ status: 401 });
+		await expect(updatePlanSharing(harness.request, published.id, "public")).rejects.toMatchObject({ status: 401 });
+		harness.setIdentity("user-owner");
+		await updatePlanSharing(harness.request, published.id, "public");
+		harness.setAnonymous();
+		const current = await loadPlanReaderData(harness.request, "demo", "shared-plan");
+		expect(current.document.version.number).toBe(2);
+		expect(current.viewer).toBeNull();
+		expect((await loadPlanDocument(harness.request, "demo", "shared-plan", 1)).version.number).toBe(1);
+		await expect(loadPlanDocument(harness.request, "demo", "other-plan")).rejects.toMatchObject({ status: 401 });
+		harness.setIdentity("user-owner");
+		await updatePlanSharing(harness.request, published.id, "workspace");
+		harness.setAnonymous();
+		await expect(loadPlanDocument(harness.request, "demo", "shared-plan")).rejects.toMatchObject({ status: 401 });
+		await expect(loadPlanDocument(harness.request, "demo", "shared-plan", 1)).rejects.toMatchObject({ status: 401 });
+	});
+
+	it("allows authors and organization owners to manage sharing, while other members and outsiders cannot", async (context) => {
+		const harness = (context as TestContext & { harness: ContractHarness }).harness;
+		await harness.seedUser("user-author");
+		await harness.seedMembership("user-author");
+		await harness.seedUser("user-member");
+		await harness.seedMembership("user-member");
+		await harness.seedUser("user-outsider");
+		harness.setIdentity("user-author");
+		const published = await createPlan(harness.request, {
+			workspaceSlug: "demo",
+			title: "Shared plan",
+			source: VALID_PLAN,
+			force: true,
+		});
+		await updatePlanSharing(harness.request, published.id, "public");
+		expect((await loadPlanReaderData(harness.request, "demo", "shared-plan")).viewer?.canManageSharing).toBe(true);
+		harness.setIdentity("user-member");
+		expect((await loadPlanReaderData(harness.request, "demo", "shared-plan")).viewer?.canManageSharing).toBe(false);
+		await expect(updatePlanSharing(harness.request, published.id, "workspace")).rejects.toMatchObject({ status: 403 });
+		harness.setIdentity("user-outsider");
+		expect((await loadPlanReaderData(harness.request, "demo", "shared-plan")).viewer).toBeNull();
+		await expect(updatePlanSharing(harness.request, published.id, "workspace")).rejects.toMatchObject({ status: 403 });
+		await expect(approveCurrentVersion(harness.request, published.id)).rejects.toMatchObject({ status: 403 });
+		harness.setIdentity("user-owner");
+		await updatePlanSharing(harness.request, published.id, "workspace");
+		expect((await loadPlanReaderData(harness.request, "demo", "shared-plan")).document.plan.visibility).toBe(
+			"workspace",
+		);
 	});
 });

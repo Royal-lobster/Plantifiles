@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { clerk } from "@clerk/testing/playwright";
@@ -125,7 +125,8 @@ test("hosted OAuth callback hands the authorization response to the terminal", a
 		.toBe("code=browser-code&state=browser-state");
 });
 
-test("agent publish, browser review, approval, and version diff", async ({ page, baseURL }) => {
+test("agent publish, browser review, approval, and version diff", async ({ page, context, browser, baseURL }) => {
+	test.setTimeout(180_000);
 	if (!baseURL) throw new Error("Playwright baseURL is required");
 	const workspaceSlug = e2eWorkspaceSlug();
 	const agentRepo = await mkdtemp(`${tmpdir()}/plantifiles-playwright-`);
@@ -187,7 +188,7 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		await dashboardRow.click();
 
 		await expect(page.getByRole("heading", { name: title })).toBeVisible();
-		const planHeader = page.getByRole("article", { name: title }).locator("header");
+		const planHeader = page.getByRole("region", { name: "Plan controls" });
 		await expect(page.getByRole("banner").getByRole("link", { name: "Plantifiles home" })).toBeVisible();
 		const diagrams = page.locator('[data-block-kind="Diagram"] svg[role~="graphics-document"]');
 		await expect(diagrams).toHaveCount(2);
@@ -212,9 +213,46 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 
 		/* Comment mode turns every block into a target: arm it once, point at the
 		   block, and the composer opens against it. */
-		await page.getByRole("button", { name: "Comment mode" }).click();
+		const commentToggle = page.getByRole("button", { name: "Comment mode" });
+		await page.evaluate(() => {
+			document.documentElement.style.scrollBehavior = "auto";
+			window.scrollTo(0, 700);
+		});
+		await expect.poll(async () => (await commentToggle.boundingBox())?.y).toBeGreaterThanOrEqual(64);
+		await expect.poll(async () => (await commentToggle.boundingBox())?.y).toBeLessThan(200);
+		await page.keyboard.press("Control+Shift+M");
+		await expect(commentToggle).toHaveAttribute("aria-pressed", "true");
+		if (process.env.PLANTIFILES_VERIFICATION_DIR) {
+			const artifacts = process.env.PLANTIFILES_VERIFICATION_DIR;
+			await mkdir(artifacts, { recursive: true });
+			for (const width of [1280, 375, 320]) {
+				await page.setViewportSize({ width, height: 900 });
+				for (const theme of ["dark", "light"]) {
+					const toggle = page
+						.getByRole("banner")
+						.getByRole("button", { name: theme === "dark" ? "Use dark theme" : "Use light theme" });
+					if (await toggle.count()) await toggle.click();
+					await page.evaluate(() => window.scrollTo(0, 700));
+					await expect(commentToggle).toBeInViewport();
+					expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+					await page.screenshot({
+						animations: "disabled",
+						path: resolve(artifacts, `comment-mode-${width}-${theme}.png`),
+					});
+				}
+			}
+			await page.setViewportSize({ width: 1280, height: 900 });
+			await page.getByRole("banner").getByRole("button", { name: "Use dark theme" }).click();
+		}
+
+		await page.keyboard.press("Escape");
+		await expect(commentToggle).toHaveAttribute("aria-pressed", "false");
+		await page.keyboard.press("Meta+Shift+M");
+		await expect(commentToggle).toHaveAttribute("aria-pressed", "true");
 		await page.getByRole("button", { name: "Comment on TLDR" }).click();
 		await page.getByPlaceholder("Add a comment").fill("Keep the approval bound to this exact plan version.");
+		await page.getByPlaceholder("Add a comment").press("Control+Shift+M");
+		await expect(commentToggle).toHaveAttribute("aria-pressed", "true");
 		await page.getByRole("button", { name: "Comment", exact: true }).click();
 		await expect(page.getByText("Keep the approval bound to this exact plan version.")).toBeVisible();
 		/* The tool stays armed for a second comment, so reading and acting on the
@@ -255,6 +293,96 @@ test("agent publish, browser review, approval, and version diff", async ({ page,
 		await expect(page.locator("html")).toHaveClass(/dark/);
 		await expect(page.getByText("Modified TLDR", { exact: false })).toBeVisible();
 		await expect(page.getByText("Added Risk", { exact: false })).toBeVisible();
+
+		// Sharing is an explicit plan-level change, and revocation applies to every version.
+		await waitForHydration(page);
+		await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+		await page.getByRole("button", { name: "Share", exact: true }).click();
+		const sharing = page.getByRole("dialog", { name: "Share plan" });
+		await expect(sharing.getByRole("combobox")).toContainText("Workspace members");
+		await sharing.getByRole("combobox").click();
+		await page.getByRole("option", { name: "Anyone with the link" }).click();
+		const sharingRequest = page.waitForRequest(
+			(request) => request.method() === "POST" && new URL(request.url()).pathname.startsWith("/_serverFn/"),
+		);
+		await sharing.getByRole("button", { name: "Save sharing" }).click();
+		const savedRequest = await sharingRequest;
+		await expect(sharing.getByRole("status")).toContainText("Anyone with the link can now read this plan.");
+		await expect(sharing.getByRole("button", { name: "Copy link" })).toBeEnabled();
+		const crossSiteAttempt = await page.request.post(savedRequest.url(), {
+			data: savedRequest.postData() ?? "",
+			headers: {
+				"Content-Type": savedRequest.headers()["content-type"] ?? "application/json",
+				Origin: "https://untrusted.example",
+				"Sec-Fetch-Site": "cross-site",
+			},
+		});
+		expect(crossSiteAttempt.status()).toBe(403);
+		if (process.env.PLANTIFILES_VERIFICATION_DIR) {
+			await page.screenshot({
+				animations: "disabled",
+				path: resolve(process.env.PLANTIFILES_VERIFICATION_DIR, "share-dialog.png"),
+			});
+		}
+		await sharing.getByRole("button", { name: "Copy link" }).click();
+		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(planUrl);
+		await page.keyboard.press("Escape");
+		if (process.env.PLANTIFILES_VERIFICATION_DIR) {
+			for (const width of [375, 320]) {
+				await page.setViewportSize({ width, height: 900 });
+				for (const theme of ["light", "dark"]) {
+					await page
+						.getByRole("banner")
+						.getByRole("button", { name: theme === "dark" ? "Use dark theme" : "Use light theme" })
+						.click();
+					await page.getByRole("button", { name: "Share", exact: true }).click();
+					await expect(sharing).toBeInViewport({ ratio: 1 });
+					await page.screenshot({
+						animations: "disabled",
+						path: resolve(process.env.PLANTIFILES_VERIFICATION_DIR, `share-dialog-${width}-${theme}.png`),
+					});
+					await page.keyboard.press("Escape");
+				}
+			}
+			await page.setViewportSize({ width: 1280, height: 900 });
+		}
+
+		const publicContext = await browser.newContext(
+			process.env.PLANTIFILES_VERIFICATION_DIR
+				? {
+						recordVideo: { dir: process.env.PLANTIFILES_VERIFICATION_DIR, size: { width: 1280, height: 900 } },
+						viewport: { width: 1280, height: 900 },
+					}
+				: {},
+		);
+		try {
+			const publicPage = await publicContext.newPage();
+			await publicPage.goto(planUrl);
+			await expect(publicPage.getByRole("heading", { name: title })).toBeVisible();
+			await waitForHydration(publicPage);
+			await expect(publicPage.getByRole("button", { name: "Comment mode" })).toHaveCount(0);
+			await expect(publicPage.getByRole("button", { name: "Approve current version" })).toHaveCount(0);
+			await publicPage.evaluate(() => window.scrollTo(0, 700));
+			await publicPage.getByRole("button", { name: "Share", exact: true }).click();
+			await expect(
+				publicPage.getByRole("dialog", { name: "Share plan" }).getByText("Anyone with the link", { exact: true }),
+			).toBeVisible();
+			await publicPage.keyboard.press("Escape");
+			const publicMarkdown = await publicContext.request.get(`${planUrl}?format=md`);
+			expect(publicMarkdown.status()).toBe(200);
+			expect((await publicContext.request.get(`${planUrl}/v/1?format=md`)).status()).toBe(200);
+
+			await page.getByRole("button", { name: "Share", exact: true }).click();
+			await sharing.getByRole("combobox").click();
+			await page.getByRole("option", { name: "Workspace members", exact: true }).click();
+			await sharing.getByRole("button", { name: "Save sharing" }).click();
+			await expect(sharing.getByRole("status")).toContainText("Public access is off.");
+			expect((await publicContext.request.get(`${planUrl}?format=md`)).status()).toBe(401);
+			expect((await publicContext.request.get(`${planUrl}/v/1?format=md`)).status()).toBe(401);
+			await page.keyboard.press("Escape");
+		} finally {
+			await publicContext.close();
+		}
 
 		const pulled = runCli(["pull", planUrl], agentRepo, token, baseURL);
 		expect(pulled).toBe(await readFile(planFile, "utf8"));

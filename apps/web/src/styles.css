@@ -237,3 +237,14 @@
 	color: var(--shiki-dark);
 	background-color: var(--shiki-dark-bg);
 }
+
+/* Leave room for both sticky bars when following decision and history links. */
+.plan-reader [id] {
+	scroll-margin-top: 11rem;
+}
+
+@media (min-width: 640px) {
+	.plan-reader [id] {
+		scroll-margin-top: 9rem;
+	}
+}

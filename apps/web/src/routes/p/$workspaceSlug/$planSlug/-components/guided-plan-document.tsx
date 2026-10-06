@@ -138,7 +138,7 @@ function GuidedPlanDocument({ data }: { data: PlanReaderData }) {
 			</div>
 
 			<div className="mt-6 grid items-start gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
-				<nav className="surface-inset p-2 lg:sticky lg:top-20" aria-label="Study path">
+				<nav className="surface-inset p-2 lg:sticky lg:top-36" aria-label="Study path">
 					<ol className="space-y-1">
 						{sections.map((section, index) => {
 							const isActive = index === activeIndex;

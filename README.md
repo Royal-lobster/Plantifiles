@@ -53,6 +53,10 @@ That shared URL is the handoff: people approve what they can read, and agents bu
 
 Each workspace maps to a Clerk Organization. Organization membership controls access while preserving stable local authorship for plans, comments, OAuth sessions, and user-scoped API keys.
 
+Authors and organization owners can enable **Anyone with the link** from the plan’s Share dialog. Shared plans, comments, and version history are readable without signing in; commenting and review remain limited to workspace members. Public access can be turned off again per plan.
+
+The plan controls stay visible while scrolling. Toggle comment mode with `Ctrl/⌘ + Shift + M`, or press `Esc` to stop commenting.
+
 Authors can move a plan into another workspace without republishing it. Version history, comments, and decisions move with the plan; approvals on the current version are cleared so the destination workspace can review it.
 
 ## Agent interfaces

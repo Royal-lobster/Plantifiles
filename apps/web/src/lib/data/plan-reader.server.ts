@@ -7,6 +7,7 @@ import { authenticateRequest, requireIdentity } from "#/lib/integrations/request
 import { getDb } from "#/lib/integrations/runtime.server";
 import { canMovePlan } from "./move-plan.server";
 import { assertWorkspaceAccess, publicPlanUrl } from "./plan-access.server";
+import { canManagePlanSharing } from "./plan-sharing.server";
 
 const creator = alias(user, "creator");
 
@@ -335,6 +336,7 @@ export type PlanReaderViewer = {
 	image: string | null;
 	/** Whether this viewer may move the plan into another organization. */
 	canMovePlan: boolean;
+	canManageSharing: boolean;
 };
 
 export async function loadPlanReaderData(
@@ -369,14 +371,16 @@ export async function loadPlanReaderData(
 	return {
 		document,
 		versions: rows.map(({ version, author }) => ({ ...version, author })),
-		viewer: identity
-			? {
-					id: identity.user.id,
-					name: identity.user.name,
-					image: identity.user.image,
-					canMovePlan: canMovePlan(document.plan, identity.user, roleRows[0]?.role ?? null),
-				}
-			: null,
+		viewer:
+			identity && roleRows[0]
+				? {
+						id: identity.user.id,
+						name: identity.user.name,
+						image: identity.user.image,
+						canMovePlan: canMovePlan(document.plan, identity.user, roleRows[0].role),
+						canManageSharing: canManagePlanSharing(document.plan, identity.user, roleRows[0].role),
+					}
+				: null,
 	};
 }
 

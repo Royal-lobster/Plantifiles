@@ -1,6 +1,6 @@
-import { getVars } from "#vars";
 import { type ClerkMiddlewareOptionsCallback, clerkMiddleware } from "@clerk/tanstack-react-start/server";
-import { createMiddleware, createStart } from "@tanstack/react-start";
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start";
+import { getVars } from "#vars";
 
 const clerkOptions: ClerkMiddlewareOptionsCallback = async () => {
 	const vars = await getVars(process.env);
@@ -28,6 +28,10 @@ const callbackHeaders = createMiddleware().server(async ({ pathname, next }) => 
 	return result;
 });
 
+const csrfMiddleware = createCsrfMiddleware({
+	filter: (context) => context.handlerType === "serverFn",
+});
+
 export const startInstance = createStart(() => ({
-	requestMiddleware: [callbackHeaders, clerkMiddleware(clerkOptions)],
+	requestMiddleware: [csrfMiddleware, callbackHeaders, clerkMiddleware(clerkOptions)],
 }));
