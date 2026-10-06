@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@plantifiles/ui/compone
 import { cn } from "@plantifiles/ui/lib/utils";
 import { Link, useRouter } from "@tanstack/react-router";
 import { History, MessageSquarePlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusChip } from "#/components/status-chip";
 import { formatUtcTimestamp } from "#/lib/helpers/format-time";
 import { renderPlan } from "#/routes/p/$workspaceSlug/$planSlug/-components/plan-render";
@@ -12,6 +12,7 @@ import type { PlanReaderData } from "#/routes/p/$workspaceSlug/$planSlug/-data/p
 import { GuidedPlanDocument } from "./guided-plan-document";
 import { PlanActionsMenu } from "./plan-actions-menu";
 import { PlanReviewDocument } from "./plan-review-document";
+import { PlanShareDialog } from "./plan-share-dialog";
 import { PlanStatusAction } from "./plan-status-action";
 
 type PlanReaderProps = {
@@ -34,6 +35,32 @@ function PlanReader({ data }: PlanReaderProps) {
 	const [commentMode, setCommentMode] = useState(false);
 	const canComment = Boolean(data.viewer && isCurrentVersion);
 
+	useEffect(() => {
+		if (!canComment) return;
+		function handleKeyDown(event: KeyboardEvent) {
+			const target = event.target;
+			if (
+				event.defaultPrevented ||
+				event.repeat ||
+				event.isComposing ||
+				(target instanceof HTMLElement && target.isContentEditable) ||
+				(target instanceof Element &&
+					target.closest(
+						'input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"], [role="menu"]',
+					))
+			)
+				return;
+			if ((event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m") {
+				event.preventDefault();
+				setCommentMode((value) => !value);
+			} else if (event.key === "Escape" && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+				setCommentMode(false);
+			}
+		}
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [canComment]);
+
 	async function selectVersion(value: string) {
 		const number = Number(value);
 		if (number === latest?.number) {
@@ -47,8 +74,8 @@ function PlanReader({ data }: PlanReaderProps) {
 	}
 
 	return (
-		<article aria-label={data.plan.title} className="w-full">
-			<header className="border-b border-foreground/[0.08] pb-8">
+		<article aria-label={data.plan.title} className="plan-reader w-full">
+			<header>
 				{!isCurrentVersion && <p className="label-eyebrow">Historical version</p>}
 				<h1 className="mt-1 flex max-w-[34ch] items-start gap-3 font-medium text-3xl leading-[1.15] tracking-tight md:text-4xl">
 					{data.plan.emoji && (
@@ -58,77 +85,86 @@ function PlanReader({ data }: PlanReaderProps) {
 					)}
 					<span>{data.plan.title}</span>
 				</h1>
+			</header>
 
-				{/* Status and actions share one rail below the title. This keeps long
+			{/* Status and actions share one rail below the title. This keeps long
 				    titles from pushing the actions onto a separate header row. */}
-				<div className="mt-4 flex flex-wrap items-center gap-3">
-					{/* Only what a reviewer acts on: where the plan stands, which version
+			<section
+				aria-label="Plan controls"
+				className="sticky top-16 z-30 mt-4 flex flex-wrap items-center gap-3 border-b border-foreground/[0.08] bg-background/95 py-4 backdrop-blur-xl"
+			>
+				{/* Only what a reviewer acts on: where the plan stands, which version
 					    they are reading, and what still blocks it. Author and agent live in
 					    version history; the lint score is an authoring metric, not a
 					    reading one; and the approval count is already spelled out by the
 					    gate sentence below when it blocks. */}
-					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
-						<StatusChip status={data.plan.status} />
-						{data.versions.length > 1 ? (
-							<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
-								<SelectTrigger
-									className="h-6 gap-1 bg-muted px-2.5 font-mono text-xs shadow-none"
-									aria-label="Plan version"
-								>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{data.versions.map((item) => (
-										<SelectItem key={item.id} value={String(item.number)}>
-											v{item.number}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						) : (
-							<span className="rounded-full bg-muted px-2.5 py-0.5">v{data.version.number}</span>
-						)}
-						<span>{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read</span>
-						{openDecisions > 0 && (
-							<>
-								{/* The meta row wraps on narrow viewports, so the separator only
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-muted-foreground text-xs">
+					<StatusChip status={data.plan.status} />
+					{data.versions.length > 1 ? (
+						<Select value={String(data.version.number)} onValueChange={(value) => void selectVersion(value)}>
+							<SelectTrigger
+								className="h-6 gap-1 bg-muted px-2.5 font-mono text-xs shadow-none"
+								aria-label="Plan version"
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{data.versions.map((item) => (
+									<SelectItem key={item.id} value={String(item.number)}>
+										v{item.number}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					) : (
+						<span className="rounded-full bg-muted px-2.5 py-0.5">v{data.version.number}</span>
+					)}
+					<span className="hidden sm:inline">
+						{Math.max(1, Math.ceil(data.version.lintReport.readTimeMinutes))} min read
+					</span>
+					{openDecisions > 0 && (
+						<>
+							{/* The meta row wraps on narrow viewports, so the separator only
 								    exists at widths where it stays between two items. */}
-								<span aria-hidden="true" className="hidden text-border sm:inline">
-									·
-								</span>
-								<a href={`#${encodeURIComponent(firstOpenDecision ?? "")}`} className="text-warning hover:underline">
-									{openDecisions} open {openDecisions === 1 ? "decision" : "decisions"}
-								</a>
-							</>
-						)}
-					</div>
-					<div className="ml-auto flex shrink-0 items-center gap-2">
-						{canComment && (
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button
-										variant={commentMode ? "default" : "outline"}
-										size="icon-sm"
-										aria-label="Comment mode"
-										aria-pressed={commentMode}
-										onClick={() => setCommentMode((value) => !value)}
-									>
-										<MessageSquarePlus />
-									</Button>
-								</TooltipTrigger>
-								<TooltipContent side="bottom">{commentMode ? "Stop commenting" : "Comment on a block"}</TooltipContent>
-							</Tooltip>
-						)}
-						<PlanStatusAction data={data} isCurrentVersion={isCurrentVersion} />
-						<PlanActionsMenu
-							planId={data.plan.id}
-							planSlug={planSlug}
-							workspaceSlug={workspaceSlug}
-							canMove={Boolean(data.viewer?.canMovePlan)}
-						/>
-					</div>
+							<span aria-hidden="true" className="hidden text-border sm:inline">
+								·
+							</span>
+							<a href={`#${encodeURIComponent(firstOpenDecision ?? "")}`} className="text-warning hover:underline">
+								{openDecisions} open {openDecisions === 1 ? "decision" : "decisions"}
+							</a>
+						</>
+					)}
 				</div>
-			</header>
+				<div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+					{canComment && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant={commentMode ? "default" : "outline"}
+									size="icon-sm"
+									aria-label="Comment mode"
+									aria-keyshortcuts="Control+Shift+M Meta+Shift+M Escape"
+									aria-pressed={commentMode}
+									onClick={() => setCommentMode((value) => !value)}
+								>
+									<MessageSquarePlus />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent side="bottom">
+								{commentMode ? "Stop commenting" : "Comment on a block"} · Ctrl/⌘ Shift M
+							</TooltipContent>
+						</Tooltip>
+					)}
+					<PlanStatusAction data={data} isCurrentVersion={isCurrentVersion} />
+					<PlanShareDialog data={data} />
+					<PlanActionsMenu
+						planId={data.plan.id}
+						planSlug={planSlug}
+						workspaceSlug={workspaceSlug}
+						canMove={Boolean(data.viewer?.canMovePlan)}
+					/>
+				</div>
+			</section>
 
 			{supportsGuided && (
 				<fieldset className="mt-5 flex items-center gap-2 border-0 p-0">

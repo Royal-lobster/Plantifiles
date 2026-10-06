@@ -25,6 +25,7 @@ export function PlanStatusAction({ data, isCurrentVersion }: { data: PlanReaderD
 		data.plan.status === "archived" || data.plan.status === "in_review"
 			? undefined
 			: NEXT_STATUS_LABEL[data.plan.status];
+	const actionLabel = data.plan.status === "in_review" ? "Approve current version" : nextLabel;
 
 	async function run() {
 		if (inFlight.current) return;
@@ -61,8 +62,19 @@ export function PlanStatusAction({ data, isCurrentVersion }: { data: PlanReaderD
 	return (
 		<div className="flex max-w-sm flex-col items-end gap-2">
 			{canAdvance ? (
-				<Button size="sm" onClick={() => void run()} disabled={busy}>
-					{data.plan.status === "in_review" ? (busy ? "Approving…" : "Approve current version") : nextLabel}
+				<Button size="sm" aria-label={actionLabel} onClick={() => void run()} disabled={busy}>
+					<span className="hidden sm:inline">
+						{data.plan.status === "in_review" && busy ? "Approving…" : actionLabel}
+					</span>
+					<span className="sm:hidden">
+						{data.plan.status === "in_review"
+							? busy
+								? "Approving…"
+								: "Approve"
+							: data.plan.status === "draft"
+								? "Submit"
+								: nextLabel}
+					</span>
 					<ArrowRight />
 				</Button>
 			) : null}
